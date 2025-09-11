@@ -1,0 +1,459 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { sessaoSchema, type SessaoInput } from '@/lib/validations/pauta'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Loader2, AlertCircle, Calendar, Users, FileText, Search } from 'lucide-react'
+
+interface SessaoFormProps {
+  onSuccess?: () => void
+  pautaId?: string
+}
+
+interface Pauta {
+  id: string
+  numero: string
+  dataPauta: Date
+  status: string
+  processos: Array<{
+    ordem: number
+    relator: string
+    processo: {
+      id: string
+      numero: string
+      contribuinte: {
+        nome: string
+      }
+    }
+  }>
+}
+
+interface User {
+  id: string
+  name: string
+  email: string
+  role: string
+}
+
+export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [pautas, setPautas] = useState<Pauta[]>([])
+  const [usuarios, setUsuarios] = useState<User[]>([])
+  const [selectedPauta, setSelectedPauta] = useState<Pauta | null>(null)
+  const [selectedConselheiros, setSelectedConselheiros] = useState<string[]>([])
+  const [searchPauta, setSearchPauta] = useState('')
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors }
+  } = useForm<SessaoInput>({
+    resolver: zodResolver(sessaoSchema),
+    defaultValues: {
+      dataInicio: new Date(),
+      conselheiros: []
+    }
+  })
+
+  // Buscar pautas elegíveis
+  useEffect(() => {
+    const fetchPautas = async () => {
+      try {
+        const response = await fetch('/api/pautas?status=aberta')
+        if (response.ok) {
+          const data = await response.json()
+          setPautas(data.pautas || [])
+        }
+      } catch (error) {
+        console.error('Erro ao buscar pautas:', error)
+      }
+    }
+
+    fetchPautas()
+  }, [])
+
+  // Buscar usuários para conselheiros
+  useEffect(() => {
+    const fetchUsuarios = async () => {
+      try {
+        const response = await fetch('/api/users')
+        if (response.ok) {
+          const data = await response.json()
+          // Filtrar apenas usuários ativos que podem ser conselheiros
+          const usuariosElegiveis = data.filter((user: User) => 
+            ['ADMIN', 'FUNCIONARIO'].includes(user.role)
+          )
+          setUsuarios(usuariosElegiveis)
+        }
+      } catch (error) {
+        console.error('Erro ao buscar usuários:', error)
+      }
+    }
+
+    fetchUsuarios()
+  }, [])
+
+  // Se pautaId for fornecido via URL, buscar a pauta específica
+  useEffect(() => {
+    const fetchPauta = async () => {
+      const pautaIdFromUrl = pautaId || searchParams.get('pauta')
+      if (!pautaIdFromUrl) return
+
+      try {
+        const response = await fetch(`/api/pautas/${pautaIdFromUrl}`)
+        if (response.ok) {
+          const pauta = await response.json()
+          setSelectedPauta(pauta)
+          setValue('pautaId', pauta.id)
+        }
+      } catch (error) {
+        console.error('Erro ao buscar pauta:', error)
+      }
+    }
+
+    fetchPauta()
+  }, [pautaId, searchParams, setValue])
+
+  // Atualizar campo de conselheiros quando seleção muda
+  useEffect(() => {
+    setValue('conselheiros', selectedConselheiros)
+  }, [selectedConselheiros, setValue])
+
+  const onSubmit = async (data: SessaoInput) => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/sessoes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao criar sessão')
+      }
+
+      const resultado = await response.json()
+      
+      if (onSuccess) {
+        onSuccess()
+      } else {
+        router.push(`/dashboard/sessoes/${resultado.id}`)
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Erro inesperado')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSelectPauta = (pauta: Pauta) => {
+    setSelectedPauta(pauta)
+    setValue('pautaId', pauta.id)
+    setSearchPauta('')
+  }
+
+  const handleConselheiroToggle = (userId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedConselheiros(prev => [...prev, userId])
+    } else {
+      setSelectedConselheiros(prev => prev.filter(id => id !== userId))
+    }
+  }
+
+  const pautasFiltradas = pautas.filter(pauta =>
+    pauta.numero.toLowerCase().includes(searchPauta.toLowerCase())
+  )
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Seleção de Pauta */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Pauta para Julgamento</CardTitle>
+          <CardDescription>
+            Selecione a pauta que será julgada nesta sessão
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!selectedPauta ? (
+            <div className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Buscar pauta..."
+                  value={searchPauta}
+                  onChange={(e) => setSearchPauta(e.target.value)}
+                  className="pl-10"
+                  disabled={isLoading}
+                />
+              </div>
+
+              {pautasFiltradas.length > 0 && (
+                <div className="border rounded-lg max-h-60 overflow-y-auto">
+                  {pautasFiltradas.map((pauta) => (
+                    <div
+                      key={pauta.id}
+                      onClick={() => handleSelectPauta(pauta)}
+                      className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{pauta.numero}</p>
+                          <p className="text-sm text-gray-600">
+                            {new Date(pauta.dataPauta).toLocaleDateString('pt-BR')} - {pauta.processos.length} processo{pauta.processos.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <Badge className="bg-blue-100 text-blue-800">
+                          {pauta.status === 'aberta' ? 'Aberta' : pauta.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {searchPauta.length > 0 && pautasFiltradas.length === 0 && (
+                <p className="text-center text-gray-500 py-4">
+                  Nenhuma pauta encontrada
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-blue-900">{selectedPauta.numero}</h4>
+                  <p className="text-sm text-blue-700">
+                    {new Date(selectedPauta.dataPauta).toLocaleDateString('pt-BR')} - {selectedPauta.processos.length} processo{selectedPauta.processos.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedPauta(null)
+                    setValue('pautaId', '')
+                  }}
+                >
+                  Alterar
+                </Button>
+              </div>
+
+              {/* Lista de Processos da Pauta */}
+              <div className="mt-4 space-y-2">
+                <h5 className="text-sm font-medium text-blue-900">Processos para Julgamento:</h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {selectedPauta.processos.map((processoPauta) => (
+                    <div key={processoPauta.processo.id} className="text-sm bg-white p-2 rounded border">
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-xs font-bold">
+                          {processoPauta.ordem}
+                        </span>
+                        <div className="flex-1">
+                          <p className="font-medium">{processoPauta.processo.numero}</p>
+                          <p className="text-xs text-gray-600">{processoPauta.processo.contribuinte.nome}</p>
+                          {processoPauta.relator && (
+                            <p className="text-xs text-blue-600">Relator: {processoPauta.relator}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          {errors.pautaId && (
+            <p className="text-sm text-red-500">{errors.pautaId.message}</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Informações da Sessão */}
+      {selectedPauta && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Dados da Sessão</CardTitle>
+            <CardDescription>
+              Configure a data e hora de início da sessão
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="dataInicio">Data e Hora de Início</Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  id="dataInicio"
+                  type="datetime-local"
+                  {...register('dataInicio', {
+                    setValueAs: (value) => value ? new Date(value) : undefined
+                  })}
+                  className="pl-10"
+                  disabled={isLoading}
+                  defaultValue={new Date().toISOString().slice(0, 16)}
+                />
+              </div>
+              {errors.dataInicio && (
+                <p className="text-sm text-red-500">{errors.dataInicio.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ata">Ata Inicial (opcional)</Label>
+              <Textarea
+                id="ata"
+                placeholder="Informações iniciais sobre a sessão..."
+                rows={3}
+                {...register('ata')}
+                disabled={isLoading}
+              />
+              <p className="text-xs text-gray-500">
+                A ata pode ser preenchida ou atualizada durante a sessão
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Seleção de Conselheiros */}
+      {selectedPauta && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Conselheiros Participantes</CardTitle>
+            <CardDescription>
+              Selecione os conselheiros que participarão desta sessão
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {usuarios.map((usuario) => (
+                <div key={usuario.id} className="flex items-center space-x-3 p-3 border rounded-lg">
+                  <Checkbox
+                    id={`conselheiro-${usuario.id}`}
+                    checked={selectedConselheiros.includes(usuario.id)}
+                    onCheckedChange={(checked) => 
+                      handleConselheiroToggle(usuario.id, checked as boolean)
+                    }
+                  />
+                  <div className="flex-1">
+                    <label 
+                      htmlFor={`conselheiro-${usuario.id}`}
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      {usuario.name}
+                    </label>
+                    <p className="text-xs text-gray-600">{usuario.email}</p>
+                    <Badge variant="outline" className="text-xs">
+                      {usuario.role === 'ADMIN' ? 'Administrador' : 'Funcionário'}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {selectedConselheiros.length > 0 && (
+              <div className="p-3 bg-green-50 rounded-lg">
+                <p className="text-sm text-green-800">
+                  <Users className="inline h-4 w-4 mr-1" />
+                  {selectedConselheiros.length} conselheiro{selectedConselheiros.length !== 1 ? 's' : ''} selecionado{selectedConselheiros.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+            )}
+
+            {errors.conselheiros && (
+              <p className="text-sm text-red-500">{errors.conselheiros.message}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Resumo */}
+      {selectedPauta && selectedConselheiros.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Resumo da Sessão
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Pauta:</span>
+                <span className="font-medium">{selectedPauta.numero}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Processos:</span>
+                <span className="font-medium">{selectedPauta.processos.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Conselheiros:</span>
+                <span className="font-medium">{selectedConselheiros.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Data:</span>
+                <span className="font-medium">
+                  {watch('dataInicio') ? new Date(watch('dataInicio')).toLocaleString('pt-BR') : 'Não definida'}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Botões de Ação */}
+      <div className="flex gap-4 justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => router.back()}
+          disabled={isLoading}
+        >
+          Cancelar
+        </Button>
+        <Button
+          type="submit"
+          disabled={isLoading || !selectedPauta || selectedConselheiros.length === 0}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Iniciando...
+            </>
+          ) : (
+            'Iniciar Sessão'
+          )}
+        </Button>
+      </div>
+    </form>
+  )
+}

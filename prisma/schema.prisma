@@ -1,0 +1,385 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum Role {
+  ADMIN
+  FUNCIONARIO
+  VISUALIZADOR
+}
+
+enum TipoProcesso {
+  COMPENSACAO
+  DACAO_PAGAMENTO
+  TRANSACAO_EXCEPCIONAL
+}
+
+enum StatusProcesso {
+  RECEPCIONADO
+  EM_ANALISE
+  AGUARDANDO_DOCUMENTOS
+  EM_PAUTA
+  JULGADO
+  ACORDO_FIRMADO
+  EM_CUMPRIMENTO
+  FINALIZADO
+  ARQUIVADO
+}
+
+enum StatusPagamento {
+  PENDENTE
+  PAGO
+  ATRASADO
+  CANCELADO
+}
+
+// Models
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  name           String
+  password       String
+  role           Role            @default(FUNCIONARIO)
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  
+  // Relations
+  processosCreated    Processo[]       @relation("CreatedBy")
+  tramitacoes         Tramitacao[]
+  sessoes             SessaoJulgamento[] @relation("Conselheiro")
+  logs                LogAuditoria[]
+}
+
+model Contribuinte {
+  id             String          @id @default(cuid())
+  cpfCnpj        String          @unique
+  nome           String
+  email          String?
+  telefone       String?
+  endereco       String?
+  cidade         String?
+  estado         String?
+  cep            String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  
+  // Relations
+  processos      Processo[]
+  imoveis        Imovel[]
+}
+
+model Processo {
+  id                String          @id @default(cuid())
+  numero            String          @unique
+  tipo              TipoProcesso
+  status            StatusProcesso  @default(RECEPCIONADO)
+  valorOriginal     Decimal         @db.Decimal(15, 2)
+  valorNegociado    Decimal?        @db.Decimal(15, 2)
+  dataAbertura      DateTime        @default(now())
+  dataFinalizacao   DateTime?
+  observacoes       String?         @db.Text
+  
+  // Relations
+  contribuinteId    String
+  contribuinte      Contribuinte    @relation(fields: [contribuinteId], references: [id])
+  
+  createdById       String
+  createdBy         User            @relation("CreatedBy", fields: [createdById], references: [id])
+  
+  tramitacoes       Tramitacao[]
+  documentos        Documento[]
+  pautas            ProcessoPauta[]
+  decisoes          Decisao[]
+  acordo            Acordo?
+  imoveis           ProcessoImovel[]
+  creditos          ProcessoCredito[]
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@index([contribuinteId])
+  @@index([status])
+  @@index([tipo])
+}
+
+model Imovel {
+  id                String          @id @default(cuid())
+  matricula         String          @unique
+  endereco          String
+  cidade            String
+  estado            String
+  valorAvaliado     Decimal         @db.Decimal(15, 2)
+  descricao         String?         @db.Text
+  
+  // Relations
+  proprietarioId    String
+  proprietario      Contribuinte    @relation(fields: [proprietarioId], references: [id])
+  
+  processos         ProcessoImovel[]
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@index([proprietarioId])
+}
+
+model ProcessoImovel {
+  id                String          @id @default(cuid())
+  
+  processoId        String
+  processo          Processo        @relation(fields: [processoId], references: [id])
+  
+  imovelId          String
+  imovel            Imovel          @relation(fields: [imovelId], references: [id])
+  
+  tipoRelacao       String          // "garantia", "dacao", etc
+  
+  @@unique([processoId, imovelId])
+  @@index([processoId])
+  @@index([imovelId])
+}
+
+model Credito {
+  id                String          @id @default(cuid())
+  tipo              String          // "precatorio", "credito_tributario", etc
+  numero            String          @unique
+  valor             Decimal         @db.Decimal(15, 2)
+  dataVencimento    DateTime?
+  descricao         String?         @db.Text
+  
+  processos         ProcessoCredito[]
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model ProcessoCredito {
+  id                String          @id @default(cuid())
+  
+  processoId        String
+  processo          Processo        @relation(fields: [processoId], references: [id])
+  
+  creditoId         String
+  credito           Credito         @relation(fields: [creditoId], references: [id])
+  
+  valorUtilizado    Decimal         @db.Decimal(15, 2)
+  
+  @@unique([processoId, creditoId])
+  @@index([processoId])
+  @@index([creditoId])
+}
+
+model Tramitacao {
+  id                String          @id @default(cuid())
+  
+  processoId        String
+  processo          Processo        @relation(fields: [processoId], references: [id])
+  
+  setorOrigem       String
+  setorDestino      String
+  dataEnvio         DateTime        @default(now())
+  dataRecebimento   DateTime?
+  prazoResposta     DateTime?
+  observacoes       String?         @db.Text
+  
+  usuarioId         String
+  usuario           User            @relation(fields: [usuarioId], references: [id])
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@index([processoId])
+  @@index([usuarioId])
+}
+
+model Documento {
+  id                String          @id @default(cuid())
+  
+  processoId        String
+  processo          Processo        @relation(fields: [processoId], references: [id])
+  
+  nome              String
+  tipo              String
+  url               String
+  tamanho           Int
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@index([processoId])
+}
+
+model Pauta {
+  id                String          @id @default(cuid())
+  numero            String          @unique
+  dataPauta         DateTime
+  status            String          // "aberta", "em_julgamento", "fechada"
+  observacoes       String?         @db.Text
+  
+  processos         ProcessoPauta[]
+  sessao            SessaoJulgamento?
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model ProcessoPauta {
+  id                String          @id @default(cuid())
+  
+  processoId        String
+  processo          Processo        @relation(fields: [processoId], references: [id])
+  
+  pautaId           String
+  pauta             Pauta           @relation(fields: [pautaId], references: [id])
+  
+  ordem             Int
+  relator           String?
+  
+  @@unique([processoId, pautaId])
+  @@index([processoId])
+  @@index([pautaId])
+}
+
+model SessaoJulgamento {
+  id                String          @id @default(cuid())
+  
+  pautaId           String          @unique
+  pauta             Pauta           @relation(fields: [pautaId], references: [id])
+  
+  dataInicio        DateTime
+  dataFim           DateTime?
+  ata               String?         @db.Text
+  
+  conselheiros      User[]          @relation("Conselheiro")
+  decisoes          Decisao[]
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model Decisao {
+  id                String          @id @default(cuid())
+  
+  processoId        String
+  processo          Processo        @relation(fields: [processoId], references: [id])
+  
+  sessaoId          String?
+  sessao            SessaoJulgamento? @relation(fields: [sessaoId], references: [id])
+  
+  tipo              String          // "deferido", "indeferido", "parcial"
+  fundamentacao     String          @db.Text
+  dataDecisao       DateTime        @default(now())
+  numeroAcordao     String?         @unique
+  dataPublicacao    DateTime?
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@index([processoId])
+  @@index([sessaoId])
+}
+
+model Acordo {
+  id                String          @id @default(cuid())
+  
+  processoId        String          @unique
+  processo          Processo        @relation(fields: [processoId], references: [id])
+  
+  numeroTermo       String          @unique
+  dataAssinatura    DateTime
+  dataVencimento    DateTime
+  valorTotal        Decimal         @db.Decimal(15, 2)
+  valorDesconto     Decimal         @default(0) @db.Decimal(15, 2)
+  percentualDesconto Decimal        @default(0) @db.Decimal(5, 2)
+  valorFinal        Decimal         @db.Decimal(15, 2)
+  modalidadePagamento String        // 'avista' ou 'parcelado'
+  numeroParcelas    Int
+  valorEntrada      Decimal?        @db.Decimal(15, 2)
+  status            String          @default("ativo") // ativo, cumprido, vencido, cancelado, renegociado
+  clausulasEspeciais String?        @db.Text
+  observacoes       String?         @db.Text
+  
+  parcelas          Parcela[]
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model Parcela {
+  id                String          @id @default(cuid())
+  
+  acordoId          String
+  acordo            Acordo          @relation(fields: [acordoId], references: [id])
+  
+  numero            Int
+  valor             Decimal         @db.Decimal(15, 2)
+  dataVencimento    DateTime
+  dataPagamento     DateTime?
+  status            StatusPagamento @default(PENDENTE)
+  
+  pagamentos        PagamentoParcela[]
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@index([acordoId])
+  @@index([status])
+}
+
+model PagamentoParcela {
+  id                String          @id @default(cuid())
+  
+  parcelaId         String
+  parcela           Parcela         @relation(fields: [parcelaId], references: [id])
+  
+  valorPago         Decimal         @db.Decimal(15, 2)
+  dataPagamento     DateTime
+  formaPagamento    String          // PIX, TED, DINHEIRO, etc
+  numeroComprovante String?
+  observacoes       String?         @db.Text
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@index([parcelaId])
+  @@index([dataPagamento])
+}
+
+model Setor {
+  id                String          @id @default(cuid())
+  nome              String          @unique
+  sigla             String          @unique
+  email             String?
+  responsavel       String?
+  ativo             Boolean         @default(true)
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model LogAuditoria {
+  id                String          @id @default(cuid())
+  
+  usuarioId         String
+  usuario           User            @relation(fields: [usuarioId], references: [id])
+  
+  acao              String
+  entidade          String
+  entidadeId        String
+  dadosAnteriores   Json?
+  dadosNovos        Json?
+  ip                String?
+  userAgent         String?
+  
+  createdAt         DateTime        @default(now())
+  
+  @@index([usuarioId])
+  @@index([entidade, entidadeId])
+}
