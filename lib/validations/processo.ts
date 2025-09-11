@@ -19,8 +19,22 @@ export const processoSchema = z.object({
       (val) => ['COMPENSACAO', 'DACAO_PAGAMENTO', 'TRANSACAO_EXCEPCIONAL'].includes(val),
       { message: 'Selecione um tipo válido de processo' }
     ),
-  valorOriginal: z.string().or(z.number()).transform(val => Number(val)),
-  valorNegociado: z.string().or(z.number()).transform(val => Number(val)).optional(),
+  valorOriginal: z.preprocess(
+    (val) => {
+      if (val === '' || val === null || val === undefined) return undefined
+      if (typeof val === 'string') return parseFloat(val)
+      return val
+    },
+    z.number().optional()
+  ),
+  valorNegociado: z.preprocess(
+    (val) => {
+      if (val === '' || val === null || val === undefined) return undefined
+      if (typeof val === 'string') return parseFloat(val)
+      return val
+    },
+    z.number().optional()
+  ),
   observacoes: z.string().optional(),
   contribuinte: contribuinteSchema
 })

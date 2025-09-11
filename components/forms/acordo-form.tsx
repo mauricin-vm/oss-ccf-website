@@ -127,7 +127,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
       novoDesconto = (valorTotal * percentualDesconto) / 100
       setValue('valorDesconto', novoDesconto)
     }
-    
+
     // Se foi alterado o valor do desconto, calcular percentual
     if (valorDesconto > 0 && valorTotal > 0) {
       novoPercentual = (valorDesconto / valorTotal) * 100
@@ -163,11 +163,11 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
       }
 
       const resultado = await response.json()
-      
+
       if (onSuccess) {
         onSuccess()
       } else {
-        router.push(`/dashboard/acordos/${resultado.id}`)
+        router.push(`/acordos/${resultado.id}`)
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Erro inesperado')
@@ -201,8 +201,8 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
   const numeroParcelas = watch('numeroParcelas') || 1
 
   // Calcular valor das parcelas se for parcelado
-  const valorParcela = modalidadePagamento === 'parcelado' && numeroParcelas > 0 
-    ? valorCalculado.final / numeroParcelas 
+  const valorParcela = modalidadePagamento === 'parcelado' && numeroParcelas > 0
+    ? valorCalculado.final / numeroParcelas
     : 0
 
   return (
@@ -341,16 +341,16 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                   <div className="space-y-2">
                     {selectedProcesso.decisoes.map((decisao) => (
                       <div key={decisao.id} className="text-sm">
-                        <Badge 
+                        <Badge
                           className={
                             decisao.tipo === 'deferido' ? 'bg-green-100 text-green-800' :
-                            decisao.tipo === 'indeferido' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
+                              decisao.tipo === 'indeferido' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
                           }
                         >
                           {decisao.tipo === 'deferido' ? 'Deferido' :
-                           decisao.tipo === 'indeferido' ? 'Indeferido' :
-                           'Parcial'}
+                            decisao.tipo === 'indeferido' ? 'Indeferido' :
+                              'Parcial'}
                         </Badge>
                         <p className="text-gray-700 mt-1">{decisao.descricao}</p>
                       </div>

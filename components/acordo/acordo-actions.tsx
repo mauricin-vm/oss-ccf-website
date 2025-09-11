@@ -20,11 +20,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { 
-  MoreHorizontal, 
-  Edit, 
-  X, 
-  Trash2, 
+import {
+  MoreHorizontal,
+  Edit,
+  X,
+  Trash2,
   Loader2,
   RefreshCw
 } from 'lucide-react'
@@ -90,7 +90,7 @@ export default function AcordoActions({ acordo }: AcordoActionsProps) {
       }
 
       toast.success('Acordo deletado com sucesso!')
-      router.push('/dashboard/acordos')
+      router.push('/acordos')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro inesperado')
     } finally {
@@ -100,7 +100,7 @@ export default function AcordoActions({ acordo }: AcordoActionsProps) {
   }
 
   const handleRenegotiate = () => {
-    router.push(`/dashboard/acordos/${acordo.id}/renegociar`)
+    router.push(`/acordos/${acordo.id}/renegociar`)
   }
 
   return (
@@ -116,18 +116,18 @@ export default function AcordoActions({ acordo }: AcordoActionsProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => router.push(`/dashboard/acordos/${acordo.id}/editar`)}>
+          <DropdownMenuItem onClick={() => router.push(`/acordos/${acordo.id}/editar`)}>
             <Edit className="mr-2 h-4 w-4" />
             Editar Acordo
           </DropdownMenuItem>
-          
+
           {canRenegotiate && (
             <DropdownMenuItem onClick={handleRenegotiate}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Renegociar
             </DropdownMenuItem>
           )}
-          
+
           {canCancel && (
             <>
               <DropdownMenuSeparator />
@@ -137,11 +137,11 @@ export default function AcordoActions({ acordo }: AcordoActionsProps) {
               </DropdownMenuItem>
             </>
           )}
-          
+
           {canDelete && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => setShowDeleteDialog(true)}
                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
               >
@@ -159,7 +159,7 @@ export default function AcordoActions({ acordo }: AcordoActionsProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Cancelar Acordo de Pagamento</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja cancelar este acordo? O processo voltará ao status anterior 
+              Tem certeza que deseja cancelar este acordo? O processo voltará ao status anterior
               e todas as parcelas pendentes serão canceladas.
               <br /><br />
               <strong>Esta ação não pode ser desfeita.</strong>
@@ -169,7 +169,7 @@ export default function AcordoActions({ acordo }: AcordoActionsProps) {
             <AlertDialogCancel disabled={isLoading}>
               Cancelar
             </AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleCancel}
               disabled={isLoading}
               className="bg-yellow-600 hover:bg-yellow-700"
@@ -193,7 +193,7 @@ export default function AcordoActions({ acordo }: AcordoActionsProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Deletar Acordo de Pagamento</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja deletar este acordo? O processo voltará ao status anterior. 
+              Tem certeza que deseja deletar este acordo? O processo voltará ao status anterior.
               Esta ação só é possível porque o acordo ainda não tem pagamentos registrados.
               <br /><br />
               <strong>Esta ação não pode ser desfeita.</strong>
@@ -203,7 +203,7 @@ export default function AcordoActions({ acordo }: AcordoActionsProps) {
             <AlertDialogCancel disabled={isLoading}>
               Cancelar
             </AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDelete}
               disabled={isLoading}
               className="bg-red-600 hover:bg-red-700"

@@ -1,96 +1,214 @@
-import { getServerSession } from 'next-auth'
-import { redirect, notFound } from 'next/navigation'
-import { authOptions } from '@/lib/auth/config'
-import { prisma } from '@/lib/db'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { notFound } from 'next/navigation'
+import EditPautaModal from '@/components/modals/edit-pauta-modal'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  ArrowLeft, 
-  Edit, 
-  Calendar, 
-  FileText, 
+import {
+  ArrowLeft,
+  Edit,
+  Calendar,
+  FileText,
   User,
   Gavel,
   Users,
   Clock,
   CheckCircle,
   AlertCircle,
-  DollarSign
+  DollarSign,
+  Trash2,
+  Plus,
+  Search,
+  Check
 } from 'lucide-react'
 import Link from 'next/link'
 import { SessionUser } from '@/types'
 
-async function getPauta(id: string) {
-  return prisma.pauta.findUnique({
-    where: { id },
-    include: {
-      processos: {
-        include: {
-          processo: {
-            include: {
-              contribuinte: true,
-              tramitacoes: {
-                orderBy: { createdAt: 'desc' },
-                take: 3,
-                include: {
-                  usuario: {
-                    select: {
-                      id: true,
-                      name: true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        orderBy: { ordem: 'asc' }
-      },
-      sessao: {
-        include: {
-          decisoes: {
-            include: {
-              processo: {
-                include: {
-                  contribuinte: true
-                }
-              }
-            },
-            orderBy: { dataDecisao: 'desc' }
-          },
-          conselheiros: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true
-            }
-          }
-        }
-      }
-    }
-  })
-}
-
-export default async function PautaDetalhesPage({
+export default function PautaDetalhesPage({
   params
 }: {
   params: Promise<{ id: string }>
 }) {
-  const session = await getServerSession(authOptions)
-  
-  if (!session) {
-    redirect('/login')
+  const { data: session } = useSession()
+  const router = useRouter()
+  const [pauta, setPauta] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [id, setId] = useState<string>('')
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isAddProcessModalOpen, setIsAddProcessModalOpen] = useState(false)
+  const [availableProcesses, setAvailableProcesses] = useState<any[]>([])
+  const [searchProcess, setSearchProcess] = useState('')
+  const [selectedProcess, setSelectedProcess] = useState<any>(null)
+  const [conselheiro, setConselheiro] = useState('')
+  const [conselheiros, setConselheiros] = useState<any[]>([])
+
+  useEffect(() => {
+    params.then(p => setId(p.id))
+  }, [params])
+
+  useEffect(() => {
+    if (!id) return
+
+    const fetchPauta = async () => {
+      try {
+        const response = await fetch(`/api/pautas/${id}`)
+        if (!response.ok) {
+          if (response.status === 404) {
+            notFound()
+          }
+          throw new Error('Erro ao carregar pauta')
+        }
+        const data = await response.json()
+        setPauta(data)
+      } catch (error) {
+        console.error('Erro ao carregar pauta:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPauta()
+  }, [id])
+
+  const handleDeletePauta = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/pautas/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao excluir pauta')
+      }
+
+      router.push('/pautas')
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro inesperado')
+      setLoading(false)
+    }
   }
 
-  const user = session.user as SessionUser
-  const { id } = await params
-  const pauta = await getPauta(id)
+  const handleEditSuccess = () => {
+    // Recarregar dados da pauta após edição
+    const fetchPauta = async () => {
+      try {
+        const response = await fetch(`/api/pautas/${id}`)
+        if (response.ok) {
+          const data = await response.json()
+          setPauta(data)
+        }
+      } catch (error) {
+        console.error('Erro ao recarregar pauta:', error)
+      }
+    }
+    fetchPauta()
+  }
+
+  const handleRemoveProcesso = async (processoId: string, numeroProcesso: string) => {
+    if (!confirm(`Tem certeza que deseja remover o processo ${numeroProcesso} desta pauta?`)) {
+      return
+    }
+
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/pautas/${id}/processos/${processoId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao remover processo da pauta')
+      }
+
+      // Recarregar dados da pauta
+      handleEditSuccess()
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro inesperado')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const searchAvailableProcesses = async (searchTerm: string) => {
+    if (searchTerm.length < 3) {
+      setAvailableProcesses([])
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/processos?search=${encodeURIComponent(searchTerm)}&limit=10`)
+      if (response.ok) {
+        const data = await response.json()
+        // Filtrar processos que já não estão na pauta
+        const processosNaPauta = pauta.processos.map((p: any) => p.processo.id)
+        const processosDisponiveis = data.processos.filter((p: any) => !processosNaPauta.includes(p.id))
+        setAvailableProcesses(processosDisponiveis)
+      }
+    } catch (error) {
+      console.error('Erro ao buscar processos:', error)
+    }
+  }
+
+  const handleAddProcesso = async () => {
+    if (!selectedProcess || !conselheiro.trim()) {
+      alert('Selecione um processo e informe o conselheiro')
+      return
+    }
+
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/pautas/${id}/processos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          processoId: selectedProcess.id,
+          relator: conselheiro.trim()
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao adicionar processo à pauta')
+      }
+
+      // Limpar estados e fechar modal
+      setSelectedProcess(null)
+      setConselheiro('')
+      setSearchProcess('')
+      setAvailableProcesses([])
+      setIsAddProcessModalOpen(false)
+
+      // Recarregar dados da pauta
+      handleEditSuccess()
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro inesperado')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!session) {
+    return <div className="flex items-center justify-center h-64">Carregando...</div>
+  }
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64">Carregando...</div>
+  }
 
   if (!pauta) {
-    notFound()
+    return notFound()
   }
 
   const statusMap = {
@@ -116,9 +234,41 @@ export default async function PautaDetalhesPage({
     parcial: { label: 'Parcialmente Deferido', color: 'bg-yellow-100 text-yellow-800' }
   }
 
-  const canEdit = user.role === 'ADMIN' || user.role === 'FUNCIONARIO'
+  const user = session?.user as SessionUser
+
+  const loadConselheiros = async () => {
+    try {
+      const response = await fetch('/api/conselheiros')
+      if (response.ok) {
+        const data = await response.json()
+        // Filtrar apenas conselheiros ativos
+        setConselheiros(data.filter((c: any) => c.ativo))
+      }
+    } catch (error) {
+      console.error('Erro ao carregar conselheiros:', error)
+    }
+  }
+
+  const loadAvailableProcesses = async () => {
+    try {
+      const response = await fetch(`/api/pautas/${id}/processos`)
+      if (response.ok) {
+        const data = await response.json()
+        setAvailableProcesses(data)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar processos disponíveis:', error)
+    }
+  }
+
+  const openAddProcessModal = () => {
+    setIsAddProcessModalOpen(true)
+    loadConselheiros()
+    loadAvailableProcesses()
+  }
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'FUNCIONARIO'
   const StatusIcon = statusMap[pauta.status as keyof typeof statusMap].icon
-  
+
   const totalProcessos = pauta.processos.length
   const processosJulgados = pauta.sessao?.decisoes?.length || 0
   const processosPendentes = totalProcessos - processosJulgados
@@ -126,10 +276,10 @@ export default async function PautaDetalhesPage({
   const getDataStatus = (dataPauta: Date) => {
     const hoje = new Date()
     const pautaDate = new Date(dataPauta)
-    
+
     hoje.setHours(0, 0, 0, 0)
     pautaDate.setHours(0, 0, 0, 0)
-    
+
     if (pautaDate.getTime() === hoje.getTime()) {
       return { label: 'Hoje', color: 'text-orange-600 font-medium' }
     } else if (pautaDate < hoje) {
@@ -137,8 +287,8 @@ export default async function PautaDetalhesPage({
     } else {
       const diffTime = pautaDate.getTime() - hoje.getTime()
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-      return { 
-        label: `Em ${diffDays} dia${diffDays > 1 ? 's' : ''}`, 
+      return {
+        label: `Em ${diffDays} dia${diffDays > 1 ? 's' : ''}`,
         color: diffDays <= 3 ? 'text-orange-600' : 'text-green-600'
       }
     }
@@ -151,7 +301,7 @@ export default async function PautaDetalhesPage({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/pautas">
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" className="cursor-pointer">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
@@ -162,31 +312,49 @@ export default async function PautaDetalhesPage({
             </p>
           </div>
         </div>
-        
+
         <div className="flex gap-2">
           {pauta.status === 'aberta' && canEdit && (
             <Link href={`/sessoes/nova?pauta=${pauta.id}`}>
-              <Button>
+              <Button className="cursor-pointer">
                 <Gavel className="mr-2 h-4 w-4" />
                 Iniciar Sessão
               </Button>
             </Link>
           )}
-          
+
           {pauta.sessao && (
             <Link href={`/sessoes/${pauta.sessao.id}`}>
-              <Button variant="secondary">
+              <Button variant="secondary" className="cursor-pointer">
                 <Users className="mr-2 h-4 w-4" />
                 Ver Sessão
               </Button>
             </Link>
           )}
-          
+
           {canEdit && pauta.status === 'aberta' && (
-            <Button variant="outline">
-              <Edit className="mr-2 h-4 w-4" />
-              Editar
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                className="cursor-pointer"
+                onClick={() => setIsEditModalOpen(true)}
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                Editar
+              </Button>
+              <Button
+                variant="destructive"
+                className="cursor-pointer"
+                onClick={() => {
+                  if (confirm('Tem certeza que deseja excluir esta pauta? Esta ação não pode ser desfeita e os processos retornarão ao status anterior.')) {
+                    handleDeletePauta()
+                  }
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -247,26 +415,40 @@ export default async function PautaDetalhesPage({
       {/* Tabs com Detalhes */}
       <Tabs defaultValue="processos" className="space-y-4">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="processos">Processos</TabsTrigger>
-          <TabsTrigger value="sessao">Sessão</TabsTrigger>
-          <TabsTrigger value="decisoes">Decisões</TabsTrigger>
-          <TabsTrigger value="historico">Histórico</TabsTrigger>
+          <TabsTrigger value="processos" className="cursor-pointer">Processos</TabsTrigger>
+          <TabsTrigger value="sessao" className="cursor-pointer">Sessão</TabsTrigger>
+          <TabsTrigger value="decisoes" className="cursor-pointer">Decisões</TabsTrigger>
+          <TabsTrigger value="historico" className="cursor-pointer">Histórico</TabsTrigger>
         </TabsList>
 
         <TabsContent value="processos">
           <Card>
             <CardHeader>
-              <CardTitle>Processos na Pauta</CardTitle>
-              <CardDescription>
-                Lista ordenada dos processos para julgamento
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Processos na Pauta</CardTitle>
+                  <CardDescription>
+                    Lista ordenada dos processos para julgamento
+                  </CardDescription>
+                </div>
+                {canEdit && pauta.status === 'aberta' && (
+                  <Button
+                    onClick={openAddProcessModal}
+                    className="cursor-pointer"
+                    disabled={loading}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar Processo
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {pauta.processos.map((processoPauta) => {
                   const processo = processoPauta.processo
                   const foiJulgado = pauta.sessao?.decisoes?.some(d => d.processoId === processo.id)
-                  
+
                   return (
                     <div key={processoPauta.id} className="border rounded-lg p-4">
                       <div className="flex items-start justify-between">
@@ -275,7 +457,7 @@ export default async function PautaDetalhesPage({
                             <span className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 rounded-full font-bold text-sm">
                               {processoPauta.ordem}
                             </span>
-                            <Link 
+                            <Link
                               href={`/processos/${processo.id}`}
                               className="font-semibold text-lg hover:text-blue-600 transition-colors"
                             >
@@ -301,9 +483,9 @@ export default async function PautaDetalhesPage({
                               <FileText className="h-4 w-4" />
                               <span>{tipoProcessoMap[processo.tipo as keyof typeof tipoProcessoMap]}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <DollarSign className="h-4 w-4" />
-                              <span>R$ {processo.valorOriginal.toLocaleString('pt-BR')}</span>
+                            <div className="flex items-center space-x-2">
+                              <DollarSign className="h-4 w-4 text-muted-foreground" />
+                              <span>{processo.valorOriginal.toLocaleString('pt-BR')}</span>
                             </div>
                           </div>
 
@@ -323,6 +505,22 @@ export default async function PautaDetalhesPage({
                             </div>
                           )}
                         </div>
+
+                        {/* Ações do Processo */}
+                        {canEdit && pauta.status === 'aberta' && !foiJulgado && (
+                          <div className="flex flex-col gap-2 ml-4">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleRemoveProcesso(processo.id, processo.numero)}
+                              className="cursor-pointer"
+                              disabled={loading}
+                            >
+                              <Trash2 className="mr-1 h-3 w-3" />
+                              Remover
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )
@@ -352,7 +550,7 @@ export default async function PautaDetalhesPage({
                   </p>
                   {pauta.status === 'aberta' && canEdit && (
                     <Link href={`/sessoes/nova?pauta=${pauta.id}`}>
-                      <Button>
+                      <Button className="cursor-pointer">
                         <Gavel className="mr-2 h-4 w-4" />
                         Iniciar Sessão
                       </Button>
@@ -427,7 +625,7 @@ export default async function PautaDetalhesPage({
                     <div key={decisao.id} className="border rounded-lg p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <Link 
+                          <Link
                             href={`/processos/${decisao.processo.id}`}
                             className="font-semibold hover:text-blue-600"
                           >
@@ -469,42 +667,48 @@ export default async function PautaDetalhesPage({
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex gap-4 pb-4 border-b">
-                  <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium">Pauta Criada</h4>
-                    <p className="text-sm text-gray-600">
-                      Pauta {pauta.numero} criada com {totalProcessos} processo{totalProcessos !== 1 ? 's' : ''}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(pauta.createdAt).toLocaleString('pt-BR')}
-                    </p>
-                  </div>
-                </div>
+                {pauta.historicos && pauta.historicos.length > 0 ? (
+                  pauta.historicos.map((historico: any, index: number) => {
+                    const isLast = index === pauta.historicos.length - 1
 
-                {pauta.sessao && (
-                  <div className="flex gap-4 pb-4 border-b">
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Gavel className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium">Sessão Iniciada</h4>
-                      <p className="text-sm text-gray-600">
-                        Sessão de julgamento iniciada
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(pauta.sessao.dataInicio).toLocaleString('pt-BR')}
-                      </p>
-                    </div>
-                  </div>
-                )}
+                    // Definir ícone e cor baseado no tipo
+                    const tipoConfig = {
+                      'CRIACAO': { icon: CheckCircle, color: 'green' },
+                      'PROCESSO_ADICIONADO': { icon: Plus, color: 'blue' },
+                      'PROCESSO_REMOVIDO': { icon: Trash2, color: 'red' },
+                      'ALTERACAO': { icon: Edit, color: 'yellow' },
+                      'EXCLUSAO': { icon: AlertCircle, color: 'red' },
+                      'EVENTO': { icon: FileText, color: 'gray' }
+                    }
 
-                {pauta.observacoes && (
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-blue-900 mb-2">Observações</h4>
-                    <p className="text-sm text-blue-700">{pauta.observacoes}</p>
+                    const config = tipoConfig[historico.tipo as keyof typeof tipoConfig] || tipoConfig.EVENTO
+                    const IconComponent = config.icon
+
+                    return (
+                      <div key={historico.id} className={`flex gap-4 ${!isLast ? 'pb-4 border-b' : ''}`}>
+                        <div className={`flex-shrink-0 w-8 h-8 bg-${config.color}-100 rounded-full flex items-center justify-center`}>
+                          <IconComponent className={`h-4 w-4 text-${config.color}-600`} />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium">{historico.titulo}</h4>
+                          <p className="text-sm text-gray-600">{historico.descricao}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-xs text-gray-500">
+                              {new Date(historico.createdAt).toLocaleString('pt-BR')}
+                            </p>
+                            <span className="text-xs text-gray-400">•</span>
+                            <p className="text-xs text-gray-500">
+                              por {historico.usuario.name}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <div className="text-center py-8">
+                    <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">Nenhum histórico encontrado</p>
                   </div>
                 )}
               </div>
@@ -512,6 +716,132 @@ export default async function PautaDetalhesPage({
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Modal de Edição */}
+      {pauta && (
+        <EditPautaModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSuccess={handleEditSuccess}
+          pauta={{
+            id: pauta.id,
+            numero: pauta.numero,
+            dataPauta: pauta.dataPauta,
+            observacoes: pauta.observacoes
+          }}
+        />
+      )}
+
+      {/* Modal para Adicionar Processo */}
+      <Dialog open={isAddProcessModalOpen} onOpenChange={setIsAddProcessModalOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Adicionar Processo à Pauta</DialogTitle>
+            <DialogDescription>
+              Busque e selecione um processo para incluir na pauta
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Buscar Processo</Label>
+              <Input
+                placeholder="Buscar por número ou contribuinte..."
+                value={searchProcess}
+                onChange={(e) => {
+                  setSearchProcess(e.target.value)
+                  searchAvailableProcesses(e.target.value)
+                }}
+              />
+            </div>
+
+            {availableProcesses.length > 0 && (
+              <div className="space-y-2">
+                <Label>Processos Disponíveis</Label>
+                <p className="text-sm text-gray-600">Clique em um processo para selecioná-lo (apenas um por vez)</p>
+                <div className="border rounded-lg max-h-60 overflow-y-auto">
+                  {availableProcesses.map((processo) => (
+                    <div
+                      key={processo.id}
+                      onClick={() => setSelectedProcess(processo)}
+                      className={`p-3 cursor-pointer border-b last:border-b-0 hover:bg-gray-50 ${selectedProcess?.id === processo.id ? 'bg-blue-50 border-blue-200' : ''
+                        }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{processo.numero}</p>
+                          <p className="text-sm text-gray-600">{processo.contribuinte.nome}</p>
+                          <div className="flex items-center space-x-2">
+                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            R$ <span>{processo.valorOriginal.toLocaleString('pt-BR')}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {selectedProcess?.id === processo.id && (
+                            <Check className="h-4 w-4 text-blue-600" />
+                          )}
+                          <Badge className="bg-gray-100 text-gray-800">
+                            {processo.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selectedProcess && (
+              <div className="space-y-2">
+                <Label>Processo Selecionado</Label>
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <p className="font-medium">{selectedProcess.numero}</p>
+                  <p className="text-sm text-gray-600">{selectedProcess.contribuinte.nome}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Conselheiro Relator</Label>
+              <Select value={conselheiro} onValueChange={setConselheiro} disabled={!selectedProcess}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um conselheiro..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {conselheiros.map((c) => (
+                    <SelectItem key={c.id} value={c.nome}>
+                      {c.nome} {c.cargo && `- ${c.cargo}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsAddProcessModalOpen(false)
+                setSelectedProcess(null)
+                setConselheiro('')
+                setSearchProcess('')
+                setAvailableProcesses([])
+              }}
+              className="cursor-pointer"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAddProcesso}
+              disabled={!selectedProcess || !conselheiro.trim() || loading}
+              className="cursor-pointer"
+            >
+              {loading ? 'Adicionando...' : 'Adicionar à Pauta'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

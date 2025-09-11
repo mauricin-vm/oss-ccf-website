@@ -92,7 +92,7 @@ export default function SessaoActions({ sessao }: SessaoActionsProps) {
       }
 
       toast.success('Sessão deletada com sucesso!')
-      router.push('/dashboard/sessoes')
+      router.push('/sessoes')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro inesperado')
     } finally {
@@ -105,7 +105,7 @@ export default function SessaoActions({ sessao }: SessaoActionsProps) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" disabled={isLoading}>
+          <Button variant="outline" size="icon" disabled={isLoading} className="cursor-pointer">
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
@@ -189,7 +189,7 @@ export default function SessaoActions({ sessao }: SessaoActionsProps) {
             <AlertDialogAction 
               onClick={handleDelete}
               disabled={isLoading}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 cursor-pointer"
             >
               {isLoading ? (
                 <>

@@ -1,10 +1,12 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
-import { prisma } from '@/lib/db'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
   Plus, 
   Search, 
@@ -15,49 +17,102 @@ import {
   Filter,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react'
 import Link from 'next/link'
 import { SessionUser } from '@/types'
 
-async function getPautas() {
-  return prisma.pauta.findMany({
-    include: {
-      processos: {
-        include: {
-          processo: {
-            include: {
-              contribuinte: true
-            }
-          }
-        },
-        orderBy: { ordem: 'asc' }
-      },
-      sessao: {
-        include: {
-          decisoes: true
-        }
-      }
-    },
-    orderBy: {
-      dataPauta: 'desc'
-    }
-  })
-}
+export default function PautasPage() {
+  const { data: session } = useSession()
+  const [pautas, setPautas] = useState<any[]>([])
+  const [filteredPautas, setFilteredPautas] = useState<any[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [anoFilter, setAnoFilter] = useState('all')
+  const [showFilters, setShowFilters] = useState(false)
 
-export default async function PautasPage() {
-  const session = await getServerSession(authOptions)
   const user = session?.user as SessionUser
-  
-  const pautas = await getPautas()
 
-  const canCreate = user.role === 'ADMIN' || user.role === 'FUNCIONARIO'
+  useEffect(() => {
+    const fetchPautas = async () => {
+      try {
+        const response = await fetch('/api/pautas')
+        if (response.ok) {
+          const data = await response.json()
+          setPautas(data.pautas || [])
+          setFilteredPautas(data.pautas || [])
+        }
+      } catch (error) {
+        console.error('Erro ao carregar pautas:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (session) {
+      fetchPautas()
+    }
+  }, [session])
+
+  // Filtrar pautas baseado nos filtros aplicados
+  useEffect(() => {
+    let filtered = pautas
+
+    // Filtro por texto (número da pauta)
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(pauta =>
+        pauta.numero.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    // Filtro por status
+    if (statusFilter && statusFilter !== 'all') {
+      filtered = filtered.filter(pauta => pauta.status === statusFilter)
+    }
+
+    // Filtro por ano
+    if (anoFilter && anoFilter !== 'all') {
+      filtered = filtered.filter(pauta => {
+        const ano = new Date(pauta.dataPauta).getFullYear().toString()
+        return ano === anoFilter
+      })
+    }
+
+    setFilteredPautas(filtered)
+  }, [searchTerm, statusFilter, anoFilter, pautas])
+
+  // Obter anos únicos das pautas para o filtro
+  const anosDisponiveis = Array.from(
+    new Set(pautas.map(pauta => new Date(pauta.dataPauta).getFullYear()))
+  ).sort((a, b) => b - a)
+
+  // Limpar todos os filtros
+  const clearFilters = () => {
+    setSearchTerm('')
+    setStatusFilter('all')
+    setAnoFilter('all')
+  }
+
+  // Verificar se há filtros ativos
+  const hasActiveFilters = searchTerm || (statusFilter && statusFilter !== 'all') || (anoFilter && anoFilter !== 'all')
+
+  const canCreate = user?.role === 'ADMIN' || user?.role === 'FUNCIONARIO'
 
   // Estatísticas
-  const totalPautas = pautas.length
-  const pautasAbertas = pautas.filter(p => p.status === 'aberta').length
-  const emJulgamento = pautas.filter(p => p.status === 'em_julgamento').length
-  const fechadas = pautas.filter(p => p.status === 'fechada').length
+  const totalPautas = filteredPautas.length
+  const pautasAbertas = filteredPautas.filter(p => p.status === 'aberta').length
+  const emJulgamento = filteredPautas.filter(p => p.status === 'em_julgamento').length
+  const fechadas = filteredPautas.filter(p => p.status === 'fechada').length
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64">Carregando...</div>
+  }
+
+  if (!session) {
+    return <div className="flex items-center justify-center h-64">Redirecionando...</div>
+  }
 
   const getStatusPauta = (pauta: { status: string }) => {
     switch (pauta.status) {
@@ -136,22 +191,105 @@ export default async function PautasPage() {
           <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Buscar por número da pauta..."
-                  className="pl-10"
-                />
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Buscar por número da pauta..."
+                    className="pl-10"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
               </div>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="cursor-pointer"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
             </div>
-            <Button variant="outline" size="icon" className="cursor-pointer">
-              <Filter className="h-4 w-4" />
-            </Button>
+            
+            {showFilters && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Status</label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos os status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os status</SelectItem>
+                      <SelectItem value="aberta">Aberta</SelectItem>
+                      <SelectItem value="em_julgamento">Em Julgamento</SelectItem>
+                      <SelectItem value="fechada">Fechada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Ano</label>
+                  <Select value={anoFilter} onValueChange={setAnoFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos os anos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os anos</SelectItem>
+                      {anosDisponiveis.map(ano => (
+                        <SelectItem key={ano} value={ano.toString()}>
+                          {ano}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex items-end">
+                  <Button 
+                    variant="outline" 
+                    onClick={clearFilters}
+                    className="cursor-pointer"
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Limpar Filtros
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Indicador de Filtros Ativos */}
+      {hasActiveFilters && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-900">
+                  Filtros ativos: 
+                  {searchTerm && <Badge variant="secondary" className="ml-2">Busca: "{searchTerm}"</Badge>}
+                  {statusFilter && statusFilter !== 'all' && <Badge variant="secondary" className="ml-2">Status: {statusFilter === 'aberta' ? 'Aberta' : statusFilter === 'em_julgamento' ? 'Em Julgamento' : 'Fechada'}</Badge>}
+                  {anoFilter && anoFilter !== 'all' && <Badge variant="secondary" className="ml-2">Ano: {anoFilter}</Badge>}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="cursor-pointer text-blue-600 hover:text-blue-800"
+              >
+                Limpar Todos
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Estatísticas */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -206,15 +344,18 @@ export default async function PautasPage() {
 
       {/* Lista de Pautas */}
       <div className="space-y-4">
-        {pautas.length === 0 ? (
+        {filteredPautas.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Calendar className="h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Nenhuma pauta encontrada
+                {searchTerm ? 'Nenhuma pauta encontrada' : 'Nenhuma pauta cadastrada'}
               </h3>
               <p className="text-gray-600 mb-4">
-                Comece criando sua primeira pauta de julgamento.
+                {searchTerm 
+                  ? `Nenhuma pauta corresponde à busca "${searchTerm}".`
+                  : 'Comece criando sua primeira pauta de julgamento.'
+                }
               </p>
               {canCreate && (
                 <Link href="/pautas/nova">
@@ -227,7 +368,7 @@ export default async function PautasPage() {
             </CardContent>
           </Card>
         ) : (
-          pautas.map((pauta) => {
+          filteredPautas.map((pauta) => {
             const status = getStatusPauta(pauta)
             const dataStatus = getDataStatus(pauta.dataPauta)
             const StatusIcon = status.icon
@@ -235,7 +376,7 @@ export default async function PautasPage() {
             const processosJulgados = pauta.sessao?.decisoes?.length || 0
 
             return (
-              <Card key={pauta.id} className="hover:shadow-md transition-shadow cursor-pointer">
+              <Card key={pauta.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="space-y-3 flex-1">

@@ -75,7 +75,7 @@ export default function PagamentoForm({ acordoId, onSuccess }: PagamentoFormProp
         const response = await fetch(`/api/acordos/${acordoId}`)
         if (response.ok) {
           const data = await response.json()
-          
+
           // Calcular valores das parcelas
           const parcelasComValores = data.parcelas.map((parcela: { id: string; numero: number; valor: number; dataVencimento: Date; status: string; pagamentos?: { valorPago: number }[] }) => {
             const valorPago = parcela.pagamentos?.reduce((total: number, p) => total + p.valorPago, 0) || 0
@@ -85,7 +85,7 @@ export default function PagamentoForm({ acordoId, onSuccess }: PagamentoFormProp
               valorRestante: parcela.valor - valorPago
             }
           })
-          
+
           setAcordo({
             ...data,
             parcelas: parcelasComValores
@@ -137,11 +137,11 @@ export default function PagamentoForm({ acordoId, onSuccess }: PagamentoFormProp
       }
 
       await response.json()
-      
+
       if (onSuccess) {
         onSuccess()
       } else {
-        router.push(`/dashboard/acordos/${acordoId}`)
+        router.push(`/acordos/${acordoId}`)
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Erro inesperado')
@@ -248,7 +248,7 @@ export default function PagamentoForm({ acordoId, onSuccess }: PagamentoFormProp
             <div className="space-y-3">
               {parcelasPendentes.map((parcela) => {
                 const vencida = isVencida(parcela.dataVencimento)
-                
+
                 return (
                   <div
                     key={parcela.id}
@@ -257,9 +257,8 @@ export default function PagamentoForm({ acordoId, onSuccess }: PagamentoFormProp
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                          vencida ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
+                        <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${vencida ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
                           {parcela.numero}
                         </span>
                         <div>

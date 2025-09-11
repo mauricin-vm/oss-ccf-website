@@ -6,6 +6,11 @@ export default withAuth(
     const token = req.nextauth.token
     const path = req.nextUrl.pathname
 
+    // Se não há token, redireciona para login
+    if (!token) {
+      return NextResponse.redirect(new URL('/login', req.url))
+    }
+
     // Rotas de admin - apenas ADMIN
     if (path.startsWith('/admin') && token?.role !== 'ADMIN') {
       return NextResponse.redirect(new URL('/dashboard', req.url))
@@ -25,7 +30,10 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token
+      authorized: ({ token, req }) => {
+        // Permite acesso se há token válido
+        return !!token
+      }
     }
   }
 )

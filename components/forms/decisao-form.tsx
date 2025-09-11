@@ -85,16 +85,16 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
         const response = await fetch(`/api/sessoes/${sessaoId}`)
         if (response.ok) {
           const sessao = await response.json()
-          
+
           // Filtrar processos que ainda não foram julgados
           const processosNaoJulgados = sessao.pauta.processos.filter(
             (p: ProcessoPauta) => !sessao.decisoes.some(
               (d: { processoId: string }) => d.processoId === p.processo.id
             )
           )
-          
+
           setProcessos(processosNaoJulgados)
-          
+
           // Se processo foi especificado na URL, selecionar automaticamente
           const processoIdFromUrl = searchParams.get('processo')
           if (processoIdFromUrl) {
@@ -134,11 +134,11 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
       }
 
       await response.json()
-      
+
       if (onSuccess) {
         onSuccess()
       } else {
-        router.push(`/dashboard/sessoes/${sessaoId}`)
+        router.push(`/sessoes/${sessaoId}`)
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Erro inesperado')
@@ -423,16 +423,16 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Decisão:</span>
-                  <Badge 
+                  <Badge
                     className={
                       watch('tipo') === 'deferido' ? 'bg-green-100 text-green-800' :
-                      watch('tipo') === 'indeferido' ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'
+                        watch('tipo') === 'indeferido' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
                     }
                   >
                     {watch('tipo') === 'deferido' ? 'Deferido' :
-                     watch('tipo') === 'indeferido' ? 'Indeferido' :
-                     'Parcial'}
+                      watch('tipo') === 'indeferido' ? 'Indeferido' :
+                        'Parcial'}
                   </Badge>
                 </div>
               </div>

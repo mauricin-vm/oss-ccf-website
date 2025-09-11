@@ -43,51 +43,23 @@ export default function ProcessosPage() {
   
   const [processos, setProcessos] = useState<Processo[]>([])
   const [loading, setLoading] = useState(true)
-  const [searching, setSearching] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [tipoFilter, setTipoFilter] = useState('all')
   const [showFilters, setShowFilters] = useState(false)
-  const [isInitialLoad, setIsInitialLoad] = useState(true)
 
-  // Carregamento inicial
+  // Carregamento inicial - buscar todos os processos
   useEffect(() => {
-    if (isInitialLoad) {
-      loadProcessos()
-      setIsInitialLoad(false)
-    }
+    loadAllProcessos()
   }, [])
 
-  // Debounce para busca por texto
-  useEffect(() => {
-    if (!isInitialLoad) {
-      const timer = setTimeout(() => {
-        loadProcessos()
-      }, searchTerm ? 500 : 0) // 500ms de delay para busca por texto, imediato para outros filtros
-
-      return () => clearTimeout(timer)
-    }
-  }, [searchTerm, statusFilter, tipoFilter, isInitialLoad])
-
-  const loadProcessos = async () => {
+  const loadAllProcessos = async () => {
     try {
-      if (isInitialLoad) {
-        setLoading(true)
-      } else {
-        setSearching(true)
-      }
+      setLoading(true)
       
-      // Construir parâmetros de busca
-      const params = new URLSearchParams()
-      if (searchTerm) params.append('search', searchTerm)
-      if (statusFilter !== 'all') params.append('status', statusFilter)
-      if (tipoFilter !== 'all') params.append('tipo', tipoFilter)
-      params.append('limit', '50') // Buscar mais processos para uma melhor experiência
-      
-      const url = `/api/processos?${params.toString()}`
-      
-      const response = await fetch(url, {
-        credentials: 'include', // Incluir cookies de sessão
+      // Buscar todos os processos sem filtros
+      const response = await fetch('/api/processos?limit=1000', {
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         }
@@ -115,18 +87,28 @@ export default function ProcessosPage() {
       setProcessos(processosFormatados)
     } catch (error) {
       console.error('Erro ao carregar processos:', error)
-      // Em caso de erro, manter array vazio apenas se for carregamento inicial
-      if (isInitialLoad) {
-        setProcessos([])
-      }
+      setProcessos([])
     } finally {
       setLoading(false)
-      setSearching(false)
     }
   }
 
-  // Como a API já faz a filtragem, usar diretamente os processos retornados
-  const filteredProcessos = processos
+  // Filtragem local (client-side) - igual ao tramitações
+  const filteredProcessos = processos.filter((processo) => {
+    // Filtro por texto de busca
+    const searchMatch = !searchTerm || 
+      processo.numero.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      processo.contribuinte.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (processo.observacoes && processo.observacoes.toLowerCase().includes(searchTerm.toLowerCase()))
+
+    // Filtro por status
+    const statusMatch = statusFilter === 'all' || processo.status === statusFilter
+
+    // Filtro por tipo
+    const tipoMatch = tipoFilter === 'all' || processo.tipo === tipoFilter
+
+    return searchMatch && statusMatch && tipoMatch
+  })
 
   const tipoProcessoMap = {
     COMPENSACAO: { label: 'Compensação', color: 'bg-blue-100 text-blue-800' },
@@ -189,11 +171,6 @@ export default function ProcessosPage() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
-                  {searching && (
-                    <div className="absolute right-3 top-3">
-                      <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-blue-600 rounded-full"></div>
-                    </div>
-                  )}
                 </div>
               </div>
               <Button 

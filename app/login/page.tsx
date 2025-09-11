@@ -11,12 +11,26 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Loader2, AlertCircle, UserPlus } from 'lucide-react'
+import { z } from 'zod'
+
+const registerSchema = z.object({
+  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  email: z.string().email('Email inválido'),
+  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+  accessCode: z.string().min(1, 'Código de acesso é obrigatório')
+})
+
+type RegisterInput = z.infer<typeof registerSchema>
 
 export default function LoginPage() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
+  const [registerError, setRegisterError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [showRegisterDialog, setShowRegisterDialog] = useState(false)
 
   const {
     register,
@@ -24,6 +38,15 @@ export default function LoginPage() {
     formState: { errors }
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema)
+  })
+
+  const {
+    register: registerRegister,
+    handleSubmit: handleRegisterSubmit,
+    formState: { errors: registerErrors },
+    reset: resetRegisterForm
+  } = useForm<RegisterInput>({
+    resolver: zodResolver(registerSchema)
   })
 
   const onSubmit = async (data: LoginInput) => {
@@ -50,12 +73,65 @@ export default function LoginPage() {
     }
   }
 
+  const onRegisterSubmit = async (data: RegisterInput) => {
+    setIsRegistering(true)
+    setRegisterError(null)
+
+    // Verificar código de acesso
+    if (data.accessCode !== 'Jurfis.3490') {
+      setRegisterError('Código de acesso inválido')
+      setIsRegistering(false)
+      return
+    }
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          password: data.password
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao criar conta')
+      }
+
+      // Fechar modal e fazer login automático
+      setShowRegisterDialog(false)
+      resetRegisterForm()
+      
+      // Fazer login automático
+      const result = await signIn('credentials', {
+        email: data.email,
+        password: data.password,
+        redirect: false
+      })
+
+      if (result?.error) {
+        setError('Conta criada, mas erro ao fazer login. Tente fazer login manualmente.')
+      } else {
+        router.push('/dashboard')
+        router.refresh()
+      }
+    } catch (error) {
+      setRegisterError(error instanceof Error ? error.message : 'Erro ao criar conta')
+    } finally {
+      setIsRegistering(false)
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            Sistema CCF
+            CCF
           </CardTitle>
           <CardDescription className="text-center">
             Câmara de Conciliação Fiscal
@@ -76,6 +152,7 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 placeholder="seu.email@ccf.gov.br"
+                autoComplete="email"
                 {...register('email')}
                 disabled={isLoading}
               />
@@ -89,6 +166,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 {...register('password')}
                 disabled={isLoading}
               />
@@ -117,9 +195,118 @@ export default function LoginPage() {
         </form>
         
         <div className="px-6 pb-4">
-          <div className="text-xs text-gray-500 text-center space-y-1">
-            <p>Credenciais de teste:</p>
-            <p>Admin: admin@ccf.com / 123456</p>
+          <div className="text-center space-y-3">
+            <Dialog open={showRegisterDialog} onOpenChange={setShowRegisterDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="w-full cursor-pointer">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Criar Conta
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Criar Nova Conta</DialogTitle>
+                  <DialogDescription>
+                    Preencha os dados abaixo e o código de acesso para criar sua conta
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleRegisterSubmit(onRegisterSubmit)} className="space-y-4">
+                  {registerError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{registerError}</AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="register-name">Nome Completo</Label>
+                    <Input
+                      id="register-name"
+                      autoComplete="name"
+                      {...registerRegister('name')}
+                      disabled={isRegistering}
+                      placeholder="Seu nome completo"
+                    />
+                    {registerErrors.name && (
+                      <p className="text-sm text-red-500">{registerErrors.name.message}</p>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="register-email">Email</Label>
+                    <Input
+                      id="register-email"
+                      type="email"
+                      autoComplete="email"
+                      {...registerRegister('email')}
+                      disabled={isRegistering}
+                      placeholder="seu.email@ccf.gov.br"
+                    />
+                    {registerErrors.email && (
+                      <p className="text-sm text-red-500">{registerErrors.email.message}</p>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="register-password">Senha</Label>
+                    <Input
+                      id="register-password"
+                      type="password"
+                      autoComplete="new-password"
+                      {...registerRegister('password')}
+                      disabled={isRegistering}
+                      placeholder="Mínimo 6 caracteres"
+                    />
+                    {registerErrors.password && (
+                      <p className="text-sm text-red-500">{registerErrors.password.message}</p>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="register-code">Código de Acesso</Label>
+                    <Input
+                      id="register-code"
+                      {...registerRegister('accessCode')}
+                      disabled={isRegistering}
+                      placeholder="Código fornecido pelo administrador"
+                    />
+                    {registerErrors.accessCode && (
+                      <p className="text-sm text-red-500">{registerErrors.accessCode.message}</p>
+                    )}
+                  </div>
+                  
+                  <div className="flex gap-2 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowRegisterDialog(false)}
+                      disabled={isRegistering}
+                      className="flex-1 cursor-pointer"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isRegistering}
+                      className="flex-1 cursor-pointer"
+                    >
+                      {isRegistering ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Criando...
+                        </>
+                      ) : (
+                        'Criar Conta'
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+            
+            <div className="text-xs text-gray-500 text-center space-y-1">
+              <p>Precisa de acesso? Entre em contato com o administrador</p>
+            </div>
           </div>
         </div>
       </Card>

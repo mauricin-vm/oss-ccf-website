@@ -168,21 +168,28 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Log de auditoria
-    await prisma.logAuditoria.create({
-      data: {
-        usuarioId: user.id,
-        acao: 'CREATE',
-        entidade: 'User',
-        entidadeId: newUser.id,
-        dadosNovos: {
-          name: newUser.name,
-          email: newUser.email,
-          role: newUser.role,
-          active: newUser.active
-        }
-      }
+    // Log de auditoria - verificar se usuário existe
+    const currentUser = session.user as SessionUser
+    const userExists = await prisma.user.findUnique({
+      where: { id: currentUser.id }
     })
+    
+    if (userExists) {
+      await prisma.logAuditoria.create({
+        data: {
+          usuarioId: currentUser.id,
+          acao: 'CREATE',
+          entidade: 'User',
+          entidadeId: newUser.id,
+          dadosNovos: {
+            name: newUser.name,
+            email: newUser.email,
+            role: newUser.role,
+            active: newUser.active
+          }
+        }
+      })
+    }
 
     return NextResponse.json(newUser, { status: 201 })
   } catch (error) {

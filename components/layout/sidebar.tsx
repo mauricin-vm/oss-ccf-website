@@ -77,7 +77,7 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
 
   const adminItems = [
     {
-      title: 'Painel Admin',
+      title: 'Painel',
       href: '/admin',
       icon: Shield,
       roles: ['ADMIN']
@@ -89,8 +89,8 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
       roles: ['ADMIN']
     },
     {
-      title: 'Setores',
-      href: '/admin/setores',
+      title: 'Cadastros',
+      href: '/admin/cadastros',
       icon: Building2,
       roles: ['ADMIN']
     },
@@ -119,7 +119,7 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
   return (
     <div className="flex h-full w-64 flex-col bg-gray-900">
       <div className="flex h-16 items-center justify-center border-b border-gray-800">
-        <h1 className="text-xl font-bold text-white">Sistema CCF</h1>
+        <h1 className="text-xl font-bold text-white">CCF</h1>
       </div>
 
       <ScrollArea className="flex-1 px-3 py-4">

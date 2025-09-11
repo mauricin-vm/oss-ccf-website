@@ -40,14 +40,22 @@ interface Setor {
   sigla: string
 }
 
+interface Conselheiro {
+  id: string
+  nome: string
+  ativo: boolean
+}
+
 export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoFormProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [processos, setProcessos] = useState<Processo[]>([])
   const [setores, setSetores] = useState<Setor[]>([])
+  const [conselheiros, setConselheiros] = useState<Conselheiro[]>([])
   const [searchProcess, setSearchProcess] = useState('')
   const [selectedProcesso, setSelectedProcesso] = useState<Processo | null>(null)
+  const [destinationType, setDestinationType] = useState<'setor' | 'pessoa'>('setor')
 
   const {
     register,
@@ -59,7 +67,7 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
     resolver: zodResolver(tramitacaoSchema),
     defaultValues: {
       processoId: processoId || '',
-      setorOrigem: '',
+      setorOrigem: 'CCF',
       setorDestino: '',
       prazoResposta: '',
       observacoes: ''
@@ -81,6 +89,23 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
     }
 
     fetchSetores()
+  }, [])
+
+  // Buscar conselheiros
+  useEffect(() => {
+    const fetchConselheiros = async () => {
+      try {
+        const response = await fetch('/api/conselheiros')
+        if (response.ok) {
+          const data = await response.json()
+          setConselheiros(data.filter((c: Conselheiro) => c.ativo))
+        }
+      } catch (error) {
+        console.error('Erro ao buscar conselheiros:', error)
+      }
+    }
+
+    fetchConselheiros()
   }, [])
 
   // Buscar processos quando há busca
@@ -304,6 +329,9 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
                     <SelectValue placeholder="Selecione o setor de origem" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="CCF">
+                      CCF - Câmara de Conciliação Fiscal
+                    </SelectItem>
                     {setores.map((setor) => (
                       <SelectItem key={setor.id} value={setor.sigla}>
                         {setor.sigla} - {setor.nome}
@@ -317,21 +345,61 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="setorDestino">Setor de Destino</Label>
+                <Label>Destino</Label>
+                
+                {/* Tipo de Destino */}
+                <div className="flex gap-4 mb-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      value="setor"
+                      checked={destinationType === 'setor'}
+                      onChange={(e) => {
+                        setDestinationType('setor')
+                        setValue('setorDestino', '', { shouldValidate: true })
+                      }}
+                      className="text-blue-600"
+                    />
+                    <span className="text-sm">Setor</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      value="pessoa"
+                      checked={destinationType === 'pessoa'}
+                      onChange={(e) => {
+                        setDestinationType('pessoa')
+                        setValue('setorDestino', '', { shouldValidate: true })
+                      }}
+                      className="text-blue-600"
+                    />
+                    <span className="text-sm">Pessoa</span>
+                  </label>
+                </div>
+
+                {/* Select baseado no tipo */}
                 <Select 
                   value={watch('setorDestino')}
                   onValueChange={(value) => setValue('setorDestino', value, { shouldValidate: true })} 
                   disabled={isLoading}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o setor de destino" />
+                    <SelectValue placeholder={`Selecione ${destinationType === 'setor' ? 'o setor' : 'a pessoa'} de destino`} />
                   </SelectTrigger>
                   <SelectContent>
-                    {setores.map((setor) => (
-                      <SelectItem key={setor.id} value={setor.sigla}>
-                        {setor.sigla} - {setor.nome}
-                      </SelectItem>
-                    ))}
+                    {destinationType === 'setor' ? (
+                      setores.map((setor) => (
+                        <SelectItem key={setor.id} value={setor.sigla}>
+                          {setor.sigla} - {setor.nome}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      conselheiros.map((conselheiro) => (
+                        <SelectItem key={conselheiro.id} value={conselheiro.nome}>
+                          {conselheiro.nome}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 {errors.setorDestino && (

@@ -10,10 +10,10 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { 
-  Plus, 
-  Search, 
-  Building2, 
+import {
+  Plus,
+  Search,
+  Building2,
   Edit,
   Trash2,
   Mail,
@@ -233,7 +233,7 @@ export default function SetoresAdminPage() {
                 <Input
                   id="nome"
                   value={formData.nome}
-                  onChange={(e) => setFormData({...formData, nome: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                   required
                 />
               </div>
@@ -242,33 +242,33 @@ export default function SetoresAdminPage() {
                 <Input
                   id="sigla"
                   value={formData.sigla}
-                  onChange={(e) => setFormData({...formData, sigla: e.target.value.toUpperCase()})}
+                  onChange={(e) => setFormData({ ...formData, sigla: e.target.value.toUpperCase() })}
                   maxLength={10}
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="email">Email (opcional)</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
               <div>
-                <Label htmlFor="responsavel">Responsável (opcional)</Label>
+                <Label htmlFor="responsavel">Responsável</Label>
                 <Input
                   id="responsavel"
                   value={formData.responsavel}
-                  onChange={(e) => setFormData({...formData, responsavel: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
                 />
               </div>
               <div className="flex items-center space-x-2">
                 <Switch
                   id="ativo"
                   checked={formData.ativo}
-                  onCheckedChange={(checked) => setFormData({...formData, ativo: checked})}
+                  onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })}
                 />
                 <Label htmlFor="ativo">Setor ativo</Label>
               </div>
@@ -432,7 +432,7 @@ export default function SetoresAdminPage() {
               <Input
                 id="edit-nome"
                 value={formData.nome}
-                onChange={(e) => setFormData({...formData, nome: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 required
               />
             </div>
@@ -441,33 +441,33 @@ export default function SetoresAdminPage() {
               <Input
                 id="edit-sigla"
                 value={formData.sigla}
-                onChange={(e) => setFormData({...formData, sigla: e.target.value.toUpperCase()})}
+                onChange={(e) => setFormData({ ...formData, sigla: e.target.value.toUpperCase() })}
                 maxLength={10}
                 required
               />
             </div>
             <div>
-              <Label htmlFor="edit-email">Email (opcional)</Label>
+              <Label htmlFor="edit-email">Email</Label>
               <Input
                 id="edit-email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
             <div>
-              <Label htmlFor="edit-responsavel">Responsável (opcional)</Label>
+              <Label htmlFor="edit-responsavel">Responsável</Label>
               <Input
                 id="edit-responsavel"
                 value={formData.responsavel}
-                onChange={(e) => setFormData({...formData, responsavel: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
               />
             </div>
             <div className="flex items-center space-x-2">
               <Switch
                 id="edit-ativo"
                 checked={formData.ativo}
-                onCheckedChange={(checked) => setFormData({...formData, ativo: checked})}
+                onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })}
               />
               <Label htmlFor="edit-ativo">Setor ativo</Label>
             </div>

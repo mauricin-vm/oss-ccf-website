@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { pauta: { numero: { contains: search, mode: 'insensitive' } } },
-        { conselheiros: { some: { name: { contains: search, mode: 'insensitive' } } } }
+        { conselheiros: { some: { nome: { contains: search, mode: 'insensitive' } } } }
       ]
     }
     
@@ -74,9 +74,9 @@ export async function GET(request: NextRequest) {
           conselheiros: {
             select: {
               id: true,
-              name: true,
+              nome: true,
               email: true,
-              role: true
+              cargo: true
             }
           }
         },
@@ -87,8 +87,32 @@ export async function GET(request: NextRequest) {
       prisma.sessaoJulgamento.count({ where })
     ])
 
+    // Converter valores Decimal para number antes de retornar
+    const sessoesSerializadas = sessoes.map(sessao => ({
+      ...sessao,
+      pauta: {
+        ...sessao.pauta,
+        processos: sessao.pauta.processos.map(processoPauta => ({
+          ...processoPauta,
+          processo: {
+            ...processoPauta.processo,
+            valorOriginal: processoPauta.processo.valorOriginal ? Number(processoPauta.processo.valorOriginal) : null,
+            valorNegociado: processoPauta.processo.valorNegociado ? Number(processoPauta.processo.valorNegociado) : null
+          }
+        }))
+      },
+      decisoes: sessao.decisoes.map(decisao => ({
+        ...decisao,
+        processo: {
+          ...decisao.processo,
+          valorOriginal: decisao.processo.valorOriginal ? Number(decisao.processo.valorOriginal) : null,
+          valorNegociado: decisao.processo.valorNegociado ? Number(decisao.processo.valorNegociado) : null
+        }
+      }))
+    }))
+
     return NextResponse.json({
-      sessoes,
+      sessoes: sessoesSerializadas,
       pagination: {
         page,
         limit,
@@ -182,11 +206,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar se todos os conselheiros existem e são elegíveis
-    const conselheiros = await prisma.user.findMany({
+    // Verificar se todos os conselheiros existem e estão ativos
+    const conselheiros = await prisma.conselheiro.findMany({
       where: { 
         id: { in: data.conselheiros },
-        role: { in: ['ADMIN', 'FUNCIONARIO'] }
+        ativo: true
       }
     })
 
@@ -225,18 +249,18 @@ export async function POST(request: NextRequest) {
         conselheiros: {
           select: {
             id: true,
-            name: true,
+            nome: true,
             email: true,
-            role: true
+            cargo: true
           }
         }
       }
     })
 
-    // Atualizar status da pauta para EM_SESSAO
+    // Atualizar status da pauta para EM_JULGAMENTO
     await prisma.pauta.update({
       where: { id: data.pautaId },
-      data: { status: 'em_sessao' }
+      data: { status: 'em_julgamento' }
     })
 
     // Log de auditoria
@@ -252,7 +276,7 @@ export async function POST(request: NextRequest) {
           totalProcessos: pauta.processos.length,
           conselheiros: conselheiros.map(c => ({
             id: c.id,
-            nome: c.name,
+            nome: c.nome,
             email: c.email
           })),
           processos: pauta.processos.map(p => ({
@@ -264,7 +288,23 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json(sessao, { status: 201 })
+    // Converter valores Decimal para number antes de retornar
+    const sessaoSerializada = {
+      ...sessao,
+      pauta: {
+        ...sessao.pauta,
+        processos: sessao.pauta.processos.map(processoPauta => ({
+          ...processoPauta,
+          processo: {
+            ...processoPauta.processo,
+            valorOriginal: processoPauta.processo.valorOriginal ? Number(processoPauta.processo.valorOriginal) : null,
+            valorNegociado: processoPauta.processo.valorNegociado ? Number(processoPauta.processo.valorNegociado) : null
+          }
+        }))
+      }
+    }
+
+    return NextResponse.json(sessaoSerializada, { status: 201 })
   } catch (error) {
     console.error('Erro ao criar sessão:', error)
     return NextResponse.json(

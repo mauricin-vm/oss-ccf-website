@@ -18,7 +18,7 @@ export default async function AuthenticatedLayout({
   const user = session.user as SessionUser
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar userRole={user.role} userName={user.name} />
       <main className="flex-1 overflow-y-auto bg-gray-50">
         <div className="p-8">

@@ -260,7 +260,7 @@ export default function UsuariosAdminPage() {
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="cursor-pointer">
               <Plus className="h-4 w-4 mr-2" />
               Novo Usuário
             </Button>
@@ -328,10 +328,10 @@ export default function UsuariosAdminPage() {
                 <Label htmlFor="active">Usuário ativo</Label>
               </div>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
+                <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)} className="cursor-pointer">
                   Cancelar
                 </Button>
-                <Button type="submit">
+                <Button type="submit" className="cursor-pointer">
                   Criar Usuário
                 </Button>
               </div>
@@ -470,6 +470,7 @@ export default function UsuariosAdminPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => openEditDialog(user)}
+                    className="cursor-pointer"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -477,7 +478,7 @@ export default function UsuariosAdminPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleDeleteUser(user)}
-                    className="text-red-600 hover:text-red-700"
+                    className="text-red-600 hover:text-red-700 cursor-pointer"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -498,6 +499,7 @@ export default function UsuariosAdminPage() {
                   size="sm"
                   onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
                   disabled={pagination.page <= 1}
+                  className="cursor-pointer"
                 >
                   Anterior
                 </Button>
@@ -506,6 +508,7 @@ export default function UsuariosAdminPage() {
                   size="sm"
                   onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
                   disabled={pagination.page >= pagination.pages}
+                  className="cursor-pointer"
                 >
                   Próximo
                 </Button>
@@ -579,10 +582,10 @@ export default function UsuariosAdminPage() {
               <Label htmlFor="edit-active">Usuário ativo</Label>
             </div>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
+              <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)} className="cursor-pointer">
                 Cancelar
               </Button>
-              <Button type="submit">
+              <Button type="submit" className="cursor-pointer">
                 Atualizar Usuário
               </Button>
             </div>

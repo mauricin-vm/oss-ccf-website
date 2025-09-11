@@ -7,7 +7,7 @@ import { SessionUser } from '@/types'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -16,8 +16,9 @@ export async function GET(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
+    const { id } = await params
     const processo = await prisma.processo.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         contribuinte: true,
         createdBy: {
@@ -83,7 +84,61 @@ export async function GET(
       )
     }
 
-    return NextResponse.json(processo)
+    // Buscar históricos separadamente usando query raw
+    let historicos = []
+    try {
+      historicos = await prisma.$queryRaw`
+        SELECT 
+          hp.id,
+          hp.titulo,
+          hp.descricao,
+          hp.tipo,
+          hp."createdAt",
+          u.id as "userId",
+          u.name as "userName",
+          u.email as "userEmail", 
+          u.role as "userRole"
+        FROM "HistoricoProcesso" hp
+        LEFT JOIN "User" u ON u.id = hp."usuarioId"
+        WHERE hp."processoId" = ${id}
+        ORDER BY hp."createdAt" DESC
+      `
+      
+      historicos = historicos.map(h => ({
+        id: h.id,
+        titulo: h.titulo,
+        descricao: h.descricao,
+        tipo: h.tipo,
+        createdAt: h.createdAt,
+        usuario: {
+          id: h.userId,
+          name: h.userName,
+          email: h.userEmail,
+          role: h.userRole
+        }
+      }))
+    } catch (error) {
+      console.log('Error fetching historicos:', error)
+      historicos = []
+    }
+
+    // Converter campos Decimal para números antes de enviar para o cliente
+    const processData = {
+      ...processo,
+      valorOriginal: processo.valorOriginal ? Number(processo.valorOriginal) : null,
+      valorNegociado: processo.valorNegociado ? Number(processo.valorNegociado) : null,
+      historicos,
+      acordo: processo.acordo ? {
+        ...processo.acordo,
+        valorTotal: Number(processo.acordo.valorTotal),
+        parcelas: processo.acordo.parcelas.map(parcela => ({
+          ...parcela,
+          valor: Number(parcela.valor)
+        }))
+      } : null
+    }
+
+    return NextResponse.json({ processo: processData })
   } catch (error) {
     console.error('Erro ao buscar processo:', error)
     return NextResponse.json(
@@ -180,7 +235,7 @@ export async function PUT(
       where: { id },
       data: {
         ...processoData,
-        valorOriginal: processoData.valorOriginal,
+        valorOriginal: processoData.valorOriginal || 0,
         valorNegociado: processoData.valorNegociado || null,
         updatedAt: new Date()
       },
@@ -223,7 +278,14 @@ export async function PUT(
       }
     })
 
-    return NextResponse.json(processoAtualizado)
+    // Converter valores Decimal para number antes de retornar
+    const processoAtualizadoSerializado = {
+      ...processoAtualizado,
+      valorOriginal: processoAtualizado.valorOriginal ? Number(processoAtualizado.valorOriginal) : null,
+      valorNegociado: processoAtualizado.valorNegociado ? Number(processoAtualizado.valorNegociado) : null
+    }
+
+    return NextResponse.json(processoAtualizadoSerializado)
   } catch (error) {
     console.error('Erro ao atualizar processo:', error)
     return NextResponse.json(
@@ -235,7 +297,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -245,6 +307,7 @@ export async function DELETE(
     }
 
     const user = session.user as SessionUser
+    const { id } = await params
 
     // Apenas Admin pode deletar processos
     if (user.role !== 'ADMIN') {
@@ -255,7 +318,7 @@ export async function DELETE(
     }
 
     const processo = await prisma.processo.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!processo) {
@@ -274,7 +337,7 @@ export async function DELETE(
     }
 
     await prisma.processo.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     // Log de auditoria
@@ -283,7 +346,7 @@ export async function DELETE(
         usuarioId: user.id,
         acao: 'DELETE',
         entidade: 'Processo',
-        entidadeId: params.id,
+        entidadeId: id,
         dadosAnteriores: {
           numero: processo.numero,
           tipo: processo.tipo,

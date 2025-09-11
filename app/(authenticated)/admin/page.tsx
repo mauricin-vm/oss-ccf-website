@@ -100,9 +100,9 @@ export default async function AdminDashboard() {
       stats: `${stats.activeUsers}/${stats.totalUsers} ativos`
     },
     {
-      title: 'Gerenciar Setores',
-      description: 'Configurar setores e departamentos',
-      href: '/admin/setores',
+      title: 'Gerenciar Cadastros',
+      description: 'Configurar conselheiros e setores',
+      href: '/admin/cadastros',
       icon: Building2,
       stats: `${stats.setores} setores`
     },

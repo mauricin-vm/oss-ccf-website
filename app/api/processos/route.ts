@@ -68,8 +68,15 @@ export async function GET(request: NextRequest) {
     ])
 
 
+    // Converter valores Decimal para number antes de retornar
+    const processosSerializados = processos.map(processo => ({
+      ...processo,
+      valorOriginal: processo.valorOriginal ? Number(processo.valorOriginal) : null,
+      valorNegociado: processo.valorNegociado ? Number(processo.valorNegociado) : null
+    }))
+
     return NextResponse.json({
-      processos,
+      processos: processosSerializados,
       pagination: {
         page,
         limit,
@@ -131,62 +138,145 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar se o contribuinte já existe pelo CPF/CNPJ
-    let contribuinte = await prisma.contribuinte.findUnique({
-      where: { cpfCnpj: contribuinteData.cpfCnpj.replace(/\D/g, '') }
-    })
-
-    // Se não existir, criar novo contribuinte
+    // Processar CPF/CNPJ se fornecido
+    const cpfCnpjLimpo = contribuinteData.cpfCnpj && contribuinteData.cpfCnpj.trim() !== '' ? 
+      contribuinteData.cpfCnpj.replace(/\D/g, '') : null
+    
+    let contribuinte = null
+    
+    // Se tem CPF/CNPJ, tentar encontrar contribuinte existente
+    if (cpfCnpjLimpo && cpfCnpjLimpo.length > 0) {
+      contribuinte = await prisma.contribuinte.findFirst({
+        where: { cpfCnpj: cpfCnpjLimpo }
+      })
+      
+      if (contribuinte) {
+        // Atualizar dados do contribuinte existente
+        const dadosAtualizacao: any = { 
+          nome: contribuinteData.nome,
+          email: contribuinteData.email || null,
+          telefone: contribuinteData.telefone || null,
+          endereco: contribuinteData.endereco || null,
+          cidade: contribuinteData.cidade || null,
+          estado: contribuinteData.estado || null,
+          cep: contribuinteData.cep || null,
+          cpfCnpj: cpfCnpjLimpo
+        }
+        
+        contribuinte = await prisma.contribuinte.update({
+          where: { id: contribuinte.id },
+          data: dadosAtualizacao
+        })
+      }
+    }
+    
+    // Se não encontrou contribuinte existente, criar novo
     if (!contribuinte) {
-      contribuinte = await prisma.contribuinte.create({
-        data: {
-          ...contribuinteData,
-          cpfCnpj: contribuinteData.cpfCnpj.replace(/\D/g, '')
-        }
-      })
-    } else {
-      // Atualizar dados do contribuinte existente
-      contribuinte = await prisma.contribuinte.update({
-        where: { id: contribuinte.id },
-        data: {
-          ...contribuinteData,
-          cpfCnpj: contribuinteData.cpfCnpj.replace(/\D/g, '')
-        }
-      })
+      // Criar dados do contribuinte tratando campos vazios
+      const dadosContribuinte: any = {
+        nome: contribuinteData.nome,
+        email: contribuinteData.email && contribuinteData.email.trim() !== '' ? contribuinteData.email : null,
+        telefone: contribuinteData.telefone && contribuinteData.telefone.trim() !== '' ? contribuinteData.telefone : null,
+        endereco: contribuinteData.endereco && contribuinteData.endereco.trim() !== '' ? contribuinteData.endereco : null,
+        cidade: contribuinteData.cidade && contribuinteData.cidade.trim() !== '' ? contribuinteData.cidade : null,
+        estado: contribuinteData.estado && contribuinteData.estado.trim() !== '' ? contribuinteData.estado : null,
+        cep: contribuinteData.cep && contribuinteData.cep.trim() !== '' ? contribuinteData.cep : null,
+      }
+      
+      // Só adicionar cpfCnpj se tiver valor
+      if (cpfCnpjLimpo && cpfCnpjLimpo.length > 0) {
+        dadosContribuinte.cpfCnpj = cpfCnpjLimpo
+      }
+      
+      console.log('Criando contribuinte com dados:', dadosContribuinte)
+      
+      try {
+        contribuinte = await prisma.contribuinte.create({
+          data: dadosContribuinte
+        })
+        console.log('Contribuinte criado com sucesso:', contribuinte.id)
+      } catch (error) {
+        console.error('Erro ao criar contribuinte:', error)
+        throw error
+      }
     }
 
+    // Verificar se o contribuinte foi criado
+    if (!contribuinte || !contribuinte.id) {
+      console.error('Contribuinte não foi criado corretamente:', contribuinte)
+      return NextResponse.json(
+        { error: 'Erro ao criar contribuinte' },
+        { status: 500 }
+      )
+    }
+    
+    console.log('Criando processo com contribuinteId:', contribuinte.id)
+    console.log('User ID:', user.id)
+    console.log('Dados do processo:', {
+      ...processoData,
+      valorOriginal: processoData.valorOriginal || 0,
+      valorNegociado: processoData.valorNegociado || null,
+      contribuinteId: contribuinte.id,
+      createdById: user.id
+    })
+    
+    // Verificar se o usuário existe
+    const usuarioExiste = await prisma.user.findUnique({
+      where: { id: user.id }
+    })
+    
+    if (!usuarioExiste) {
+      console.error('Usuário não encontrado:', user.id)
+      return NextResponse.json(
+        { error: 'Usuário não encontrado' },
+        { status: 500 }
+      )
+    }
+    
+    console.log('Usuário encontrado:', usuarioExiste.email)
+    
     // Criar o processo
-    const processo = await prisma.processo.create({
-      data: {
-        ...processoData,
-        valorOriginal: processoData.valorOriginal,
-        valorNegociado: processoData.valorNegociado || null,
-        contribuinteId: contribuinte.id,
-        createdById: user.id
-      },
-      include: {
-        contribuinte: true,
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true
+    let processo
+    try {
+      processo = await prisma.processo.create({
+        data: {
+          ...processoData,
+          valorOriginal: processoData.valorOriginal || 0,
+          valorNegociado: processoData.valorNegociado || null,
+          contribuinteId: contribuinte.id,
+          createdById: user.id
+        },
+        include: {
+          contribuinte: true,
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
           }
         }
-      }
-    })
+      })
+      
+      console.log('Processo criado com sucesso:', processo.id)
+    } catch (error) {
+      console.error('Erro detalhado ao criar processo:', error)
+      throw error
+    }
 
-    // Criar tramitação inicial
-    await prisma.tramitacao.create({
-      data: {
-        processoId: processo.id,
-        setorOrigem: 'CCF',
-        setorDestino: 'ANÁLISE INICIAL',
-        observacoes: 'Processo criado e direcionado para análise de admissibilidade',
-        usuarioId: user.id
-      }
-    })
+    // Criar histórico inicial do processo
+    try {
+      await prisma.$queryRaw`
+        INSERT INTO "HistoricoProcesso" ("id", "processoId", "usuarioId", "titulo", "descricao", "tipo", "createdAt")
+        VALUES (gen_random_uuid(), ${processo.id}, ${user.id}, 'Processo Criado', ${`Processo ${processo.numero} foi criado no sistema`}, 'SISTEMA', ${processo.createdAt})
+      `
+      console.log('Histórico inicial criado para o processo:', processo.id)
+    } catch (error) {
+      console.error('Erro ao criar histórico inicial:', error)
+      // Não interrompe o fluxo se falhar o histórico
+    }
+
 
     // Log de auditoria
     await prisma.logAuditoria.create({
@@ -204,7 +294,14 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json(processo, { status: 201 })
+    // Converter valores Decimal para number antes de retornar
+    const processoSerializado = {
+      ...processo,
+      valorOriginal: processo.valorOriginal ? Number(processo.valorOriginal) : null,
+      valorNegociado: processo.valorNegociado ? Number(processo.valorNegociado) : null
+    }
+
+    return NextResponse.json(processoSerializado, { status: 201 })
   } catch (error) {
     console.error('Erro ao criar processo:', error)
     return NextResponse.json(

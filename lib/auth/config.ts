@@ -67,14 +67,20 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = (user as SessionUser).role
+        token.email = user.email
+        token.name = user.name
       }
+      
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         (session.user as SessionUser).id = token.id as string
         (session.user as SessionUser).role = token.role as 'ADMIN' | 'FUNCIONARIO' | 'VISUALIZADOR'
+        session.user.email = token.email as string
+        session.user.name = token.name as string
       }
+      
       return session
     }
   },
@@ -84,7 +90,26 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60 // 30 dias
+    maxAge: 7 * 24 * 60 * 60, // 7 dias
+    updateAge: 60 * 60 // Atualiza a sessão a cada hora
   },
-  secret: process.env.NEXTAUTH_SECRET
+  jwt: {
+    maxAge: 7 * 24 * 60 * 60 // JWT expira em 7 dias
+  },
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' 
+        ? `__Secure-next-auth.session-token`
+        : `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    }
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === 'development',
+  trustHost: true
 }

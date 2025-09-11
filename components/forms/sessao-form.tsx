@@ -38,11 +38,14 @@ interface Pauta {
   }>
 }
 
-interface User {
+interface Conselheiro {
   id: string
-  name: string
-  email: string
-  role: string
+  nome: string
+  email: string | null
+  telefone: string | null
+  cargo: string | null
+  origem: string | null
+  ativo: boolean
 }
 
 export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
@@ -51,7 +54,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [pautas, setPautas] = useState<Pauta[]>([])
-  const [usuarios, setUsuarios] = useState<User[]>([])
+  const [conselheiros, setConselheiros] = useState<Conselheiro[]>([])
   const [selectedPauta, setSelectedPauta] = useState<Pauta | null>(null)
   const [selectedConselheiros, setSelectedConselheiros] = useState<string[]>([])
   const [searchPauta, setSearchPauta] = useState('')
@@ -87,25 +90,35 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
     fetchPautas()
   }, [])
 
-  // Buscar usuários para conselheiros
+  // Buscar conselheiros ativos
   useEffect(() => {
-    const fetchUsuarios = async () => {
+    const fetchConselheiros = async () => {
       try {
-        const response = await fetch('/api/users')
+        const response = await fetch('/api/conselheiros')
         if (response.ok) {
           const data = await response.json()
-          // Filtrar apenas usuários ativos que podem ser conselheiros
-          const usuariosElegiveis = data.filter((user: User) => 
-            ['ADMIN', 'FUNCIONARIO'].includes(user.role)
+          // Filtrar apenas conselheiros ativos
+          const conselheirosAtivos = (data || []).filter((conselheiro: Conselheiro) =>
+            conselheiro.ativo
           )
-          setUsuarios(usuariosElegiveis)
+          setConselheiros(conselheirosAtivos)
+          
+          // Auto-selecionar conselheiros titulares
+          const titulares = conselheirosAtivos
+            .filter((conselheiro: Conselheiro) => 
+              conselheiro.cargo === 'Conselheiro Titular' || 
+              conselheiro.cargo === 'Conselheira Titular'
+            )
+            .map((conselheiro: Conselheiro) => conselheiro.id)
+          
+          setSelectedConselheiros(titulares)
         }
       } catch (error) {
-        console.error('Erro ao buscar usuários:', error)
+        console.error('Erro ao buscar conselheiros:', error)
       }
     }
 
-    fetchUsuarios()
+    fetchConselheiros()
   }, [])
 
   // Se pautaId for fornecido via URL, buscar a pauta específica
@@ -153,11 +166,11 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
       }
 
       const resultado = await response.json()
-      
+
       if (onSuccess) {
         onSuccess()
       } else {
-        router.push(`/dashboard/sessoes/${resultado.id}`)
+        router.push(`/sessoes/${resultado.id}`)
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Erro inesperado')
@@ -216,7 +229,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
               </div>
 
               {pautasFiltradas.length > 0 && (
-                <div className="border rounded-lg max-h-60 overflow-y-auto">
+                <div className="border rounded-lg">
                   {pautasFiltradas.map((pauta) => (
                     <div
                       key={pauta.id}
@@ -258,6 +271,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
                   type="button"
                   variant="outline"
                   size="sm"
+                  className="cursor-pointer"
                   onClick={() => {
                     setSelectedPauta(null)
                     setValue('pautaId', '')
@@ -271,7 +285,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
               <div className="mt-4 space-y-2">
                 <h5 className="text-sm font-medium text-blue-900">Processos para Julgamento:</h5>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {selectedPauta.processos.map((processoPauta) => (
+                    {selectedPauta.processos.map((processoPauta) => (
                     <div key={processoPauta.processo.id} className="text-sm bg-white p-2 rounded border">
                       <div className="flex items-center gap-2">
                         <span className="w-6 h-6 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-xs font-bold">
@@ -284,9 +298,9 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
                             <p className="text-xs text-blue-600">Relator: {processoPauta.relator}</p>
                           )}
                         </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
             </div>
@@ -309,7 +323,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="dataInicio">Data e Hora de Início</Label>
-              <div className="relative">
+              <div className="relative w-1/2">
                 <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   id="dataInicio"
@@ -317,7 +331,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
                   {...register('dataInicio', {
                     setValueAs: (value) => value ? new Date(value) : undefined
                   })}
-                  className="pl-10"
+                  className="pl-10 w-full"
                   disabled={isLoading}
                   defaultValue={new Date().toISOString().slice(0, 16)}
                 />
@@ -328,7 +342,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="ata">Ata Inicial (opcional)</Label>
+              <Label htmlFor="ata">Ata Inicial</Label>
               <Textarea
                 id="ata"
                 placeholder="Informações iniciais sobre a sessão..."
@@ -355,26 +369,35 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {usuarios.map((usuario) => (
-                <div key={usuario.id} className="flex items-center space-x-3 p-3 border rounded-lg">
+              {conselheiros.map((conselheiro) => (
+                <div key={conselheiro.id} className="flex items-center space-x-3 p-3 border rounded-lg">
                   <Checkbox
-                    id={`conselheiro-${usuario.id}`}
-                    checked={selectedConselheiros.includes(usuario.id)}
-                    onCheckedChange={(checked) => 
-                      handleConselheiroToggle(usuario.id, checked as boolean)
+                    id={`conselheiro-${conselheiro.id}`}
+                    checked={selectedConselheiros.includes(conselheiro.id)}
+                    onCheckedChange={(checked) =>
+                      handleConselheiroToggle(conselheiro.id, checked as boolean)
                     }
                   />
                   <div className="flex-1">
-                    <label 
-                      htmlFor={`conselheiro-${usuario.id}`}
-                      className="text-sm font-medium cursor-pointer"
-                    >
-                      {usuario.name}
-                    </label>
-                    <p className="text-xs text-gray-600">{usuario.email}</p>
-                    <Badge variant="outline" className="text-xs">
-                      {usuario.role === 'ADMIN' ? 'Administrador' : 'Funcionário'}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <label
+                        htmlFor={`conselheiro-${conselheiro.id}`}
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        {conselheiro.nome}
+                      </label>
+                      {conselheiro.cargo && (
+                        <Badge variant="outline" className="text-xs">
+                          {conselheiro.cargo}
+                        </Badge>
+                      )}
+                    </div>
+                    {conselheiro.email && (
+                      <p className="text-xs text-gray-600">{conselheiro.email}</p>
+                    )}
+                    {conselheiro.origem && (
+                      <p className="text-xs text-gray-500">{conselheiro.origem}</p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -396,45 +419,13 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
         </Card>
       )}
 
-      {/* Resumo */}
-      {selectedPauta && selectedConselheiros.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Resumo da Sessão
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Pauta:</span>
-                <span className="font-medium">{selectedPauta.numero}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Processos:</span>
-                <span className="font-medium">{selectedPauta.processos.length}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Conselheiros:</span>
-                <span className="font-medium">{selectedConselheiros.length}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Data:</span>
-                <span className="font-medium">
-                  {watch('dataInicio') ? new Date(watch('dataInicio')).toLocaleString('pt-BR') : 'Não definida'}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Botões de Ação */}
       <div className="flex gap-4 justify-end">
         <Button
           type="button"
           variant="outline"
+          className="cursor-pointer"
           onClick={() => router.back()}
           disabled={isLoading}
         >
@@ -442,6 +433,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
         </Button>
         <Button
           type="submit"
+          className="cursor-pointer"
           disabled={isLoading || !selectedPauta || selectedConselheiros.length === 0}
         >
           {isLoading ? (

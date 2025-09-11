@@ -33,7 +33,7 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
     resolver: zodResolver(processoSchema) as any,
     defaultValues: {
       tipo: '',
-      valorOriginal: 0,
+      valorOriginal: undefined,
       valorNegociado: undefined
     }
   })
@@ -58,7 +58,7 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
       }
 
       const resultado = await response.json()
-      
+
       if (onSuccess) {
         onSuccess()
       } else {
@@ -118,8 +118,8 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="tipo">Tipo de Processo</Label>
-              <Select 
-                onValueChange={(value) => setValue('tipo', value, { shouldValidate: true })} 
+              <Select
+                onValueChange={(value) => setValue('tipo', value, { shouldValidate: true })}
                 disabled={isLoading}
               >
                 <SelectTrigger>
@@ -139,13 +139,13 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="valorOriginal">Valor Original (R$)</Label>
+              <Label htmlFor="valorOriginal">Valor Original (R$) <span className="text-gray-500 text-sm"></span></Label>
               <Input
                 id="valorOriginal"
                 type="number"
                 step="0.01"
                 placeholder="150000.00"
-                {...register('valorOriginal', { valueAsNumber: true })}
+                {...register('valorOriginal')}
                 disabled={isLoading}
               />
               {errors.valorOriginal && (
@@ -154,13 +154,13 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="valorNegociado">Valor Negociado (R$)</Label>
+              <Label htmlFor="valorNegociado">Valor Negociado (R$) <span className="text-gray-500 text-sm"></span></Label>
               <Input
                 id="valorNegociado"
                 type="number"
                 step="0.01"
                 placeholder="120000.00"
-                {...register('valorNegociado', { valueAsNumber: true })}
+                {...register('valorNegociado')}
                 disabled={isLoading}
               />
               {errors.valorNegociado && (

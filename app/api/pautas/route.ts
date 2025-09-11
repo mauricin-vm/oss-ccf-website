@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
               conselheiros: {
                 select: {
                   id: true,
-                  name: true,
+                  nome: true,
                   email: true
                 }
               }
@@ -156,19 +156,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar se os processos estão em status adequado para pauta
-    const processosInelegiveis = processos.filter(p => 
-      !['EM_ANALISE', 'AGUARDANDO_DOCUMENTOS'].includes(p.status)
-    )
-
-    if (processosInelegiveis.length > 0) {
-      return NextResponse.json(
-        { 
-          error: `Os seguintes processos não estão elegíveis para pauta: ${processosInelegiveis.map(p => p.numero).join(', ')}` 
-        },
-        { status: 400 }
-      )
-    }
+    // Remover verificação de status - qualquer processo pode ser pautado
 
     // Criar a pauta
     const pauta = await prisma.pauta.create({
@@ -199,11 +187,68 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Atualizar status dos processos para EM_PAUTA
-    await prisma.processo.updateMany({
-      where: { id: { in: processosIds } },
-      data: { status: 'EM_PAUTA' }
+    // Atualizar status dos processos para EM_PAUTA e criar histórico
+    await Promise.all([
+      // Atualizar status dos processos
+      prisma.processo.updateMany({
+        where: { id: { in: processosIds } },
+        data: { status: 'EM_PAUTA' }
+      }),
+      // Criar histórico para cada processo
+      ...data.processos.map((processoPauta, index) => {
+        const processo = processos.find(p => p.id === processoPauta.processoId)
+        const distribucaoInfo = processoPauta.relator ? ` - Distribuído para: ${processoPauta.relator}` : ''
+        return prisma.$queryRaw`
+          INSERT INTO "HistoricoProcesso" ("id", "processoId", "usuarioId", "titulo", "descricao", "tipo", "createdAt")
+          VALUES (gen_random_uuid(), ${processoPauta.processoId}, ${user.id}, ${'Processo incluído em pauta'}, ${`Processo incluído na ${data.numero} agendada para ${data.dataPauta.toLocaleDateString('pt-BR')}${distribucaoInfo}`}, ${'STATUS_CHANGE'}, ${new Date()})
+        `
+      }),
+      // Criar tramitações para cada processo na pauta (apenas se houver distribuição)
+      ...data.processos
+        .filter(processoPauta => processoPauta.relator) // Só criar tramitação se houver distribuição
+        .map((processoPauta) => {
+          return prisma.tramitacao.create({
+            data: {
+              processoId: processoPauta.processoId,
+              usuarioId: user.id,
+              setorOrigem: 'CCF',
+              setorDestino: processoPauta.relator, // Nome da pessoa (conselheiro)
+              // Remover dataRecebimento - tramitação não deve ser marcada como concluída automaticamente
+              observacoes: `Processo distribuído na ${data.numero} para julgamento em ${data.dataPauta.toLocaleDateString('pt-BR')}`
+            }
+          })
+        })
+    ])
+
+    // Criar histórico inicial da pauta
+    await prisma.historicoPauta.create({
+      data: {
+        pautaId: pauta.id,
+        usuarioId: user.id,
+        titulo: 'Pauta criada',
+        descricao: `Pauta ${data.numero} criada com ${data.processos.length} processo${data.processos.length !== 1 ? 's' : ''} para julgamento em ${data.dataPauta.toLocaleDateString('pt-BR')}`,
+        tipo: 'CRIACAO'
+      }
     })
+
+    // Criar histórico para cada processo adicionado
+    if (data.processos.length > 0) {
+      await Promise.all(
+        data.processos.map((processoPauta) => {
+          const processo = processos.find(p => p.id === processoPauta.processoId)
+          const distribucaoInfo = processoPauta.relator ? ` - Distribuído para: ${processoPauta.relator}` : ''
+          return prisma.historicoPauta.create({
+            data: {
+              pautaId: pauta.id,
+              usuarioId: user.id,
+              titulo: 'Processo adicionado',
+              descricao: `Processo ${processo?.numero} incluído na pauta${distribucaoInfo}`,
+              tipo: 'PROCESSO_ADICIONADO'
+            }
+          })
+        })
+      )
+    }
 
     // Log de auditoria
     await prisma.logAuditoria.create({

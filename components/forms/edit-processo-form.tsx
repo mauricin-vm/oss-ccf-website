@@ -52,7 +52,7 @@ export default function EditProcessoForm({ processo }: EditProcessoFormProps) {
     defaultValues: {
       numero: processo.numero,
       tipo: processo.tipo,
-      valorOriginal: Number(processo.valorOriginal),
+      valorOriginal: processo.valorOriginal ? Number(processo.valorOriginal) : undefined,
       valorNegociado: processo.valorNegociado ? Number(processo.valorNegociado) : undefined,
       observacoes: processo.observacoes || '',
       contribuinte: {
@@ -164,13 +164,13 @@ export default function EditProcessoForm({ processo }: EditProcessoFormProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="valorOriginal">Valor Original (R$)</Label>
+              <Label htmlFor="valorOriginal">Valor Original (R$) <span className="text-gray-500 text-sm">(opcional)</span></Label>
               <Input
                 id="valorOriginal"
                 type="number"
                 step="0.01"
                 placeholder="150000.00"
-                {...register('valorOriginal', { valueAsNumber: true })}
+                {...register('valorOriginal')}
                 disabled={isLoading}
               />
               {errors.valorOriginal && (
@@ -179,13 +179,13 @@ export default function EditProcessoForm({ processo }: EditProcessoFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="valorNegociado">Valor Negociado (R$)</Label>
+              <Label htmlFor="valorNegociado">Valor Negociado (R$) <span className="text-gray-500 text-sm">(opcional)</span></Label>
               <Input
                 id="valorNegociado"
                 type="number"
                 step="0.01"
                 placeholder="120000.00"
-                {...register('valorNegociado', { valueAsNumber: true })}
+                {...register('valorNegociado')}
                 disabled={isLoading}
               />
               {errors.valorNegociado && (

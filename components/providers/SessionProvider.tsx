@@ -7,5 +7,13 @@ export default function ClientSessionProvider({
 }: {
   children: React.ReactNode
 }) {
-  return <SessionProvider>{children}</SessionProvider>
+  return (
+    <SessionProvider
+      refetchInterval={5 * 60} // Refetch a cada 5 minutos
+      refetchOnWindowFocus={true} // Refaz fetch quando a janela ganha foco
+      refetchWhenOffline={false} // Não refaz fetch quando offline
+    >
+      {children}
+    </SessionProvider>
+  )
 }

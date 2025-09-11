@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { SessionUser } from '@/types'
-import { SessaoJulgamento, Pauta, ProcessoPauta, Processo, Contribuinte, Decisao, User } from '@prisma/client'
+import { SessaoJulgamento, Pauta, ProcessoPauta, Processo, Contribuinte, Decisao, Conselheiro } from '@prisma/client'
 
 type SessaoWithRelations = SessaoJulgamento & {
   pauta: Pauta & {
@@ -33,7 +33,7 @@ type SessaoWithRelations = SessaoJulgamento & {
       contribuinte: Contribuinte
     }
   })[]
-  conselheiros: Pick<User, 'id' | 'name' | 'email' | 'role'>[]
+  conselheiros: Pick<Conselheiro, 'id' | 'nome' | 'email' | 'cargo'>[]
 }
 
 async function getSessoes() {
@@ -64,9 +64,9 @@ async function getSessoes() {
       conselheiros: {
         select: {
           id: true,
-          name: true,
+          nome: true,
           email: true,
-          role: true
+          cargo: true
         }
       }
     },
@@ -146,7 +146,7 @@ export default async function SessoesPage() {
         
         {canCreate && (
           <Link href="/sessoes/nova">
-            <Button>
+            <Button className="cursor-pointer">
               <Plus className="mr-2 h-4 w-4" />
               Nova Sessão
             </Button>
@@ -170,7 +170,7 @@ export default async function SessoesPage() {
                 />
               </div>
             </div>
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" className="cursor-pointer">
               <Filter className="h-4 w-4" />
             </Button>
           </div>
@@ -242,7 +242,7 @@ export default async function SessoesPage() {
               </p>
               {canCreate && (
                 <Link href="/sessoes/nova">
-                  <Button>
+                  <Button className="cursor-pointer">
                     <Plus className="mr-2 h-4 w-4" />
                     Criar Sessão
                   </Button>
@@ -258,7 +258,7 @@ export default async function SessoesPage() {
             const duracao = getDuracaoSessao(sessao.dataInicio, sessao.dataFim)
 
             return (
-              <Card key={sessao.id} className="hover:shadow-md transition-shadow cursor-pointer">
+              <Card key={sessao.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="space-y-3 flex-1">
@@ -312,7 +312,7 @@ export default async function SessoesPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4" />
-                          <span>{sessao.decisoes.length} decisão{sessao.decisoes.length !== 1 ? 'ões' : 'ão'}</span>
+                          <span>{sessao.decisoes.length} {sessao.decisoes.length !== 1 ? 'decisões' : 'decisão'}</span>
                         </div>
                       </div>
 
@@ -323,7 +323,7 @@ export default async function SessoesPage() {
                           <div className="flex flex-wrap gap-2">
                             {sessao.conselheiros.slice(0, 3).map((conselheiro) => (
                               <Badge key={conselheiro.id} variant="outline" className="text-xs">
-                                {conselheiro.name}
+                                {conselheiro.nome}
                               </Badge>
                             ))}
                             {sessao.conselheiros.length > 3 && (
@@ -365,7 +365,7 @@ export default async function SessoesPage() {
                             ))}
                             {sessao.decisoes.length > 2 && (
                               <div className="text-xs text-gray-500">
-                                ... e mais {sessao.decisoes.length - 2} decisão{sessao.decisoes.length - 2 !== 1 ? 'ões' : 'ão'}
+                                ... e mais {sessao.decisoes.length - 2} {sessao.decisoes.length - 2 !== 1 ? 'decisões' : 'decisão'}
                               </div>
                             )}
                           </div>

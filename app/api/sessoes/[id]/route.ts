@@ -72,7 +72,31 @@ export async function GET(
       )
     }
 
-    return NextResponse.json(sessao)
+    // Converter valores Decimal para number antes de retornar
+    const sessaoSerializada = {
+      ...sessao,
+      pauta: {
+        ...sessao.pauta,
+        processos: sessao.pauta.processos.map(processoPauta => ({
+          ...processoPauta,
+          processo: {
+            ...processoPauta.processo,
+            valorOriginal: processoPauta.processo.valorOriginal ? Number(processoPauta.processo.valorOriginal) : null,
+            valorNegociado: processoPauta.processo.valorNegociado ? Number(processoPauta.processo.valorNegociado) : null
+          }
+        }))
+      },
+      decisoes: sessao.decisoes.map(decisao => ({
+        ...decisao,
+        processo: {
+          ...decisao.processo,
+          valorOriginal: decisao.processo.valorOriginal ? Number(decisao.processo.valorOriginal) : null,
+          valorNegociado: decisao.processo.valorNegociado ? Number(decisao.processo.valorNegociado) : null
+        }
+      }))
+    }
+
+    return NextResponse.json(sessaoSerializada)
   } catch (error) {
     console.error('Erro ao buscar sessão:', error)
     return NextResponse.json(
@@ -144,7 +168,7 @@ export async function PUT(
       // Se está finalizando a sessão, atualizar status da pauta
       await prisma.pauta.update({
         where: { id: sessaoAtual.pautaId },
-        data: { status: 'finalizada' }
+        data: { status: 'fechada' }
       })
     }
 
@@ -227,7 +251,31 @@ export async function PUT(
       }
     })
 
-    return NextResponse.json(sessaoAtualizada)
+    // Converter valores Decimal para number antes de retornar
+    const sessaoAtualizadaSerializada = {
+      ...sessaoAtualizada,
+      pauta: {
+        ...sessaoAtualizada.pauta,
+        processos: sessaoAtualizada.pauta.processos.map(processoPauta => ({
+          ...processoPauta,
+          processo: {
+            ...processoPauta.processo,
+            valorOriginal: processoPauta.processo.valorOriginal ? Number(processoPauta.processo.valorOriginal) : null,
+            valorNegociado: processoPauta.processo.valorNegociado ? Number(processoPauta.processo.valorNegociado) : null
+          }
+        }))
+      },
+      decisoes: sessaoAtualizada.decisoes.map(decisao => ({
+        ...decisao,
+        processo: {
+          ...decisao.processo,
+          valorOriginal: decisao.processo.valorOriginal ? Number(decisao.processo.valorOriginal) : null,
+          valorNegociado: decisao.processo.valorNegociado ? Number(decisao.processo.valorNegociado) : null
+        }
+      }))
+    }
+
+    return NextResponse.json(sessaoAtualizadaSerializada)
   } catch (error) {
     console.error('Erro ao atualizar sessão:', error)
     return NextResponse.json(

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -30,11 +31,18 @@ interface Processo {
   }
 }
 
+interface Conselheiro {
+  id: string
+  nome: string
+  ativo: boolean
+}
+
 export default function PautaForm({ onSuccess }: PautaFormProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [processos, setProcessos] = useState<Processo[]>([])
+  const [conselheiros, setConselheiros] = useState<Conselheiro[]>([])
   const [searchProcess, setSearchProcess] = useState('')
   const [selectedProcessos, setSelectedProcessos] = useState<Array<{
     processo: Processo
@@ -63,7 +71,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
       }
 
       try {
-        const response = await fetch(`/api/processos?search=${encodeURIComponent(searchProcess)}&status=EM_ANALISE,AGUARDANDO_DOCUMENTOS`)
+        const response = await fetch(`/api/processos?search=${encodeURIComponent(searchProcess)}`)
         if (response.ok) {
           const data = await response.json()
           setProcessos(data.processos || [])
@@ -77,13 +85,30 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
     return () => clearTimeout(timeoutId)
   }, [searchProcess])
 
+  // Buscar conselheiros ativos
+  useEffect(() => {
+    const fetchConselheiros = async () => {
+      try {
+        const response = await fetch('/api/conselheiros')
+        if (response.ok) {
+          const data = await response.json()
+          setConselheiros(data.filter((c: Conselheiro) => c.ativo))
+        }
+      } catch (error) {
+        console.error('Erro ao buscar conselheiros:', error)
+      }
+    }
+
+    fetchConselheiros()
+  }, [])
+
   // Gerar número da pauta automaticamente
   useEffect(() => {
     const generateNumero = () => {
-      const ano = new Date().getFullYear()
-      const mes = String(new Date().getMonth() + 1).padStart(2, '0')
       const dia = String(new Date().getDate()).padStart(2, '0')
-      const numero = `PAUTA-${ano}-${mes}-${dia}`
+      const mes = String(new Date().getMonth() + 1).padStart(2, '0')
+      const ano = new Date().getFullYear()
+      const numero = `Pauta ${dia}-${mes}-${ano}`
       setValue('numero', numero)
     }
 
@@ -364,22 +389,28 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                                   </p>
                                 </div>
 
-                                <div className="w-48">
+                                <div className="w-60 mr-4">
                                   <Label htmlFor={`relator-${item.processo.id}`} className="text-xs">
-                                    Distribuição <span className="text-red-500">*</span>
+                                    Conselheiro <span className="text-red-500">*</span>
                                   </Label>
-                                  <Input
-                                    id={`relator-${item.processo.id}`}
-                                    placeholder="Relator ou Revisor"
+                                  <Select 
                                     value={item.relator}
-                                    onChange={(e) => handleDistribuicaoChange(item.processo.id, e.target.value)}
-                                    className={`mt-1 ${!item.relator ? 'border-red-300 focus:border-red-500' : ''}`}
-                                    size="sm"
-                                    required
-                                  />
+                                    onValueChange={(value) => handleDistribuicaoChange(item.processo.id, value)}
+                                  >
+                                    <SelectTrigger className={`mt-1 h-8 ${!item.relator ? 'border-red-300 focus:border-red-500' : ''}`}>
+                                      <SelectValue placeholder="Selecione um conselheiro" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {conselheiros.map((conselheiro) => (
+                                        <SelectItem key={conselheiro.id} value={conselheiro.nome}>
+                                          {conselheiro.nome}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
                                   {!item.relator && (
                                     <p className="text-xs text-red-500 mt-1">
-                                      Distribuição é obrigatória
+                                      Seleção de conselheiro é obrigatória
                                     </p>
                                   )}
                                 </div>

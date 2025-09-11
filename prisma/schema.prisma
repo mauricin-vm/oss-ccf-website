@@ -53,13 +53,14 @@ model User {
   // Relations
   processosCreated    Processo[]       @relation("CreatedBy")
   tramitacoes         Tramitacao[]
-  sessoes             SessaoJulgamento[] @relation("Conselheiro")
   logs                LogAuditoria[]
+  historicos          HistoricoProcesso[]
+  historicosPauta     HistoricoPauta[] @relation("HistoricoPauta")
 }
 
 model Contribuinte {
   id             String          @id @default(cuid())
-  cpfCnpj        String          @unique
+  cpfCnpj        String?
   nome           String
   email          String?
   telefone       String?
@@ -73,6 +74,8 @@ model Contribuinte {
   // Relations
   processos      Processo[]
   imoveis        Imovel[]
+  
+  @@index([cpfCnpj])
 }
 
 model Processo {
@@ -100,6 +103,7 @@ model Processo {
   acordo            Acordo?
   imoveis           ProcessoImovel[]
   creditos          ProcessoCredito[]
+  historicos        HistoricoProcesso[]
   
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -225,6 +229,7 @@ model Pauta {
   
   processos         ProcessoPauta[]
   sessao            SessaoJulgamento?
+  historicos        HistoricoPauta[]
   
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -257,7 +262,7 @@ model SessaoJulgamento {
   dataFim           DateTime?
   ata               String?         @db.Text
   
-  conselheiros      User[]          @relation("Conselheiro")
+  conselheiros      Conselheiro[]   @relation("SessaoConselheiro")
   decisoes          Decisao[]
   
   createdAt         DateTime        @default(now())
@@ -362,6 +367,61 @@ model Setor {
   
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
+}
+
+model Conselheiro {
+  id                String          @id @default(cuid())
+  nome              String
+  email             String?
+  telefone          String?
+  cargo             String?
+  origem            String?         // Ex: "Secretaria da Fazenda", "OAB", "Sindicato dos Contadores", etc.
+  ativo             Boolean         @default(true)
+  
+  sessoes           SessaoJulgamento[] @relation("SessaoConselheiro")
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model HistoricoProcesso {
+  id                String          @id @default(cuid())
+  
+  processoId        String
+  processo          Processo        @relation(fields: [processoId], references: [id], onDelete: Cascade)
+  
+  usuarioId         String
+  usuario           User            @relation(fields: [usuarioId], references: [id])
+  
+  titulo            String
+  descricao         String
+  tipo              String          @default("EVENTO") // EVENTO, OBSERVACAO, ALTERACAO, etc.
+  
+  createdAt         DateTime        @default(now())
+  
+  @@index([processoId])
+  @@index([usuarioId])
+  @@index([createdAt])
+}
+
+model HistoricoPauta {
+  id                String          @id @default(cuid())
+  
+  pautaId           String
+  pauta             Pauta           @relation(fields: [pautaId], references: [id], onDelete: Cascade)
+  
+  usuarioId         String
+  usuario           User            @relation("HistoricoPauta", fields: [usuarioId], references: [id])
+  
+  titulo            String
+  descricao         String
+  tipo              String          @default("EVENTO") // EVENTO, PROCESSO_ADICIONADO, PROCESSO_REMOVIDO, ALTERACAO, etc.
+  
+  createdAt         DateTime        @default(now())
+  
+  @@index([pautaId])
+  @@index([usuarioId])
+  @@index([createdAt])
 }
 
 model LogAuditoria {

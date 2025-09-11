@@ -24,7 +24,7 @@ interface SessaoPageProps {
 }
 
 async function getSessao(id: string) {
-  return prisma.sessaoJulgamento.findUnique({
+  const sessao = await prisma.sessaoJulgamento.findUnique({
     where: { id },
     include: {
       pauta: {
@@ -66,13 +66,39 @@ async function getSessao(id: string) {
       conselheiros: {
         select: {
           id: true,
-          name: true,
+          nome: true,
           email: true,
-          role: true
+          cargo: true
         }
       }
     }
   })
+
+  if (!sessao) return null
+
+  // Converter valores Decimal para number
+  return {
+    ...sessao,
+    pauta: {
+      ...sessao.pauta,
+      processos: sessao.pauta.processos.map(processoPauta => ({
+        ...processoPauta,
+        processo: {
+          ...processoPauta.processo,
+          valorOriginal: processoPauta.processo.valorOriginal ? Number(processoPauta.processo.valorOriginal) : null,
+          valorNegociado: processoPauta.processo.valorNegociado ? Number(processoPauta.processo.valorNegociado) : null
+        }
+      }))
+    },
+    decisoes: sessao.decisoes.map(decisao => ({
+      ...decisao,
+      processo: {
+        ...decisao.processo,
+        valorOriginal: decisao.processo.valorOriginal ? Number(decisao.processo.valorOriginal) : null,
+        valorNegociado: decisao.processo.valorNegociado ? Number(decisao.processo.valorNegociado) : null
+      }
+    }))
+  }
 }
 
 export default async function SessaoPage({ params }: SessaoPageProps) {
@@ -146,9 +172,8 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/sessoes">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
+          <Button variant="outline" size="icon" className="cursor-pointer">
+            <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div className="flex-1">
@@ -166,7 +191,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
         <div className="flex gap-2">
           {canEdit && isActive && progresso.pendentes > 0 && (
             <Link href={`/sessoes/${sessao.id}/decisoes/nova`}>
-              <Button>
+              <Button className="cursor-pointer">
                 <Gavel className="mr-2 h-4 w-4" />
                 Julgar Processo
               </Button>
@@ -226,11 +251,11 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
               {sessao.conselheiros.map((conselheiro) => (
                 <div key={conselheiro.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
-                    <p className="font-medium">{conselheiro.name}</p>
+                    <p className="font-medium">{conselheiro.nome}</p>
                     <p className="text-sm text-gray-600">{conselheiro.email}</p>
                   </div>
                   <Badge variant="outline">
-                    {conselheiro.role === 'ADMIN' ? 'Administrador' : 'Funcionário'}
+                    {conselheiro.cargo || 'Conselheiro'}
                   </Badge>
                 </div>
               ))}

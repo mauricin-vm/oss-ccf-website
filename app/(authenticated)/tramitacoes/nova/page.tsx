@@ -38,7 +38,7 @@ export default async function NovaTramitacaoPage({
         <div>
           <h1 className="text-3xl font-bold">Nova Tramitação</h1>
           <p className="text-gray-600">
-            Envie um processo para outro setor
+            Envie um processo para outro setor ou pessoa
           </p>
         </div>
       </div>

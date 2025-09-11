@@ -125,18 +125,17 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     
-    // Converter prazoResposta para Date se fornecido
-    if (body.prazoResposta) {
-      body.prazoResposta = new Date(body.prazoResposta)
-    }
-
+    // Note: não converter prazoResposta aqui pois o schema já faz isso
     const validationResult = tramitacaoSchema.safeParse(body)
 
     if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error.errors)
+      console.error('Request body:', body)
       return NextResponse.json(
         { 
           error: 'Dados inválidos',
-          details: validationResult.error.errors
+          details: validationResult.error.errors,
+          received: body
         },
         { status: 400 }
       )

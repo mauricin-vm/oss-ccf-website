@@ -1,7 +1,9 @@
-import { getServerSession } from 'next-auth'
-import { redirect, notFound } from 'next/navigation'
-import { authOptions } from '@/lib/auth/config'
-import { prisma } from '@/lib/db'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { notFound, useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -18,91 +20,186 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
-  XCircle
+  XCircle,
+  Plus,
+  Download,
+  ArrowRight,
+  History,
+  User
 } from 'lucide-react'
 import Link from 'next/link'
 import { SessionUser } from '@/types'
+import ProcessoDocumentos from '@/components/processo/processo-documentos'
+import AdicionarHistoricoModal from '@/components/modals/adicionar-historico-modal'
+import AlterarStatusModal from '@/components/modals/alterar-status-modal'
 
-async function getProcesso(id: string) {
-  return prisma.processo.findUnique({
-    where: { id },
-    include: {
-      contribuinte: true,
-      createdBy: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true
-        }
-      },
-      tramitacoes: {
-        include: {
-          usuario: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true
-            }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      },
-      documentos: {
-        orderBy: { createdAt: 'desc' }
-      },
-      pautas: {
-        include: {
-          pauta: true
-        },
-        orderBy: { pauta: { dataPauta: 'desc' } }
-      },
-      decisoes: {
-        include: {
-          sessao: true
-        },
-        orderBy: { dataDecisao: 'desc' }
-      },
-      acordo: {
-        include: {
-          parcelas: {
-            orderBy: { numero: 'asc' }
-          }
-        }
-      },
-      imoveis: {
-        include: {
-          imovel: true
-        }
-      },
-      creditos: {
-        include: {
-          credito: true
-        }
-      }
+
+interface Processo {
+  id: string
+  numero: string
+  tipo: string
+  status: string
+  valorOriginal: any
+  valorNegociado: any
+  dataAbertura: string
+  observacoes?: string
+  createdAt: string
+  contribuinte: {
+    id: string
+    nome: string
+    cpfCnpj?: string
+    email?: string
+    telefone?: string
+    endereco?: string
+    cidade?: string
+    estado?: string
+    cep?: string
+  }
+  createdBy: {
+    id: string
+    name: string
+    email: string
+    role: string
+  }
+  tramitacoes: {
+    id: string
+    setorOrigem: string
+    setorDestino: string
+    dataEnvio: string
+    dataRecebimento?: string
+    prazoResposta?: string
+    observacoes?: string
+    createdAt: string
+    usuario: {
+      id: string
+      name: string
+      email: string
+      role: string
     }
-  })
+  }[]
+  documentos: {
+    id: string
+    nome: string
+    tipo: string
+    url: string
+    tamanho: number
+    createdAt: string
+  }[]
+  historicos: {
+    id: string
+    titulo: string
+    descricao: string
+    tipo: string
+    createdAt: string
+    usuario: {
+      id: string
+      name: string
+      email: string
+      role: string
+    }
+  }[]
+  acordo?: {
+    id: string
+    numeroTermo: string
+    dataAssinatura: string
+    valorTotal: any
+    parcelas: {
+      id: string
+      numero: number
+      valor: any
+      dataVencimento: string
+      status: string
+    }[]
+  }
 }
 
-export default async function ProcessoDetalhesPage({
-  params
-}: {
+interface Props {
   params: Promise<{ id: string }>
-}) {
-  const session = await getServerSession(authOptions)
+}
+
+export default function ProcessoDetalhesPage({ params }: Props) {
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
+  const { data: session } = useSession()
+  const router = useRouter()
+  const [processo, setProcesso] = useState<Processo | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [showHistoricoModal, setShowHistoricoModal] = useState(false)
+  const [showStatusModal, setShowStatusModal] = useState(false)
   
-  if (!session) {
-    redirect('/login')
+  useEffect(() => {
+    const resolveParams = async () => {
+      const resolved = await params
+      setResolvedParams(resolved)
+    }
+    resolveParams()
+  }, [params])
+
+  useEffect(() => {
+    if (!session) {
+      router.push('/login')
+      return
+    }
+    
+    if (resolvedParams) {
+      loadProcesso()
+    }
+  }, [session, resolvedParams])
+
+  const loadProcesso = async () => {
+    if (!resolvedParams) return
+    
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/processos/${resolvedParams.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setProcesso(data.processo)
+      } else if (response.status === 404) {
+        notFound()
+      }
+    } catch (error) {
+      console.error('Erro ao carregar processo:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleMarcarRecebida = async (tramitacaoId: string) => {
+    try {
+      const response = await fetch(`/api/tramitacoes/${tramitacaoId}/receber`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        toast.success('Tramitação marcada como recebida com sucesso')
+        loadProcesso() // Recarregar dados para mostrar a mudança
+      } else {
+        const errorData = await response.json()
+        toast.error(errorData.error || 'Erro ao marcar tramitação como recebida')
+      }
+    } catch (error) {
+      console.error('Erro ao marcar tramitação como recebida:', error)
+      toast.error('Erro ao marcar tramitação como recebida')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin h-8 w-8 border-2 border-gray-300 border-t-blue-600 rounded-full"></div>
+        <span className="ml-2">Carregando processo...</span>
+      </div>
+    )
+  }
+
+  if (!processo || !session) {
+    return null
   }
 
   const user = session.user as SessionUser
-  const { id } = await params
-  const processo = await getProcesso(id)
-
-  if (!processo) {
-    notFound()
-  }
 
   const tipoProcessoMap = {
     COMPENSACAO: { label: 'Compensação', color: 'bg-blue-100 text-blue-800' },
@@ -163,14 +260,26 @@ export default async function ProcessoDetalhesPage({
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center gap-2">
-              <StatusIcon className="h-5 w-5 text-gray-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Status</p>
-                <Badge className={statusMap[processo.status].color}>
-                  {statusMap[processo.status].label}
-                </Badge>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <StatusIcon className="h-5 w-5 text-gray-600" />
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Status</p>
+                  <Badge className={statusMap[processo.status].color}>
+                    {statusMap[processo.status].label}
+                  </Badge>
+                </div>
               </div>
+              {canEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowStatusModal(true)}
+                  className="cursor-pointer"
+                >
+                  <Edit className="h-3 w-3" />
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -196,7 +305,7 @@ export default async function ProcessoDetalhesPage({
               <div>
                 <p className="text-sm font-medium text-gray-600">Valor Original</p>
                 <p className="text-lg font-bold">
-                  R$ {processo.valorOriginal.toLocaleString('pt-BR')}
+                  {processo.valorOriginal ? Number(processo.valorOriginal).toLocaleString('pt-BR') : '0,00'}
                 </p>
               </div>
             </div>
@@ -246,12 +355,12 @@ export default async function ProcessoDetalhesPage({
                 </div>
                 <div>
                   <Label>Valor Original</Label>
-                  <p className="font-medium">R$ {processo.valorOriginal.toLocaleString('pt-BR')}</p>
+                  <p className="font-medium">R$ {processo.valorOriginal ? Number(processo.valorOriginal).toLocaleString('pt-BR') : '0,00'}</p>
                 </div>
                 {processo.valorNegociado && (
                   <div>
                     <Label>Valor Negociado</Label>
-                    <p className="font-medium">R$ {processo.valorNegociado.toLocaleString('pt-BR')}</p>
+                    <p className="font-medium">R$ {Number(processo.valorNegociado).toLocaleString('pt-BR')}</p>
                   </div>
                 )}
                 <div>
@@ -352,16 +461,32 @@ export default async function ProcessoDetalhesPage({
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center justify-between">
                           <h4 className="font-medium">
-                            {tramitacao.setorOrigem} → {tramitacao.setorDestino}
+                            <div className="flex items-center gap-2">
+                              <span>{tramitacao.setorOrigem}</span>
+                              <ArrowRight className="h-4 w-4" />
+                              <span>{tramitacao.setorDestino}</span>
+                            </div>
                           </h4>
-                          <div className="text-right">
-                            <span className="text-sm text-gray-500">
-                              Enviado: {new Date(tramitacao.dataEnvio).toLocaleDateString('pt-BR')}
-                            </span>
-                            {tramitacao.dataRecebimento && (
-                              <p className="text-sm text-green-600 font-medium">
-                                ✓ Recebido: {new Date(tramitacao.dataRecebimento).toLocaleDateString('pt-BR')}
-                              </p>
+                          <div className="flex items-center gap-2">
+                            <div className="text-right">
+                              <span className="text-sm text-gray-500">
+                                Enviado: {new Date(tramitacao.dataEnvio).toLocaleDateString('pt-BR')}
+                              </span>
+                              {tramitacao.dataRecebimento && (
+                                <p className="text-sm text-green-600 font-medium">
+                                  ✓ Recebido: {new Date(tramitacao.dataRecebimento).toLocaleDateString('pt-BR')}
+                                </p>
+                              )}
+                            </div>
+                            {!tramitacao.dataRecebimento && canEdit && (
+                              <Button 
+                                size="sm" 
+                                variant="default" 
+                                className="cursor-pointer ml-2"
+                                onClick={() => handleMarcarRecebida(tramitacao.id)}
+                              >
+                                Marcar Recebida
+                              </Button>
                             )}
                           </div>
                         </div>
@@ -398,40 +523,21 @@ export default async function ProcessoDetalhesPage({
         </TabsContent>
 
         <TabsContent value="documentos">
-          <Card>
-            <CardHeader>
-              <CardTitle>Documentos</CardTitle>
-              <CardDescription>
-                Documentos anexados ao processo
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {processo.documentos.length === 0 ? (
-                <p className="text-center text-gray-500 py-4">
-                  Nenhum documento anexado
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {processo.documentos.map((documento) => (
-                    <div key={documento.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-gray-500" />
-                        <div>
-                          <p className="font-medium">{documento.nome}</p>
-                          <p className="text-sm text-gray-500">
-                            {documento.tipo} • {(documento.tamanho / 1024).toFixed(1)} KB
-                          </p>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm" className="cursor-pointer">
-                        Baixar
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ProcessoDocumentos 
+            processo={{
+              id: processo.id,
+              numero: processo.numero,
+              documentos: processo.documentos.map(doc => ({
+                id: doc.id,
+                nome: doc.nome,
+                tipo: doc.tipo,
+                url: doc.url,
+                tamanho: doc.tamanho,
+                createdAt: doc.createdAt
+              }))
+            }} 
+            canEdit={canEdit} 
+          />
         </TabsContent>
 
         <TabsContent value="acordo">
@@ -463,7 +569,7 @@ export default async function ProcessoDetalhesPage({
                     <div>
                       <Label>Valor Total</Label>
                       <p className="font-medium">
-                        R$ {processo.acordo.valorTotal.toLocaleString('pt-BR')}
+                        R$ {Number(processo.acordo.valorTotal).toLocaleString('pt-BR')}
                       </p>
                     </div>
                   </div>
@@ -477,7 +583,7 @@ export default async function ProcessoDetalhesPage({
                             <span className="font-medium">#{parcela.numero}</span>
                             <div>
                               <p className="font-medium">
-                                R$ {parcela.valor.toLocaleString('pt-BR')}
+                                R$ {Number(parcela.valor).toLocaleString('pt-BR')}
                               </p>
                               <p className="text-sm text-gray-500">
                                 Vencimento: {new Date(parcela.dataVencimento).toLocaleDateString('pt-BR')}
@@ -500,34 +606,110 @@ export default async function ProcessoDetalhesPage({
         <TabsContent value="historico">
           <Card>
             <CardHeader>
-              <CardTitle>Histórico Completo</CardTitle>
-              <CardDescription>
-                Timeline completa do processo
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Histórico Completo</CardTitle>
+                  <CardDescription>
+                    Timeline completa do processo
+                  </CardDescription>
+                </div>
+                {canEdit && (
+                  <Button 
+                    onClick={() => setShowHistoricoModal(true)}
+                    className="cursor-pointer"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar Histórico
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex gap-4 pb-4 border-b">
-                  <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
+                {/* Históricos customizados */}
+                {processo.historicos.map((historico) => {
+                  const tipoIcon = {
+                    'EVENTO': CheckCircle,
+                    'OBSERVACAO': AlertCircle,
+                    'ALTERACAO': Edit,
+                    'COMUNICACAO': Mail,
+                    'DECISAO': XCircle,
+                    'SISTEMA': CheckCircle
+                  }[historico.tipo] || History
+                  
+                  const Icon = tipoIcon
+                  
+                  return (
+                    <div key={historico.id} className="flex gap-4 pb-4 border-b last:border-b-0">
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                        historico.tipo === 'SISTEMA' ? 'bg-green-100' : 'bg-blue-100'
+                      }`}>
+                        <Icon className={`h-4 w-4 ${
+                          historico.tipo === 'SISTEMA' ? 'text-green-600' : 'text-blue-600'
+                        }`} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-medium">{historico.titulo}</h4>
+                          <Badge variant="outline" className="text-xs">
+                            {historico.tipo}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">
+                          {historico.descricao}
+                        </p>
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            <span>{historico.usuario.name}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{new Date(historico.createdAt).toLocaleString('pt-BR')}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {processo.historicos.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <History className="mx-auto h-12 w-12 text-gray-400 mb-2" />
+                    <p>Nenhum histórico adicional registrado</p>
+                    {canEdit && (
+                      <p className="text-sm mt-1">
+                        Clique em "Adicionar Histórico" para registrar eventos
+                      </p>
+                    )}
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium">Processo Criado</h4>
-                    <p className="text-sm text-gray-600">
-                      Processo {processo.numero} criado por {processo.createdBy.name}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(processo.createdAt).toLocaleString('pt-BR')}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Aqui você pode adicionar outros eventos do histórico */}
+                )}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Modal de Adicionar Histórico */}
+      {canEdit && resolvedParams && (
+        <AdicionarHistoricoModal
+          processoId={resolvedParams.id}
+          open={showHistoricoModal}
+          onOpenChange={setShowHistoricoModal}
+          onSuccess={loadProcesso}
+        />
+      )}
+
+      {/* Modal de Alterar Status */}
+      {canEdit && resolvedParams && processo && (
+        <AlterarStatusModal
+          processoId={resolvedParams.id}
+          statusAtual={processo.status}
+          open={showStatusModal}
+          onOpenChange={setShowStatusModal}
+          onSuccess={loadProcesso}
+        />
+      )}
     </div>
   )
 }
