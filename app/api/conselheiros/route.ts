@@ -14,24 +14,44 @@ const conselheiroDtoSchema = z.object({
   ativo: z.boolean().default(true)
 })
 
-// GET - Listar todos os conselheiros
-export async function GET() {
+// GET - Listar conselheiros
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
+    const { searchParams } = new URL(request.url)
+    const incluirInativos = searchParams.get('incluirInativos') === 'true'
+    const apenasAtivos = searchParams.get('apenasAtivos') === 'true'
+
     // Permitir que todos os usuários autenticados vejam os conselheiros
     // pois são necessários para designar relatores em pautas
 
+    const where = incluirInativos 
+      ? {} 
+      : apenasAtivos 
+        ? { ativo: true }
+        : {} // Por padrão, mostra todos para compatibilidade
+
     const conselheiros = await prisma.conselheiro.findMany({
+      where,
       orderBy: {
         nome: 'asc'
+      },
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        telefone: true,
+        cargo: true,
+        origem: true,
+        ativo: true
       }
     })
 
-    return NextResponse.json(conselheiros)
+    return NextResponse.json({ conselheiros })
   } catch (error) {
     console.error('Erro ao buscar conselheiros:', error)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })

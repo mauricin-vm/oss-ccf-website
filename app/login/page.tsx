@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { signIn, useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { loginSchema, type LoginInput } from '@/lib/validations/auth'
@@ -27,20 +27,27 @@ type RegisterInput = z.infer<typeof registerSchema>
 export default function LoginPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [error, setError] = useState<string | null>(null)
   const [registerError, setRegisterError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isRegistering, setIsRegistering] = useState(false)
   const [showRegisterDialog, setShowRegisterDialog] = useState(false)
 
+  // Função para obter a URL de redirecionamento
+  const getRedirectUrl = () => {
+    const callbackUrl = searchParams.get('callbackUrl')
+    return callbackUrl || '/dashboard'
+  }
+
   // Redirecionar se já estiver autenticado
   useEffect(() => {
     if (status === 'loading') return
     
     if (session) {
-      router.replace('/dashboard')
+      router.replace(getRedirectUrl())
     }
-  }, [session, status, router])
+  }, [session, status, router, searchParams])
 
   const {
     register,
@@ -72,11 +79,17 @@ export default function LoginPage() {
 
       if (result?.error) {
         setError('Email ou senha inválidos')
-      } else {
-        router.push('/dashboard')
-        router.refresh()
+      } else if (result?.ok) {
+        // Login bem-sucedido, redirecionar manualmente
+        const redirectUrl = getRedirectUrl()
+        
+        // Usar um pequeno delay para garantir que a sessão seja estabelecida
+        setTimeout(() => {
+          window.location.href = redirectUrl
+        }, 100)
       }
-    } catch {
+    } catch (error) {
+      console.error('Login error:', error)
       setError('Ocorreu um erro ao fazer login')
     } finally {
       setIsLoading(false)
@@ -119,9 +132,10 @@ export default function LoginPage() {
 
       if (result?.error) {
         setError('Conta criada, mas erro ao fazer login. Tente fazer login manualmente.')
-      } else {
-        router.push('/dashboard')
-        router.refresh()
+      } else if (result?.ok) {
+        // Login bem-sucedido após registro, redirecionar manualmente
+        const redirectUrl = getRedirectUrl()
+        window.location.href = redirectUrl
       }
     } catch (error) {
       setRegisterError(error instanceof Error ? error.message : 'Erro ao criar conta')

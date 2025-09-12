@@ -92,7 +92,7 @@ export async function POST(
     // Verificar se o processo existe
     const processo = await prisma.processo.findUnique({
       where: { id: processoId },
-      select: { id: true, numero: true }
+      select: { id: true, numero: true, status: true }
     })
 
     if (!processo) {
@@ -117,14 +117,25 @@ export async function POST(
 
     const { titulo, descricao, tipo } = validationResult.data
 
-    // Criar histórico usando query raw
-    const historicoId = await prisma.$queryRaw`
-      INSERT INTO "HistoricoProcesso" ("id", "processoId", "usuarioId", "titulo", "descricao", "tipo", "createdAt")
-      VALUES (gen_random_uuid(), ${processoId}, ${user.id}, ${titulo}, ${descricao}, ${tipo}, NOW())
-      RETURNING "id"
-    `
+    // Usar transação para criar histórico e atualizar status
+    const newHistoricoId = await prisma.$transaction(async (tx) => {
+      // Criar histórico usando query raw
+      const historicoId = await tx.$queryRaw`
+        INSERT INTO "HistoricoProcesso" ("id", "processoId", "usuarioId", "titulo", "descricao", "tipo", "createdAt")
+        VALUES (gen_random_uuid(), ${processoId}, ${user.id}, ${titulo}, ${descricao}, ${tipo}, NOW())
+        RETURNING "id"
+      `
 
-    const newHistoricoId = historicoId[0].id
+      // Atualizar status para EM_ANALISE se for RECEPCIONADO
+      if (processo.status === 'RECEPCIONADO') {
+        await tx.processo.update({
+          where: { id: processoId },
+          data: { status: 'EM_ANALISE' }
+        })
+      }
+
+      return historicoId[0].id
+    })
 
     // Buscar o histórico criado com dados do usuário
     const historico = await prisma.$queryRaw`

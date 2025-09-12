@@ -38,11 +38,11 @@ interface EditPautaModalProps {
   }
 }
 
-export default function EditPautaModal({ 
-  isOpen, 
-  onClose, 
-  onSuccess, 
-  pauta 
+export default function EditPautaModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  pauta
 }: EditPautaModalProps) {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -128,7 +128,7 @@ export default function EditPautaModal({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="numero">Número da Pauta</Label>
+            <Label htmlFor="numero">Número da Pauta <span className="text-red-500">*</span></Label>
             <Input
               id="numero"
               {...register('numero')}
@@ -141,7 +141,7 @@ export default function EditPautaModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dataPauta">Data da Pauta</Label>
+            <Label htmlFor="dataPauta">Data da Pauta <span className="text-red-500">*</span></Label>
             <div className="relative">
               <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input

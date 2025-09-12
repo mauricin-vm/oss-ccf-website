@@ -104,7 +104,7 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="numero">Número do Processo</Label>
+              <Label htmlFor="numero">Número do Processo <span className="text-red-500">*</span></Label>
               <Input
                 id="numero"
                 placeholder="CCF-2024-001"
@@ -117,7 +117,7 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tipo">Tipo de Processo</Label>
+              <Label htmlFor="tipo">Tipo de Processo <span className="text-red-500">*</span></Label>
               <Select
                 onValueChange={(value) => setValue('tipo', value, { shouldValidate: true })}
                 disabled={isLoading}
@@ -216,7 +216,7 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="contribuinte.nome">Nome/Razão Social</Label>
+              <Label htmlFor="contribuinte.nome">Nome/Razão Social <span className="text-red-500">*</span></Label>
               <Input
                 id="contribuinte.nome"
                 placeholder="Nome completo ou razão social"

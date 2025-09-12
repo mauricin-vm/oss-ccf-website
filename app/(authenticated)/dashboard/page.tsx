@@ -28,13 +28,13 @@ async function getStatistics() {
     prisma.processo.count({
       where: {
         status: {
-          in: ['EM_ANALISE', 'AGUARDANDO_DOCUMENTOS', 'EM_PAUTA']
+          in: ['EM_ANALISE', 'EM_PAUTA']
         }
       }
     }),
     prisma.processo.count({
       where: {
-        status: 'FINALIZADO'
+        status: 'ARQUIVADO'
       }
     }),
     prisma.tramitacao.count({
@@ -160,12 +160,13 @@ export default async function DashboardPage() {
   const statusMap = {
     RECEPCIONADO: { label: 'Recepcionado', color: 'bg-gray-100 text-gray-800' },
     EM_ANALISE: { label: 'Em Análise', color: 'bg-blue-100 text-blue-800' },
-    AGUARDANDO_DOCUMENTOS: { label: 'Aguardando Docs', color: 'bg-yellow-100 text-yellow-800' },
     EM_PAUTA: { label: 'Em Pauta', color: 'bg-purple-100 text-purple-800' },
+    SUSPENSO: { label: 'Suspenso', color: 'bg-yellow-100 text-yellow-800' },
+    PEDIDO_VISTA: { label: 'Pedido de Vista', color: 'bg-orange-100 text-orange-800' },
+    PEDIDO_DILIGENCIA: { label: 'Pedido de Diligência', color: 'bg-red-100 text-red-800' },
     JULGADO: { label: 'Julgado', color: 'bg-indigo-100 text-indigo-800' },
     ACORDO_FIRMADO: { label: 'Acordo Firmado', color: 'bg-green-100 text-green-800' },
     EM_CUMPRIMENTO: { label: 'Em Cumprimento', color: 'bg-orange-100 text-orange-800' },
-    FINALIZADO: { label: 'Finalizado', color: 'bg-green-100 text-green-800' },
     ARQUIVADO: { label: 'Arquivado', color: 'bg-gray-100 text-gray-800' }
   }
 

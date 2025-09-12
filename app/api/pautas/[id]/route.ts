@@ -166,7 +166,7 @@ export async function DELETE(
         DELETE FROM "HistoricoProcesso" 
         WHERE "processoId" = ANY(${processosIds}) 
         AND "titulo" = 'Processo incluído em pauta' 
-        AND "tipo" = 'STATUS_CHANGE'
+        AND "tipo" = 'PAUTA'
       `
 
       // Restaurar status dos processos
@@ -180,7 +180,7 @@ export async function DELETE(
         processosIds.map(processoId => 
           tx.$queryRaw`
             INSERT INTO "HistoricoProcesso" ("id", "processoId", "usuarioId", "titulo", "descricao", "tipo", "createdAt")
-            VALUES (gen_random_uuid(), ${processoId}, ${user.id}, ${'Processo removido de pauta'}, ${`Processo removido da ${pauta.numero} que foi excluída`}, ${'STATUS_CHANGE'}, ${new Date()})
+            VALUES (gen_random_uuid(), ${processoId}, ${user.id}, ${'Processo removido de pauta'}, ${`Processo removido da ${pauta.numero} que foi excluída`}, ${'PAUTA'}, ${new Date()})
           `
         )
       )

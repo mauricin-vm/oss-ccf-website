@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
         const distribucaoInfo = processoPauta.relator ? ` - Distribuído para: ${processoPauta.relator}` : ''
         return prisma.$queryRaw`
           INSERT INTO "HistoricoProcesso" ("id", "processoId", "usuarioId", "titulo", "descricao", "tipo", "createdAt")
-          VALUES (gen_random_uuid(), ${processoPauta.processoId}, ${user.id}, ${'Processo incluído em pauta'}, ${`Processo incluído na ${data.numero} agendada para ${data.dataPauta.toLocaleDateString('pt-BR')}${distribucaoInfo}`}, ${'STATUS_CHANGE'}, ${new Date()})
+          VALUES (gen_random_uuid(), ${processoPauta.processoId}, ${user.id}, ${'Processo incluído em pauta'}, ${`Processo incluído na ${data.numero} agendada para ${data.dataPauta.toLocaleDateString('pt-BR')}${distribucaoInfo}`}, ${'PAUTA'}, ${new Date()})
         `
       }),
       // Criar tramitações para cada processo na pauta (apenas se houver distribuição)

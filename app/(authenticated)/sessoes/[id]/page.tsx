@@ -5,6 +5,7 @@ import { redirect, notFound } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import ExcluirDecisaoButton from '@/components/buttons/excluir-decisao-button'
 import {
   Gavel,
   Calendar,
@@ -173,11 +174,46 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
     const processosJulgados = sessao.decisoes.length
     const percentual = totalProcessos > 0 ? Math.round((processosJulgados / totalProcessos) * 100) : 0
 
+    // Contar processos por categoria
+    const contadores = {
+      pendentes: 0,
+      suspensos: 0,
+      diligencias: 0,
+      vistas: 0,
+      julgados: 0
+    }
+
+    sessao.pauta.processos.forEach(processoPauta => {
+      const decisao = sessao.decisoes.find(d => d.processoId === processoPauta.processo.id)
+      
+      if (!decisao) {
+        contadores.pendentes++
+      } else {
+        switch (decisao.tipoResultado) {
+          case 'SUSPENSO':
+            contadores.suspensos++
+            break
+          case 'PEDIDO_DILIGENCIA':
+            contadores.diligencias++
+            break
+          case 'PEDIDO_VISTA':
+            contadores.vistas++
+            break
+          case 'JULGADO':
+            contadores.julgados++
+            break
+          default:
+            contadores.pendentes++
+        }
+      }
+    })
+
     return {
       total: totalProcessos,
       julgados: processosJulgados,
       pendentes: totalProcessos - processosJulgados,
-      percentual
+      percentual,
+      contadores
     }
   }
 
@@ -431,18 +467,26 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                 style={{ width: `${progresso.percentual}%` }}
               />
             </div>
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="grid grid-cols-5 gap-3 text-center">
               <div>
-                <p className="text-2xl font-bold text-blue-600">{progresso.total}</p>
-                <p className="text-sm text-gray-600">Total</p>
+                <p className="text-xl font-bold text-yellow-600">{progresso.contadores.pendentes}</p>
+                <p className="text-xs text-gray-600">Pendentes</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-green-600">{progresso.julgados}</p>
-                <p className="text-sm text-gray-600">Julgados</p>
+                <p className="text-xl font-bold text-orange-600">{progresso.contadores.suspensos}</p>
+                <p className="text-xs text-gray-600">Suspensos</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-yellow-600">{progresso.pendentes}</p>
-                <p className="text-sm text-gray-600">Pendentes</p>
+                <p className="text-xl font-bold text-red-600">{progresso.contadores.diligencias}</p>
+                <p className="text-xs text-gray-600">Diligências</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold text-blue-600">{progresso.contadores.vistas}</p>
+                <p className="text-xs text-gray-600">Vistas</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold text-green-600">{progresso.contadores.julgados}</p>
+                <p className="text-xs text-gray-600">Julgados</p>
               </div>
             </div>
           </div>
@@ -494,7 +538,25 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                     </div>
                     <div className="text-right space-y-2">
                       {isJulgado ? (
-                        getResultadoBadge(decisao)
+                        <div className="space-y-2">
+                          {getResultadoBadge(decisao)}
+                          {canEdit && isActive && (
+                            <div className="flex items-center justify-end gap-2">
+                              <Link
+                                href={`/sessoes/${sessao.id}/decisoes/${decisao.id}/editar`}
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                              >
+                                Editar
+                              </Link>
+                              {user.role === 'ADMIN' && (
+                                <ExcluirDecisaoButton 
+                                  sessaoId={sessao.id} 
+                                  decisaoId={decisao.id} 
+                                />
+                              )}
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <Badge variant="outline">Aguardando</Badge>
                       )}
@@ -514,17 +576,8 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                   {decisao && (
                     <div className="mt-3 space-y-2">
                       <div className="p-3 bg-white rounded border">
-                        <h5 className="text-sm font-medium mb-2">Fundamentação:</h5>
-                        <p className="text-sm text-gray-700">{decisao.fundamentacao}</p>
-                        
-                        {resultadoDetails && resultadoDetails.length > 0 && (
-                          <div className="mt-3 pt-2 border-t">
-                            <h6 className="text-xs font-medium text-gray-600 mb-1">Detalhes:</h6>
-                            {resultadoDetails.map((detail, index) => (
-                              <p key={index} className="text-xs text-gray-600">{detail}</p>
-                            ))}
-                          </div>
-                        )}
+                        <h5 className="text-sm font-medium mb-2">Ata:</h5>
+                        <p className="text-sm text-gray-700">{processoPauta.ataTexto || 'Texto da ata não informado'}</p>
 
                         {decisao.votos && decisao.votos.length > 0 && (
                           <div className="mt-3 pt-2 border-t">
@@ -566,14 +619,6 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                           Registrada em {new Date(decisao.dataDecisao).toLocaleString('pt-BR')}
                         </p>
                       </div>
-
-                      {/* Texto da Ata específico do processo */}
-                      {processoPauta.ataTexto && (
-                        <div className="p-3 bg-blue-50 rounded border border-blue-200">
-                          <h5 className="text-sm font-medium text-blue-900 mb-1">Texto da Ata:</h5>
-                          <p className="text-sm text-blue-800">{processoPauta.ataTexto}</p>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -583,94 +628,6 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
         </CardContent>
       </Card>
 
-
-      {/* Decisões Registradas */}
-      {sessao.decisoes.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Decisões Registradas</CardTitle>
-            <CardDescription>
-              Histórico de decisões tomadas nesta sessão
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {sessao.decisoes.map((decisao) => {
-                const resultadoDetails = getResultadoDetails(decisao)
-                
-                return (
-                  <div key={decisao.id} className={`border rounded-lg p-4 ${getCardBackground(decisao)}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <Link
-                        href={`/processos/${decisao.processo.id}`}
-                        className="font-medium hover:text-blue-600"
-                      >
-                        {decisao.processo.numero}
-                      </Link>
-                      {getResultadoBadge(decisao)}
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3">{decisao.processo.contribuinte.nome}</p>
-                    
-                    <div className="bg-white p-3 rounded border">
-                      <h5 className="text-sm font-medium mb-2">Fundamentação:</h5>
-                      <p className="text-sm text-gray-700">{decisao.fundamentacao}</p>
-
-                      {resultadoDetails && resultadoDetails.length > 0 && (
-                        <div className="mt-3 pt-2 border-t">
-                          <h6 className="text-xs font-medium text-gray-600 mb-1">Detalhes:</h6>
-                          {resultadoDetails.map((detail, index) => (
-                            <p key={index} className="text-xs text-gray-600">{detail}</p>
-                          ))}
-                        </div>
-                      )}
-
-                      {decisao.votos && decisao.votos.length > 0 && (
-                        <div className="mt-3 pt-2 border-t">
-                          <h6 className="text-xs font-medium text-gray-600 mb-2">Votos registrados:</h6>
-                          <div className="space-y-1">
-                            {decisao.votos.map((voto: any, index: number) => (
-                              <div key={index} className="text-xs text-gray-600 flex items-center gap-2">
-                                <span className="font-medium">{voto.nomeVotante}</span>
-                                <span className="text-gray-400">·</span>
-                                <span>{voto.tipoVoto}</span>
-                                {voto.posicaoVoto && (
-                                  <>
-                                    <span className="text-gray-400">·</span>
-                                    <span className={
-                                      voto.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
-                                      voto.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
-                                      'text-yellow-600'
-                                    }>
-                                      {voto.posicaoVoto}
-                                    </span>
-                                  </>
-                                )}
-                                {voto.acompanhaVoto && (
-                                  <>
-                                    <span className="text-gray-400">·</span>
-                                    <span>Acompanha {voto.acompanhaVoto}</span>
-                                  </>
-                                )}
-                                {voto.isPresidente && (
-                                  <span className="text-blue-600 font-medium">(Presidente)</span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <p className="text-xs text-gray-500 mt-2">
-                        Registrada em {new Date(decisao.dataDecisao).toLocaleString('pt-BR')}
-                      </p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }

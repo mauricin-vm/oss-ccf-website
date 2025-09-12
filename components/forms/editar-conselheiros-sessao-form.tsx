@@ -51,7 +51,7 @@ export default function EditarConselheirosForm({
         const response = await fetch('/api/conselheiros')
         if (response.ok) {
           const data = await response.json()
-          const conselheirosAtivos = (data || []).filter((conselheiro: Conselheiro) => conselheiro.ativo)
+          const conselheirosAtivos = (data.conselheiros || []).filter((conselheiro: Conselheiro) => conselheiro.ativo)
           setConselheiros(conselheirosAtivos)
         }
       } catch (error) {

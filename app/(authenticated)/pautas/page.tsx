@@ -7,11 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  Plus, 
-  Search, 
-  Calendar, 
-  FileText, 
+import {
+  Plus,
+  Search,
+  Calendar,
+  FileText,
   Gavel,
   Users,
   Filter,
@@ -96,8 +96,6 @@ export default function PautasPage() {
     setAnoFilter('all')
   }
 
-  // Verificar se há filtros ativos
-  const hasActiveFilters = searchTerm || (statusFilter && statusFilter !== 'all') || (anoFilter && anoFilter !== 'all')
 
   const canCreate = user?.role === 'ADMIN' || user?.role === 'FUNCIONARIO'
 
@@ -118,26 +116,26 @@ export default function PautasPage() {
   const getStatusPauta = (pauta: { status: string }) => {
     switch (pauta.status) {
       case 'aberta':
-        return { 
-          label: 'Aberta', 
+        return {
+          label: 'Aberta',
           color: 'bg-blue-100 text-blue-800',
           icon: Calendar
         }
       case 'em_julgamento':
-        return { 
-          label: 'Em Julgamento', 
+        return {
+          label: 'Em Julgamento',
           color: 'bg-yellow-100 text-yellow-800',
           icon: Gavel
         }
       case 'fechada':
-        return { 
-          label: 'Fechada', 
+        return {
+          label: 'Fechada',
           color: 'bg-green-100 text-green-800',
           icon: CheckCircle
         }
       default:
-        return { 
-          label: 'Indefinido', 
+        return {
+          label: 'Indefinido',
           color: 'bg-gray-100 text-gray-800',
           icon: AlertCircle
         }
@@ -147,11 +145,11 @@ export default function PautasPage() {
   const getDataStatus = (dataPauta: Date) => {
     const hoje = new Date()
     const pauta = new Date(dataPauta)
-    
+
     // Remover horas para comparar apenas datas
     hoje.setHours(0, 0, 0, 0)
     pauta.setHours(0, 0, 0, 0)
-    
+
     if (pauta.getTime() === hoje.getTime()) {
       return { label: 'Hoje', color: 'text-orange-600 font-medium' }
     } else if (pauta < hoje) {
@@ -159,8 +157,8 @@ export default function PautasPage() {
     } else {
       const diffTime = pauta.getTime() - hoje.getTime()
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-      return { 
-        label: `Em ${diffDays} dia${diffDays > 1 ? 's' : ''}`, 
+      return {
+        label: `Em ${diffDays} dia${diffDays > 1 ? 's' : ''}`,
         color: diffDays <= 3 ? 'text-orange-600' : 'text-green-600'
       }
     }
@@ -175,7 +173,7 @@ export default function PautasPage() {
             Gerencie as pautas de julgamento da CCF
           </p>
         </div>
-        
+
         {canCreate && (
           <Link href="/pautas/nova">
             <Button className="cursor-pointer">
@@ -205,16 +203,16 @@ export default function PautasPage() {
                   />
                 </div>
               </div>
-              <Button 
-                variant="outline" 
-                size="icon" 
+              <Button
+                variant="outline"
+                size="icon"
                 className="cursor-pointer"
                 onClick={() => setShowFilters(!showFilters)}
               >
                 <Filter className="h-4 w-4" />
               </Button>
             </div>
-            
+
             {showFilters && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
                 <div>
@@ -231,7 +229,7 @@ export default function PautasPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div>
                   <label className="text-sm font-medium mb-2 block">Ano</label>
                   <Select value={anoFilter} onValueChange={setAnoFilter}>
@@ -248,10 +246,10 @@ export default function PautasPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="flex items-end">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={clearFilters}
                     className="cursor-pointer"
                   >
@@ -265,32 +263,6 @@ export default function PautasPage() {
         </CardContent>
       </Card>
 
-      {/* Indicador de Filtros Ativos */}
-      {hasActiveFilters && (
-        <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-900">
-                  Filtros ativos: 
-                  {searchTerm && <Badge variant="secondary" className="ml-2">Busca: &ldquo;{searchTerm}&rdquo;</Badge>}
-                  {statusFilter && statusFilter !== 'all' && <Badge variant="secondary" className="ml-2">Status: {statusFilter === 'aberta' ? 'Aberta' : statusFilter === 'em_julgamento' ? 'Em Julgamento' : 'Fechada'}</Badge>}
-                  {anoFilter && anoFilter !== 'all' && <Badge variant="secondary" className="ml-2">Ano: {anoFilter}</Badge>}
-                </span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-                className="cursor-pointer text-blue-600 hover:text-blue-800"
-              >
-                Limpar Todos
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Estatísticas */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -305,7 +277,7 @@ export default function PautasPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-2">
@@ -317,7 +289,7 @@ export default function PautasPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-2">
@@ -329,7 +301,7 @@ export default function PautasPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-2">
@@ -350,13 +322,10 @@ export default function PautasPage() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Calendar className="h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {searchTerm ? 'Nenhuma pauta encontrada' : 'Nenhuma pauta cadastrada'}
+                {searchTerm ? 'Nenhuma pauta encontrada' : 'Nenhuma pauta corresponde aos filtros'}
               </h3>
               <p className="text-gray-600 mb-4">
-                {searchTerm 
-                  ? `Nenhuma pauta corresponde à busca &ldquo;${searchTerm}&rdquo;.`
-                  : 'Comece criando sua primeira pauta de julgamento.'
-                }
+                {searchTerm ? 'Comece criando sua primeira pauta.' : 'Tente ajustar os filtros ou criar uma nova pauta.'}
               </p>
               {canCreate && (
                 <Link href="/pautas/nova">
@@ -427,7 +396,7 @@ export default function PautasPage() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {pauta.processos.slice(0, 4).map((processoPauta) => (
                               <div key={processoPauta.id} className="text-sm">
-                                <Link 
+                                <Link
                                   href={`/processos/${processoPauta.processo.id}`}
                                   className="text-blue-600 hover:text-blue-800 font-medium"
                                 >
@@ -452,7 +421,7 @@ export default function PautasPage() {
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Ações */}
                     <div className="flex flex-col gap-2 ml-4">
                       <Link href={`/pautas/${pauta.id}`}>
@@ -460,7 +429,7 @@ export default function PautasPage() {
                           Ver Detalhes
                         </Button>
                       </Link>
-                      
+
                       {pauta.status === 'aberta' && canCreate && (
                         <Link href={`/sessoes/nova?pauta=${pauta.id}`}>
                           <Button size="sm" className="w-full cursor-pointer">
@@ -469,7 +438,7 @@ export default function PautasPage() {
                           </Button>
                         </Link>
                       )}
-                      
+
                       {pauta.sessao && (
                         <Link href={`/sessoes/${pauta.sessao.id}`}>
                           <Button variant="secondary" size="sm" className="w-full cursor-pointer">
@@ -509,7 +478,7 @@ export default function PautasPage() {
                   return (
                     <div key={pauta.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
-                        <Link 
+                        <Link
                           href={`/pautas/${pauta.id}`}
                           className="font-medium hover:text-blue-600"
                         >

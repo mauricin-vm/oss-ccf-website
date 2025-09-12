@@ -24,7 +24,8 @@ import {
   Plus,
   ArrowRight,
   History,
-  User
+  User,
+  Search
 } from 'lucide-react'
 import Link from 'next/link'
 import { SessionUser, ProcessoWithRelations } from '@/types'
@@ -77,7 +78,8 @@ export default function ProcessoDetalhesPage({ params }: Props) {
 
   useEffect(() => {
     if (!session) {
-      router.push('/login')
+      // Não redirecionar manualmente - deixar o middleware fazer isso
+      // router.push('/login')
       return
     }
     
@@ -134,6 +136,10 @@ export default function ProcessoDetalhesPage({ params }: Props) {
     EM_ANALISE: { label: 'Em Análise', color: 'bg-blue-100 text-blue-800', icon: Clock },
     AGUARDANDO_DOCUMENTOS: { label: 'Aguardando Docs', color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle },
     EM_PAUTA: { label: 'Em Pauta', color: 'bg-purple-100 text-purple-800', icon: Calendar },
+    EM_SESSAO: { label: 'Em Sessão', color: 'bg-purple-100 text-purple-800', icon: Calendar },
+    SUSPENSO: { label: 'Suspenso', color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle },
+    PEDIDO_VISTA: { label: 'Pedido de Vista', color: 'bg-blue-100 text-blue-800', icon: Search },
+    PEDIDO_DILIGENCIA: { label: 'Pedido de Diligência', color: 'bg-orange-100 text-orange-800', icon: Clock },
     JULGADO: { label: 'Julgado', color: 'bg-indigo-100 text-indigo-800', icon: CheckCircle },
     ACORDO_FIRMADO: { label: 'Acordo Firmado', color: 'bg-green-100 text-green-800', icon: CheckCircle },
     EM_CUMPRIMENTO: { label: 'Em Cumprimento', color: 'bg-orange-100 text-orange-800', icon: Clock },
@@ -149,7 +155,8 @@ export default function ProcessoDetalhesPage({ params }: Props) {
   }
 
   const canEdit = user.role === 'ADMIN' || user.role === 'FUNCIONARIO'
-  const StatusIcon = statusMap[processo.status].icon
+  const statusInfo = statusMap[processo.status] || { label: processo.status, color: 'bg-gray-100 text-gray-800', icon: AlertCircle }
+  const StatusIcon = statusInfo.icon
 
   return (
     <div className="space-y-6">
@@ -189,8 +196,8 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                 <StatusIcon className="h-5 w-5 text-gray-600" />
                 <div>
                   <p className="text-sm font-medium text-gray-600">Status</p>
-                  <Badge className={statusMap[processo.status].color}>
-                    {statusMap[processo.status].label}
+                  <Badge className={statusInfo.color}>
+                    {statusInfo.label}
                   </Badge>
                 </div>
               </div>
@@ -558,7 +565,9 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     'ALTERACAO': Edit,
                     'COMUNICACAO': Mail,
                     'DECISAO': XCircle,
-                    'SISTEMA': CheckCircle
+                    'SISTEMA': CheckCircle,
+                    'PAUTA': Calendar,
+                    'REPAUTAMENTO': Calendar
                   }[historico.tipo] || History
                   
                   const tipoLabel = {
@@ -567,7 +576,9 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     'ALTERACAO': 'Alteração',
                     'COMUNICACAO': 'Comunicação',
                     'DECISAO': 'Decisão',
-                    'SISTEMA': 'Sistema'
+                    'SISTEMA': 'Sistema',
+                    'PAUTA': 'Pauta',
+                    'REPAUTAMENTO': 'Repautamento'
                   }[historico.tipo] || historico.tipo
                   
                   const Icon = tipoIcon
@@ -575,10 +586,12 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                   return (
                     <div key={historico.id} className="flex gap-4 pb-4 border-b last:border-b-0">
                       <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                        historico.tipo === 'SISTEMA' ? 'bg-green-100' : 'bg-blue-100'
+                        historico.tipo === 'SISTEMA' ? 'bg-green-100' :
+                        historico.tipo === 'PAUTA' || historico.tipo === 'REPAUTAMENTO' ? 'bg-purple-100' : 'bg-blue-100'
                       }`}>
                         <Icon className={`h-4 w-4 ${
-                          historico.tipo === 'SISTEMA' ? 'text-green-600' : 'text-blue-600'
+                          historico.tipo === 'SISTEMA' ? 'text-green-600' :
+                          historico.tipo === 'PAUTA' || historico.tipo === 'REPAUTAMENTO' ? 'text-purple-600' : 'text-blue-600'
                         }`} />
                       </div>
                       <div className="flex-1">

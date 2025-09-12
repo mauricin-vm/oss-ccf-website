@@ -129,12 +129,13 @@ export default function ProcessosPage() {
   const statusMap = {
     RECEPCIONADO: { label: 'Recepcionado', color: 'bg-gray-100 text-gray-800' },
     EM_ANALISE: { label: 'Em Análise', color: 'bg-blue-100 text-blue-800' },
-    AGUARDANDO_DOCUMENTOS: { label: 'Aguardando Docs', color: 'bg-yellow-100 text-yellow-800' },
     EM_PAUTA: { label: 'Em Pauta', color: 'bg-purple-100 text-purple-800' },
+    SUSPENSO: { label: 'Suspenso', color: 'bg-yellow-100 text-yellow-800' },
+    PEDIDO_VISTA: { label: 'Pedido de Vista', color: 'bg-orange-100 text-orange-800' },
+    PEDIDO_DILIGENCIA: { label: 'Pedido de Diligência', color: 'bg-red-100 text-red-800' },
     JULGADO: { label: 'Julgado', color: 'bg-indigo-100 text-indigo-800' },
     ACORDO_FIRMADO: { label: 'Acordo Firmado', color: 'bg-green-100 text-green-800' },
     EM_CUMPRIMENTO: { label: 'Em Cumprimento', color: 'bg-orange-100 text-orange-800' },
-    FINALIZADO: { label: 'Finalizado', color: 'bg-green-100 text-green-800' },
     ARQUIVADO: { label: 'Arquivado', color: 'bg-gray-100 text-gray-800' }
   }
 
@@ -205,12 +206,13 @@ export default function ProcessosPage() {
                       <SelectItem value="all">Todos os status</SelectItem>
                       <SelectItem value="RECEPCIONADO">Recepcionado</SelectItem>
                       <SelectItem value="EM_ANALISE">Em Análise</SelectItem>
-                      <SelectItem value="AGUARDANDO_DOCUMENTOS">Aguardando Docs</SelectItem>
+                      <SelectItem value="SUSPENSO">Suspenso</SelectItem>
+                      <SelectItem value="PEDIDO_VISTA">Pedido de Vista</SelectItem>
+                      <SelectItem value="PEDIDO_DILIGENCIA">Pedido de Diligência</SelectItem>
+                      <SelectItem value="ACORDO_FIRMADO">Acordo Firmado</SelectItem>
                       <SelectItem value="EM_PAUTA">Em Pauta</SelectItem>
                       <SelectItem value="JULGADO">Julgado</SelectItem>
-                      <SelectItem value="ACORDO_FIRMADO">Acordo Firmado</SelectItem>
                       <SelectItem value="EM_CUMPRIMENTO">Em Cumprimento</SelectItem>
-                      <SelectItem value="FINALIZADO">Finalizado</SelectItem>
                       <SelectItem value="ARQUIVADO">Arquivado</SelectItem>
                     </SelectContent>
                   </Select>
@@ -272,7 +274,7 @@ export default function ProcessosPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Em Análise</p>
                 <p className="text-2xl font-bold">
-                  {filteredProcessos.filter(p => ['EM_ANALISE', 'AGUARDANDO_DOCUMENTOS'].includes(p.status)).length}
+                  {filteredProcessos.filter(p => p.status === 'EM_ANALISE').length}
                 </p>
               </div>
             </div>

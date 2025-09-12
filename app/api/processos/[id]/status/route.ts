@@ -9,12 +9,13 @@ const statusSchema = z.object({
   status: z.enum([
     'RECEPCIONADO',
     'EM_ANALISE',
-    'AGUARDANDO_DOCUMENTOS',
     'EM_PAUTA',
+    'SUSPENSO',
+    'PEDIDO_VISTA',
+    'PEDIDO_DILIGENCIA',
     'JULGADO',
     'ACORDO_FIRMADO',
     'EM_CUMPRIMENTO',
-    'FINALIZADO',
     'ARQUIVADO'
   ])
 })

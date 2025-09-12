@@ -9,9 +9,7 @@ export default function ClientSessionProvider({
 }) {
   return (
     <SessionProvider
-    // refetchInterval={5 * 60} // Revalida a cada 5 minutos para manter a sessão ativa
-    // refetchOnWindowFocus={true} // Refaz fetch quando a janela ganha foco
-    // refetchWhenOffline={false} // Não refaz fetch quando offline
+      refetchOnWindowFocus={false} // Desativado para evitar recarregamentos no foco
     >
       {children}
     </SessionProvider>

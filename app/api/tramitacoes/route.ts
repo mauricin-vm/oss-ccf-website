@@ -206,9 +206,10 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Atualizar status do processo se necessário
+    // Atualizar status do processo para EM_ANALISE se houver tramitação
+    // (exceto se já estiver em pauta ou julgado)
     let novoStatus = processo.status
-    if (processo.status === 'RECEPCIONADO' && data.setorDestino !== 'CCF') {
+    if (['RECEPCIONADO'].includes(processo.status)) {
       novoStatus = 'EM_ANALISE'
     }
 

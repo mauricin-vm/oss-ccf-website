@@ -23,16 +23,13 @@ enum TipoProcesso {
 enum StatusProcesso {
   RECEPCIONADO
   EM_ANALISE
-  AGUARDANDO_DOCUMENTOS
   EM_PAUTA
   SUSPENSO
   PEDIDO_VISTA
   PEDIDO_DILIGENCIA
   JULGADO
-  AGUARDANDO_ACORDO
   ACORDO_FIRMADO
   EM_CUMPRIMENTO
-  FINALIZADO
   ARQUIVADO
 }
 
@@ -269,13 +266,14 @@ model ProcessoPauta {
   
   ordem             Int
   relator           String?
+  revisores         String[]        @default([])
   
   // Novo: status específico na sessão
   statusSessao      TipoResultadoJulgamento?
   ataTexto          String?         @db.Text
   motivoSuspensao   String?         @db.Text
   prazoVista        DateTime?
-  prazoDialigencia  DateTime?
+  prazoDiligencia   Int?
   observacoesSessao String?         @db.Text
   
   @@unique([processoId, pautaId])
@@ -317,7 +315,7 @@ model Decisao {
   // Expandido para suportar todos os tipos
   tipoResultado     TipoResultadoJulgamento
   tipoDecisao       TipoDecisao?    // Apenas para JULGADO
-  fundamentacao     String          @db.Text
+  observacoes       String          @db.Text
   dataDecisao       DateTime        @default(now())
   numeroAcordao     String?         @unique
   dataPublicacao    DateTime?
@@ -327,7 +325,7 @@ model Decisao {
   conselheiroPedidoVista String?    // Nome do conselheiro que pediu vista
   prazoVista        DateTime?       // Prazo para retorno da vista
   especificacaoDiligencia String?   @db.Text
-  prazoDiligencia   DateTime?       
+  prazoDiligencia   Int?       
   
   // Para acordos
   definirAcordo     Boolean         @default(false)

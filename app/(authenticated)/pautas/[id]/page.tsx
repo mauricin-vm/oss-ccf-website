@@ -222,11 +222,11 @@ export default function PautaDetalhesPage({
 
   const loadConselheiros = async () => {
     try {
-      const response = await fetch('/api/conselheiros')
+      const response = await fetch('/api/conselheiros?apenasAtivos=true')
       if (response.ok) {
         const data = await response.json()
         // Filtrar apenas conselheiros ativos
-        setConselheiros(data.filter((c: PrismaUser) => c.ativo))
+        setConselheiros(data.conselheiros || [])
       }
     } catch (error) {
       console.error('Erro ao carregar conselheiros:', error)
@@ -431,12 +431,6 @@ export default function PautaDetalhesPage({
                             <Badge className={statusProcessoMap[processo.status as keyof typeof statusProcessoMap]?.color || 'bg-gray-100 text-gray-800'}>
                               {statusProcessoMap[processo.status as keyof typeof statusProcessoMap]?.label || processo.status}
                             </Badge>
-                            {foiJulgado && (
-                              <Badge className="bg-green-100 text-green-800">
-                                <CheckCircle className="mr-1 h-3 w-3" />
-                                Julgado
-                              </Badge>
-                            )}
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
@@ -523,7 +517,7 @@ export default function PautaDetalhesPage({
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <h4 className="font-medium mb-2">Data de Início</h4>
                       <p>{new Date(pauta.sessao.dataInicio).toLocaleString('pt-BR')}</p>
@@ -532,6 +526,15 @@ export default function PautaDetalhesPage({
                       <div>
                         <h4 className="font-medium mb-2">Data de Fim</h4>
                         <p>{new Date(pauta.sessao.dataFim).toLocaleString('pt-BR')}</p>
+                      </div>
+                    )}
+                    {pauta.sessao.presidente && (
+                      <div>
+                        <h4 className="font-medium mb-2">Presidente</h4>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-gray-500" />
+                          <span>{pauta.sessao.presidente.nome}</span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -543,7 +546,7 @@ export default function PautaDetalhesPage({
                         {pauta.sessao.conselheiros.map((conselheiro) => (
                           <div key={conselheiro.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
                             <Users className="h-4 w-4 text-gray-500" />
-                            <span>{conselheiro.name}</span>
+                            <span>{conselheiro.nome}</span>
                           </div>
                         ))}
                       </div>
@@ -597,14 +600,14 @@ export default function PautaDetalhesPage({
                           </Link>
                           <p className="text-sm text-gray-600">{decisao.processo.contribuinte.nome}</p>
                         </div>
-                        <Badge className={decisaoMap[decisao.tipo as keyof typeof decisaoMap].color}>
-                          {decisaoMap[decisao.tipo as keyof typeof decisaoMap].label}
+                        <Badge className={decisao.tipoDecisao ? decisaoMap[decisao.tipoDecisao.toLowerCase() as keyof typeof decisaoMap]?.color || 'bg-gray-100 text-gray-800' : 'bg-gray-100 text-gray-800'}>
+                          {decisao.tipoDecisao ? decisaoMap[decisao.tipoDecisao.toLowerCase() as keyof typeof decisaoMap]?.label || decisao.tipoDecisao : 'Sem decisão'}
                         </Badge>
                       </div>
 
                       <div className="bg-gray-50 p-3 rounded">
-                        <h5 className="font-medium mb-2">Fundamentação:</h5>
-                        <p className="text-sm whitespace-pre-wrap">{decisao.fundamentacao}</p>
+                        <h5 className="font-medium mb-2">Observações:</h5>
+                        <p className="text-sm whitespace-pre-wrap">{decisao.observacoes}</p>
                       </div>
 
                       <div className="flex items-center justify-between mt-3 text-xs text-gray-500">

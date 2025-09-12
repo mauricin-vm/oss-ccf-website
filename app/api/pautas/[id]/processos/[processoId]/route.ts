@@ -110,7 +110,7 @@ export async function DELETE(
           usuarioId: user.id,
           titulo: 'Processo removido de pauta',
           descricao: `Processo removido da ${pauta.numero} agendada para ${pauta.dataPauta.toLocaleDateString('pt-BR')}`,
-          tipo: 'STATUS_CHANGE'
+          tipo: 'PAUTA'
         }
       })
 

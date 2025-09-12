@@ -6,9 +6,13 @@ export default withAuth(
     const token = req.nextauth.token
     const path = req.nextUrl.pathname
 
-    // Se não há token, redireciona para login
+    // Se não há token, redireciona para login preservando a URL original
     if (!token) {
-      return NextResponse.redirect(new URL('/login', req.url))
+      const originalPath = req.nextUrl.pathname + req.nextUrl.search
+      const loginUrl = new URL('/login', req.url)
+      loginUrl.searchParams.set('callbackUrl', originalPath)
+      
+      return NextResponse.redirect(loginUrl)
     }
 
     // Rotas de admin - apenas ADMIN

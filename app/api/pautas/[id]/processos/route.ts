@@ -74,18 +74,183 @@ export async function POST(
       )
     }
 
-    // Verificar se o processo pode ser incluído (deve estar EM_ANALISE)
-    if (processo.status !== 'EM_ANALISE') {
+    // Verificar se o processo pode ser incluído
+    const statusPermitidos = ['EM_ANALISE', 'SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA']
+    const statusJulgados = ['JULGADO', 'ACORDO_FIRMADO', 'EM_CUMPRIMENTO', 'ARQUIVADO']
+    
+    if (!statusPermitidos.includes(processo.status) && !statusJulgados.includes(processo.status)) {
       return NextResponse.json(
-        { error: 'Apenas processos em análise podem ser incluídos em pautas' },
+        { error: 'Processo não pode ser incluído em pauta com este status' },
         { status: 400 }
       )
     }
+
+    // Verificar se é repautamento de processo já julgado
+    const isRepautamentoJulgado = statusJulgados.includes(processo.status)
+    
+    // Buscar distribuição anterior do processo
+    const ultimaDistribuicao = await prisma.processoPauta.findFirst({
+      where: { processoId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        pauta: true
+      }
+    })
 
     // Obter a próxima ordem na pauta
     const proximaOrdem = pauta.processos.length > 0 
       ? Math.max(...pauta.processos.map(p => p.ordem)) + 1 
       : 1
+
+    // Validar se o relator informado é um conselheiro ativo (se especificado)
+    if (relator && relator.trim()) {
+      const conselheiroValido = await prisma.conselheiro.findFirst({
+        where: { 
+          nome: relator.trim(),
+          ativo: true 
+        }
+      })
+      
+      if (!conselheiroValido) {
+        return NextResponse.json(
+          { error: 'Relator deve ser um conselheiro ativo cadastrado no sistema' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Definir distribuição baseada no status e histórico
+    let novoRelator = relator?.trim() || null
+    let novosRevisores: string[] = []
+    let observacaoDistribuicao = ''
+
+    if (ultimaDistribuicao) {
+      switch (processo.status) {
+        case 'SUSPENSO':
+          // Para suspensão, permite redistribuição flexível
+          if (relator && relator.trim()) {
+            // Redistribuição manual especificada
+            novoRelator = relator.trim()
+            
+            // Se o novo relator era um dos revisores, remove da lista de revisores
+            novosRevisores = (ultimaDistribuicao.revisores || []).filter(r => r !== novoRelator)
+            
+            // Se mudou relator, o anterior vira revisor (se não estava já)
+            if (ultimaDistribuicao.relator && ultimaDistribuicao.relator !== novoRelator && !novosRevisores.includes(ultimaDistribuicao.relator)) {
+              novosRevisores = [ultimaDistribuicao.relator, ...novosRevisores]
+            }
+            
+            observacaoDistribuicao = ultimaDistribuicao.relator === novoRelator 
+              ? ` - Mantido relator original (${novoRelator})`
+              : ` - Redistribuído de ${ultimaDistribuicao.relator} para ${novoRelator}`
+          } else {
+            // Sem especificação, mantém distribuição original
+            novoRelator = ultimaDistribuicao.relator
+            novosRevisores = ultimaDistribuicao.revisores || []
+            observacaoDistribuicao = ` - Mantida distribuição original (${ultimaDistribuicao.relator})`
+          }
+          break
+          
+        case 'PEDIDO_DILIGENCIA':
+          // Para diligência, sugere último membro mas permite alteração
+          if (relator && relator.trim()) {
+            // Redistribuição manual especificada
+            novoRelator = relator.trim()
+            
+            // Se o novo relator era um dos revisores, remove da lista de revisores
+            novosRevisores = (ultimaDistribuicao.revisores || []).filter(r => r !== novoRelator)
+            
+            // Se mudou relator, o anterior vira revisor (se não estava já)
+            if (ultimaDistribuicao.relator && ultimaDistribuicao.relator !== novoRelator && !novosRevisores.includes(ultimaDistribuicao.relator)) {
+              novosRevisores = [ultimaDistribuicao.relator, ...novosRevisores]
+            }
+            
+            // Determinar último membro da distribuição anterior para comparação
+            const ultimoMembro = ultimaDistribuicao.revisores && ultimaDistribuicao.revisores.length > 0
+              ? ultimaDistribuicao.revisores[ultimaDistribuicao.revisores.length - 1]
+              : ultimaDistribuicao.relator
+              
+            observacaoDistribuicao = novoRelator === ultimoMembro
+              ? ` - Mantido último membro (${novoRelator})`
+              : ` - Redistribuído de ${ultimoMembro} para ${novoRelator}`
+          } else {
+            // Sem especificação, vai para último membro (sugestão padrão)
+            const ultimoMembro = ultimaDistribuicao.revisores && ultimaDistribuicao.revisores.length > 0
+              ? ultimaDistribuicao.revisores[ultimaDistribuicao.revisores.length - 1]
+              : ultimaDistribuicao.relator
+              
+            novoRelator = ultimoMembro
+            // Remove o novo relator da lista de revisores se ele estava lá
+            novosRevisores = (ultimaDistribuicao.revisores || []).filter(r => r !== novoRelator)
+            // Adiciona o relator anterior como revisor se necessário
+            if (ultimaDistribuicao.relator && ultimaDistribuicao.relator !== novoRelator && !novosRevisores.includes(ultimaDistribuicao.relator)) {
+              novosRevisores = [ultimaDistribuicao.relator, ...novosRevisores]
+            }
+            
+            observacaoDistribuicao = ` - Distribuído para último membro (${ultimoMembro})`
+          }
+          break
+          
+        case 'PEDIDO_VISTA':
+          // Buscar todas as vistas pedidas para este processo
+          const decisoesVista = await prisma.decisao.findMany({
+            where: { 
+              processoId,
+              tipoResultado: 'PEDIDO_VISTA'
+            },
+            orderBy: { createdAt: 'asc' } // Ordem cronológica
+          })
+          
+          if (relator && relator.trim()) {
+            // Redistribuição manual especificada
+            novoRelator = relator.trim()
+            
+            // Se o novo relator era um dos revisores, remove da lista
+            novosRevisores = (ultimaDistribuicao.revisores || []).filter(r => r !== novoRelator)
+            
+            // Se mudou relator, o anterior vira revisor
+            if (ultimaDistribuicao.relator && ultimaDistribuicao.relator !== novoRelator && !novosRevisores.includes(ultimaDistribuicao.relator)) {
+              novosRevisores = [ultimaDistribuicao.relator, ...novosRevisores]
+            }
+            
+            // Adicionar quem pediu vista como revisor (se não for o novo relator)
+            const novosRevisoresVista = decisoesVista
+              .map(d => d.conselheiroPedidoVista)
+              .filter(conselheiro => conselheiro && conselheiro !== novoRelator && !novosRevisores.includes(conselheiro))
+            
+            novosRevisores = [...novosRevisores, ...novosRevisoresVista]
+            
+            observacaoDistribuicao = ultimaDistribuicao.relator === novoRelator
+              ? ` - Mantido relator original, adicionados revisores: ${novosRevisoresVista.join(', ')}`
+              : ` - Redistribuído de ${ultimaDistribuicao.relator} para ${novoRelator}, revisores: ${novosRevisoresVista.join(', ')}`
+          } else {
+            // Sem especificação, mantém relator original e adiciona quem pediu vista
+            novoRelator = ultimaDistribuicao.relator
+            
+            // Adicionar todos que pediram vista como revisores
+            novosRevisores = [...(ultimaDistribuicao.revisores || [])]
+            const novosRevisoresVista = decisoesVista
+              .map(d => d.conselheiroPedidoVista)
+              .filter(conselheiro => conselheiro && !novosRevisores.includes(conselheiro))
+            
+            novosRevisores = [...novosRevisores, ...novosRevisoresVista]
+            
+            observacaoDistribuicao = novosRevisoresVista.length > 0
+              ? ` - Mantido relator: ${novoRelator}, novos revisores: ${novosRevisoresVista.join(', ')}`
+              : ` - Mantida distribuição anterior`
+          }
+          break
+          
+        default:
+          // Para EM_ANALISE ou primeira distribuição
+          novoRelator = relator?.trim() || null
+          observacaoDistribuicao = relator ? ` - Distribuído para: ${relator}` : ''
+      }
+    } else {
+      // Primeira distribuição
+      novoRelator = relator?.trim() || null
+      observacaoDistribuicao = relator ? ` - Distribuído para: ${relator}` : ''
+    }
 
     await prisma.$transaction(async (tx) => {
       // Incluir processo na pauta
@@ -94,7 +259,8 @@ export async function POST(
           pautaId,
           processoId,
           ordem: proximaOrdem,
-          relator: relator?.trim() || null
+          relator: novoRelator,
+          revisores: novosRevisores
         }
       })
 
@@ -105,27 +271,33 @@ export async function POST(
       })
 
       // Criar histórico no processo
-      const distribucaoInfo = relator ? ` - Distribuído para: ${relator}` : ''
+      let tituloHistorico = 'Processo incluído em pauta'
+      let tipoHistorico = 'PAUTA'
+      
+      if (isRepautamentoJulgado) {
+        tituloHistorico = 'Processo repautado'
+        tipoHistorico = 'REPAUTAMENTO'
+      }
+      
       await tx.historicoProcesso.create({
         data: {
           processoId,
           usuarioId: user.id,
-          titulo: 'Processo incluído em pauta',
-          descricao: `Processo incluído na ${pauta.numero} agendada para ${pauta.dataPauta.toLocaleDateString('pt-BR')}${distribucaoInfo}`,
-          tipo: 'STATUS_CHANGE'
+          titulo: tituloHistorico,
+          descricao: `Processo incluído na ${pauta.numero} agendada para ${pauta.dataPauta.toLocaleDateString('pt-BR')}${observacaoDistribuicao}${isRepautamentoJulgado ? ' (ATENÇÃO: Processo já foi julgado anteriormente)' : ''}`,
+          tipo: tipoHistorico
         }
       })
 
       // Criar tramitação para o processo (apenas se houver distribuição)
-      if (relator) {
+      if (novoRelator) {
         await tx.tramitacao.create({
           data: {
             processoId,
             usuarioId: user.id,
             setorOrigem: 'CCF',
-            setorDestino: relator, // Nome da pessoa (conselheiro)
-            // Remover dataRecebimento - tramitação não deve ser marcada como concluída automaticamente
-            observacoes: `Processo distribuído na ${pauta.numero} para julgamento em ${pauta.dataPauta.toLocaleDateString('pt-BR')}`
+            setorDestino: novoRelator, // Nome da pessoa (conselheiro)
+            observacoes: `Processo distribuído na ${pauta.numero} para julgamento em ${pauta.dataPauta.toLocaleDateString('pt-BR')}${novosRevisores.length > 0 ? ` - Revisores: ${novosRevisores.join(', ')}` : ''}`
           }
         })
       }

@@ -74,15 +74,14 @@ export default async function NovaDecisaoPage({ params }: NovaDecisaoPageProps) 
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href={`/sessoes/${id}`}>
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
+          <Button variant="outline" size="icon" className="cursor-pointer">
+            <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-bold">Nova Decisão</h1>
           <p className="text-gray-600">
-            Registre a decisão de julgamento para um processo da pauta {sessao.pauta.numero}
+            Registre a decisão de julgamento para um processo da {sessao.pauta.numero}
           </p>
         </div>
       </div>
@@ -135,40 +134,6 @@ export default async function NovaDecisaoPage({ params }: NovaDecisaoPageProps) 
         </CardContent>
       </Card>
 
-      {/* Orientações */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Orientações</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 text-sm text-gray-600">
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <strong>Processo:</strong> Selecione o processo que está sendo julgado. Apenas processos ainda não julgados aparecerão na lista
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <strong>Decisão:</strong> Escolha entre Deferido (aprovado), Indeferido (rejeitado) ou Parcial (aprovado com condições)
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <strong>Fundamentação:</strong> Descreva os motivos jurídicos e técnicos que levaram à decisão. Este campo é obrigatório
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <strong>Observações:</strong> Campo opcional para informações complementares, recomendações ou orientações adicionais
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

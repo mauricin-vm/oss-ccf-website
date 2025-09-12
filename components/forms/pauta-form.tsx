@@ -89,10 +89,10 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
   useEffect(() => {
     const fetchConselheiros = async () => {
       try {
-        const response = await fetch('/api/conselheiros')
+        const response = await fetch('/api/conselheiros?apenasAtivos=true')
         if (response.ok) {
           const data = await response.json()
-          setConselheiros(data.filter((c: Conselheiro) => c.ativo))
+          setConselheiros(data.conselheiros || [])
         }
       } catch (error) {
         console.error('Erro ao buscar conselheiros:', error)
@@ -147,7 +147,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
       }
 
       const result = await response.json()
-      
+
       if (onSuccess) {
         onSuccess()
       } else {
@@ -175,7 +175,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
   }
 
   const handleRemoveProcesso = (processoId: string) => {
-    setSelectedProcessos(prev => 
+    setSelectedProcessos(prev =>
       prev.filter(item => item.processo.id !== processoId)
         .map((item, index) => ({ ...item, ordem: index + 1 }))
     )
@@ -186,7 +186,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
       const result = Array.from(prev)
       const [removed] = result.splice(startIndex, 1)
       result.splice(endIndex, 0, removed)
-      
+
       return result.map((item, index) => ({ ...item, ordem: index + 1 }))
     })
   }
@@ -235,7 +235,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="numero">Número da Pauta</Label>
+              <Label htmlFor="numero">Número da Pauta <span className="text-red-500">*</span></Label>
               <Input
                 id="numero"
                 {...register('numero')}
@@ -247,7 +247,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="dataPauta">Data da Pauta</Label>
+              <Label htmlFor="dataPauta">Data da Pauta <span className="text-red-500">*</span></Label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
@@ -322,7 +322,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                         <p className="font-medium">{processo.numero}</p>
                         <p className="text-sm text-gray-600">{processo.contribuinte.nome}</p>
                         <p className="text-xs text-gray-500">
-                          {tipoProcessoMap[processo.tipo as keyof typeof tipoProcessoMap]} - 
+                          {tipoProcessoMap[processo.tipo as keyof typeof tipoProcessoMap]} -
                           R$ {processo.valorOriginal.toLocaleString('pt-BR')}
                         </p>
                       </div>
@@ -349,7 +349,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
           {selectedProcessos.length > 0 && (
             <div className="space-y-3">
               <h4 className="font-medium">Processos Selecionados ({selectedProcessos.length})</h4>
-              
+
               <DragDropContext onDragEnd={onDragEnd}>
                 <Droppable droppableId="processos">
                   {(provided) => (
@@ -389,7 +389,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                                   </div>
                                   <p className="text-sm text-gray-600">{item.processo.contribuinte.nome}</p>
                                   <p className="text-xs text-gray-500">
-                                    {tipoProcessoMap[item.processo.tipo as keyof typeof tipoProcessoMap]} - 
+                                    {tipoProcessoMap[item.processo.tipo as keyof typeof tipoProcessoMap]} -
                                     R$ {item.processo.valorOriginal.toLocaleString('pt-BR')}
                                   </p>
                                 </div>
@@ -398,7 +398,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                                   <Label htmlFor={`relator-${item.processo.id}`} className="text-xs">
                                     Conselheiro <span className="text-red-500">*</span>
                                   </Label>
-                                  <Select 
+                                  <Select
                                     value={item.relator}
                                     onValueChange={(value) => handleDistribuicaoChange(item.processo.id, value)}
                                   >
@@ -413,11 +413,6 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                                       ))}
                                     </SelectContent>
                                   </Select>
-                                  {!item.relator && (
-                                    <p className="text-xs text-red-500 mt-1">
-                                      Seleção de conselheiro é obrigatória
-                                    </p>
-                                  )}
                                 </div>
 
                                 <div className="flex flex-col gap-1">

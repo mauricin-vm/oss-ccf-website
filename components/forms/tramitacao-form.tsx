@@ -95,10 +95,10 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
   useEffect(() => {
     const fetchConselheiros = async () => {
       try {
-        const response = await fetch('/api/conselheiros')
+        const response = await fetch('/api/conselheiros?apenasAtivos=true')
         if (response.ok) {
           const data = await response.json()
-          setConselheiros(data.filter((c: Conselheiro) => c.ativo))
+          setConselheiros(data.conselheiros || [])
         }
       } catch (error) {
         console.error('Erro ao buscar conselheiros:', error)
@@ -142,7 +142,7 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
           const processo = await response.json()
           setSelectedProcesso(processo)
           setValue('processoId', processo.id)
-          
+
           // Definir setor de origem baseado na última tramitação
           if (processo.tramitacoes.length > 0) {
             setValue('setorOrigem', processo.tramitacoes[0].setorDestino, { shouldValidate: true })
@@ -175,7 +175,7 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
       }
 
       await response.json()
-      
+
       if (onSuccess) {
         onSuccess()
       } else {
@@ -193,7 +193,7 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
     setValue('processoId', processo.id)
     setSearchProcess('')
     setProcessos([])
-    
+
     // Definir setor de origem baseado na última tramitação
     if (processo.tramitacoes.length > 0) {
       setValue('setorOrigem', processo.tramitacoes[0].setorDestino, { shouldValidate: true })
@@ -319,10 +319,10 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="setorOrigem">Setor de Origem</Label>
-                <Select 
+                <Label htmlFor="setorOrigem">Setor de Origem <span className="text-red-500">*</span></Label>
+                <Select
                   value={watch('setorOrigem')}
-                  onValueChange={(value) => setValue('setorOrigem', value, { shouldValidate: true })} 
+                  onValueChange={(value) => setValue('setorOrigem', value, { shouldValidate: true })}
                   disabled={isLoading}
                 >
                   <SelectTrigger>
@@ -345,8 +345,8 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
               </div>
 
               <div className="space-y-2">
-                <Label>Destino</Label>
-                
+                <Label>Destino <span className="text-red-500">*</span></Label>
+
                 {/* Tipo de Destino */}
                 <div className="flex gap-4 mb-2">
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -378,9 +378,9 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
                 </div>
 
                 {/* Select baseado no tipo */}
-                <Select 
+                <Select
                   value={watch('setorDestino')}
-                  onValueChange={(value) => setValue('setorDestino', value, { shouldValidate: true })} 
+                  onValueChange={(value) => setValue('setorDestino', value, { shouldValidate: true })}
                   disabled={isLoading}
                 >
                   <SelectTrigger>

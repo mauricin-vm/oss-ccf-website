@@ -19,30 +19,28 @@ function getTituloHistoricoDecisao(tipoResultado: string): string {
 function getDescricaoHistoricoDecisao(data: any, decisao: any): string {
   switch (data.tipoResultado) {
     case 'SUSPENSO':
-      let descSuspenso = data.ataTexto || 'Texto da ata não informado'
-      if (data.observacoes) {
-        descSuspenso += `\n\nObservação: ${data.observacoes}`
-      }
-      return descSuspenso
+      return `Processo suspenso durante sessão de julgamento${data.motivoSuspensao ? `. Motivo: ${data.motivoSuspensao}` : '.'}`
 
     case 'PEDIDO_VISTA':
-      let descVista = data.ataTexto || 'Texto da ata não informado'
-      if (data.observacoes) {
-        descVista += `\n\nObservação: ${data.observacoes}`
-      }
-      return descVista
+      return `Pedido de vista solicitado por ${data.conselheiroPedidoVista}${data.observacoes ? `. Observação: ${data.observacoes}` : '.'}`
 
     case 'PEDIDO_DILIGENCIA':
-      let descDiligencia = data.ataTexto || 'Texto da ata não informado'
-      if (data.observacoes) {
-        descDiligencia += `\n\nObservação: ${data.observacoes}`
+      let descDiligencia = `Pedido de diligência com prazo de ${data.prazoDiligencia} dias`
+      if (data.especificacaoDiligencia) {
+        descDiligencia += `. Observação: ${data.especificacaoDiligencia}`
       }
       return descDiligencia
 
     case 'JULGADO':
-      let descJulgado = data.ataTexto || 'Texto da ata não informado'
-      if (data.observacoes) {
-        descJulgado += `\n\nObservação: ${data.observacoes}`
+      let descJulgado = `Processo julgado`
+      if (data.tipoDecisao) {
+        descJulgado += ` - Resultado: ${data.tipoDecisao}`
+      }
+      if (data.definirAcordo) {
+        descJulgado += ` (Acordo Firmado)`
+      }
+      if (data.votos && data.votos.length > 0) {
+        descJulgado += `. Votação registrada com ${data.votos.length} voto(s)`
       }
       return descJulgado
 
@@ -62,7 +60,7 @@ const votoSchema = z.object({
   isPresidente: z.boolean().optional()
 })
 
-const decisaoSchema = z.object({
+const atualizarDecisaoSchema = z.object({
   processoId: z.string().min(1, 'Processo é obrigatório'),
   tipoResultado: z.enum(['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO'], {
     required_error: 'Tipo de resultado é obrigatório'
@@ -75,10 +73,10 @@ const decisaoSchema = z.object({
   motivoSuspensao: z.string().optional(),
   // Para PEDIDO_VISTA
   conselheiroPedidoVista: z.string().optional(),
-  prazoVista: z.string().optional(), // ISO date string
+  prazoVista: z.string().optional(),
   // Para PEDIDO_DILIGENCIA
   especificacaoDiligencia: z.string().optional(),
-  prazoDiligencia: z.string().optional(), // ISO date string
+  prazoDiligencia: z.string().optional(),
   // Para acordos
   definirAcordo: z.boolean().optional(),
   tipoAcordo: z.enum(['aceita_proposta', 'contra_proposta', 'sem_acordo']).optional(),
@@ -109,52 +107,12 @@ const decisaoSchema = z.object({
   }
 })
 
-export async function GET(
+export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string; decisaoId: string }> }
 ) {
   try {
-    const { id } = await params
-    const session = await getServerSession(authOptions)
-
-    if (!session) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-    }
-
-    const decisoes = await prisma.decisao.findMany({
-      where: { sessaoId: id },
-      include: {
-        processo: {
-          include: {
-            contribuinte: true
-          }
-        },
-        votos: {
-          include: {
-            conselheiro: true
-          },
-          orderBy: { ordemApresentacao: 'asc' }
-        }
-      },
-      orderBy: { createdAt: 'asc' }
-    })
-
-    return NextResponse.json({ decisoes })
-  } catch (error) {
-    console.error('Erro ao buscar decisões:', error)
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params
+    const { id, decisaoId } = await params
     const session = await getServerSession(authOptions)
 
     if (!session) {
@@ -163,17 +121,16 @@ export async function POST(
 
     const user = session.user as SessionUser
 
-    // Apenas Admin e Funcionário podem registrar decisões
+    // Apenas Admin e Funcionário podem atualizar decisões
     if (user.role === 'VISUALIZADOR') {
       return NextResponse.json(
-        { error: 'Sem permissão para registrar decisões' },
+        { error: 'Sem permissão para atualizar decisões' },
         { status: 403 }
       )
     }
 
     const body = await request.json()
-
-    const validationResult = decisaoSchema.safeParse(body)
+    const validationResult = atualizarDecisaoSchema.safeParse(body)
 
     if (!validationResult.success) {
       return NextResponse.json(
@@ -187,39 +144,44 @@ export async function POST(
 
     const data = validationResult.data
 
-    // Verificar se a sessão existe e está ativa
-    const sessao = await prisma.sessaoJulgamento.findUnique({
-      where: { id: id },
+    // Verificar se a decisão existe e pertence à sessão
+    const decisaoExistente = await prisma.decisao.findUnique({
+      where: { id: decisaoId },
       include: {
-        pauta: {
+        sessao: {
           include: {
-            processos: {
+            pauta: {
               include: {
-                processo: true
+                processos: {
+                  include: {
+                    processo: true
+                  }
+                }
               }
             }
           }
         },
-        decisoes: true
+        votos: true
       }
     })
 
-    if (!sessao) {
+    if (!decisaoExistente || decisaoExistente.sessaoId !== id) {
       return NextResponse.json(
-        { error: 'Sessão não encontrada' },
+        { error: 'Decisão não encontrada' },
         { status: 404 }
       )
     }
 
-    if (sessao.dataFim) {
+    // Verificar se a sessão está ativa
+    if (decisaoExistente.sessao.dataFim) {
       return NextResponse.json(
-        { error: 'Não é possível registrar decisões em sessões finalizadas' },
+        { error: 'Não é possível atualizar decisões de sessões finalizadas' },
         { status: 400 }
       )
     }
 
     // Verificar se o processo existe na pauta
-    const processoNaPauta = sessao.pauta.processos.find(
+    const processoNaPauta = decisaoExistente.sessao.pauta.processos.find(
       p => p.processo.id === data.processoId
     )
 
@@ -230,21 +192,8 @@ export async function POST(
       )
     }
 
-    // Verificar se o processo já foi julgado
-    const decisaoExistente = sessao.decisoes.find(
-      d => d.processoId === data.processoId
-    )
-
-    if (decisaoExistente) {
-      return NextResponse.json(
-        { error: 'Este processo já foi julgado nesta sessão' },
-        { status: 400 }
-      )
-    }
-
     // Validação específica para PEDIDO_VISTA
     if (data.tipoResultado === 'PEDIDO_VISTA' && data.conselheiroPedidoVista) {
-      // Verificar se quem está pedindo vista não é o relator atual
       const relatorAtual = processoNaPauta.relator
       const revisoresAtuais = processoNaPauta.revisores || []
 
@@ -265,11 +214,10 @@ export async function POST(
 
     // Usar transação para garantir consistência
     const result = await prisma.$transaction(async (tx) => {
-      // Criar a decisão
-      const decisao = await tx.decisao.create({
+      // Atualizar a decisão
+      const decisaoAtualizada = await tx.decisao.update({
+        where: { id: decisaoId },
         data: {
-          sessaoId: id,
-          processoId: data.processoId,
           tipoResultado: data.tipoResultado,
           tipoDecisao: data.tipoResultado === 'JULGADO' ? (data.tipoDecisao || null) : null,
           observacoes: data.observacoes || '',
@@ -290,11 +238,15 @@ export async function POST(
         }
       })
 
-      // Criar votos se fornecidos
+      // Remover votos existentes e criar novos se fornecidos
+      await tx.voto.deleteMany({
+        where: { decisaoId: decisaoId }
+      })
+
       if (data.votos && data.votos.length > 0) {
         await tx.voto.createMany({
           data: data.votos.map(voto => ({
-            decisaoId: decisao.id,
+            decisaoId: decisaoId,
             conselheiroId: voto.conselheiroId || null,
             tipoVoto: voto.tipoVoto,
             nomeVotante: voto.nomeVotante,
@@ -355,54 +307,229 @@ export async function POST(
         data: { status: novoStatusProcesso as any }
       })
 
-      // Adicionar histórico do processo
+      // Remover histórico anterior relacionado a esta decisão
+      await tx.historicoProcesso.deleteMany({
+        where: {
+          processoId: data.processoId,
+          tipo: 'DECISAO',
+          createdAt: {
+            gte: decisaoExistente.createdAt,
+            lte: new Date(decisaoExistente.createdAt.getTime() + 5000) // 5 segundos de margem
+          }
+        }
+      })
+
+      // Adicionar novo histórico do processo
       const tituloHistorico = getTituloHistoricoDecisao(data.tipoResultado)
-      const descricaoHistorico = getDescricaoHistoricoDecisao(data, decisao)
+      const descricaoHistorico = getDescricaoHistoricoDecisao(data, decisaoAtualizada)
 
       await tx.historicoProcesso.create({
         data: {
           processoId: data.processoId,
           usuarioId: user.id,
-          titulo: tituloHistorico,
+          titulo: `${tituloHistorico}`,
           descricao: descricaoHistorico,
           tipo: 'DECISAO'
         }
       })
 
-      return decisao
+      return decisaoAtualizada
     })
-
-    const decisao = result
-
-    // Verificar se todos os processos foram julgados
-    const totalProcessos = sessao.pauta.processos.length
-    const totalDecisoes = sessao.decisoes.length + 1 // +1 pela decisão que acabamos de criar
 
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
         usuarioId: user.id,
-        acao: 'CREATE',
+        acao: 'UPDATE',
         entidade: 'Decisao',
-        entidadeId: decisao.id,
+        entidadeId: decisaoId,
+        dadosAnteriores: {
+          processoNumero: processoNaPauta.processo.numero,
+          contribuinte: result.processo.contribuinte.nome,
+          resultadoAnterior: decisaoExistente.tipoResultado,
+          decisaoAnterior: decisaoExistente.tipoDecisao,
+          observacoesAnterior: decisaoExistente.observacoes,
+          votosAnterior: decisaoExistente.votos.length
+        },
         dadosNovos: {
           sessaoId: id,
           processoNumero: processoNaPauta.processo.numero,
-          contribuinte: decisao.processo.contribuinte.nome,
-          resultadoDecisao: decisao.tipoResultado,
-          tipoDecisao: decisao.tipoDecisao,
-          observacoes: decisao.observacoes,
-          definirAcordo: decisao.definirAcordo,
-          progressoSessao: `${totalDecisoes}/${totalProcessos}`,
-          votosRegistrados: data.votos?.length || 0,
-          decisaoCompleta: `${decisao.tipoResultado}${decisao.tipoDecisao ? ` (${decisao.tipoDecisao})` : ''}${decisao.definirAcordo ? ' - Acordo Firmado' : ''}`
+          contribuinte: result.processo.contribuinte.nome,
+          novoResultado: result.tipoResultado,
+          novaDecisao: result.tipoDecisao,
+          novaFundamentacao: result.observacoes,
+          definirAcordo: result.definirAcordo,
+          novosVotos: data.votos?.length || 0,
+          alteracao: `${decisaoExistente.tipoResultado} → ${result.tipoResultado}${result.tipoDecisao ? ` (${result.tipoDecisao})` : ''}`
         }
       }
     })
 
-    return NextResponse.json(decisao, { status: 201 })
+    return NextResponse.json(result)
   } catch (error) {
-    console.error('Erro ao registrar decisão:', error)
+    console.error('Erro ao atualizar decisão:', error)
+    return NextResponse.json(
+      { error: 'Erro interno do servidor' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; decisaoId: string }> }
+) {
+  try {
+    const { id, decisaoId } = await params
+    const session = await getServerSession(authOptions)
+
+    if (!session) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
+    const user = session.user as SessionUser
+
+    // Apenas Admin pode excluir decisões
+    if (user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Apenas administradores podem excluir decisões' },
+        { status: 403 }
+      )
+    }
+
+    // Verificar se a decisão existe e pertence à sessão
+    const decisaoExistente = await prisma.decisao.findUnique({
+      where: { id: decisaoId },
+      include: {
+        sessao: {
+          include: {
+            pauta: {
+              include: {
+                processos: {
+                  include: {
+                    processo: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        processo: {
+          include: {
+            contribuinte: true
+          }
+        },
+        votos: true
+      }
+    })
+
+    if (!decisaoExistente || decisaoExistente.sessaoId !== id) {
+      return NextResponse.json(
+        { error: 'Decisão não encontrada' },
+        { status: 404 }
+      )
+    }
+
+    // Verificar se a sessão está ativa
+    if (decisaoExistente.sessao.dataFim) {
+      return NextResponse.json(
+        { error: 'Não é possível excluir decisões de sessões finalizadas' },
+        { status: 400 }
+      )
+    }
+
+    // Encontrar o processo na pauta
+    const processoNaPauta = decisaoExistente.sessao.pauta.processos.find(
+      p => p.processo.id === decisaoExistente.processoId
+    )
+
+    // Usar transação para garantir consistência
+    await prisma.$transaction(async (tx) => {
+      // Excluir votos primeiro
+      await tx.voto.deleteMany({
+        where: { decisaoId: decisaoId }
+      })
+
+      // Excluir a decisão
+      await tx.decisao.delete({
+        where: { id: decisaoId }
+      })
+
+      // Resetar status do ProcessoPauta
+      if (processoNaPauta) {
+        await tx.processoPauta.updateMany({
+          where: {
+            processoId: decisaoExistente.processoId,
+            pauta: {
+              sessao: {
+                id: id
+              }
+            }
+          },
+          data: {
+            statusSessao: null,
+            ataTexto: null,
+            motivoSuspensao: null,
+            prazoVista: null,
+            prazoDialigencia: null,
+            observacoesSessao: null
+          }
+        })
+      }
+
+      // Resetar status do processo para EM_SESSAO
+      await tx.processo.update({
+        where: { id: decisaoExistente.processoId },
+        data: { status: 'EM_SESSAO' as any }
+      })
+
+      // Remover histórico relacionado a esta decisão
+      await tx.historicoProcesso.deleteMany({
+        where: {
+          processoId: decisaoExistente.processoId,
+          tipo: 'DECISAO',
+          createdAt: {
+            gte: decisaoExistente.createdAt,
+            lte: new Date(decisaoExistente.createdAt.getTime() + 5000) // 5 segundos de margem
+          }
+        }
+      })
+
+      // Adicionar histórico de remoção da decisão
+      await tx.historicoProcesso.create({
+        data: {
+          processoId: decisaoExistente.processoId,
+          usuarioId: user.id,
+          titulo: 'Decisão Removida',
+          descricao: `Decisão de ${decisaoExistente.tipoResultado.toLowerCase()} foi removida da sessão de julgamento`,
+          tipo: 'DECISAO'
+        }
+      })
+    })
+
+    // Log de auditoria
+    await prisma.logAuditoria.create({
+      data: {
+        usuarioId: user.id,
+        acao: 'DELETE',
+        entidade: 'Decisao',
+        entidadeId: decisaoId,
+        dadosAnteriores: {
+          sessaoId: id,
+          processoNumero: decisaoExistente.processo.numero,
+          contribuinte: decisaoExistente.processo.contribuinte.nome,
+          resultadoExcluido: decisaoExistente.tipoResultado,
+          decisaoExcluida: decisaoExistente.tipoDecisao,
+          observacoesExcluida: decisaoExistente.observacoes,
+          votosExcluidos: decisaoExistente.votos.length,
+          exclusao: `Decisão ${decisaoExistente.tipoResultado}${decisaoExistente.tipoDecisao ? ` (${decisaoExistente.tipoDecisao})` : ''} foi removida`
+        }
+      }
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Erro ao excluir decisão:', error)
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }

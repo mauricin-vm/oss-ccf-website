@@ -123,7 +123,7 @@ export default function AdicionarHistoricoModal({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="tipo">Tipo</Label>
+            <Label htmlFor="tipo">Tipo <span className="text-red-500">*</span></Label>
             <Select
               value={formData.tipo}
               onValueChange={(value) => handleInputChange('tipo', value)}
@@ -142,7 +142,7 @@ export default function AdicionarHistoricoModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="titulo">Título *</Label>
+            <Label htmlFor="titulo">Título <span className="text-red-500">*</span></Label>
             <Input
               id="titulo"
               value={formData.titulo}
@@ -154,7 +154,7 @@ export default function AdicionarHistoricoModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="descricao">Descrição *</Label>
+            <Label htmlFor="descricao">Descrição <span className="text-red-500">*</span></Label>
             <Textarea
               id="descricao"
               value={formData.descricao}

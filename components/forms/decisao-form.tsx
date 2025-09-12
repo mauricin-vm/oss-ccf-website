@@ -15,7 +15,8 @@ import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Loader2, AlertCircle, Gavel, FileText, User, Building, Clock, Pause, Search, CheckCircle, Plus, X } from 'lucide-react'
+import { Loader2, AlertCircle, Gavel, FileText, User, Building, Clock, Pause, Search, CheckCircle, Plus, X, Users } from 'lucide-react'
+import VotacaoModal from '@/components/modals/votacao-modal'
 
 const votoSchema = z.object({
   tipoVoto: z.enum(['RELATOR', 'REVISOR', 'CONSELHEIRO']),
@@ -34,7 +35,7 @@ const decisaoSchema = z.object({
     required_error: 'Tipo de resultado é obrigatório'
   }),
   tipoDecisao: z.enum(['DEFERIDO', 'INDEFERIDO', 'PARCIAL']).optional(),
-  fundamentacao: z.string().min(10, 'Fundamentação deve ter pelo menos 10 caracteres'),
+  observacoes: z.string().optional(),
   motivoSuspensao: z.string().optional(),
   conselheiroPedidoVista: z.string().optional(),
   prazoVista: z.string().optional(),
@@ -42,8 +43,29 @@ const decisaoSchema = z.object({
   prazoDiligencia: z.string().optional(),
   definirAcordo: z.boolean().optional(),
   tipoAcordo: z.enum(['aceita_proposta', 'contra_proposta', 'sem_acordo']).optional(),
-  ataTexto: z.string().optional(),
+  ataTexto: z.string().min(1, 'Texto da ata é obrigatório'),
   votos: z.array(votoSchema).optional()
+}).superRefine((data, ctx) => {
+  // Validações específicas por tipo de resultado
+  if (data.tipoResultado === 'PEDIDO_DILIGENCIA') {
+    if (!data.prazoDiligencia || data.prazoDiligencia.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Prazo para cumprimento é obrigatório',
+        path: ['prazoDiligencia']
+      })
+    }
+  }
+  
+  if (data.tipoResultado === 'PEDIDO_VISTA') {
+    if (!data.conselheiroPedidoVista || data.conselheiroPedidoVista.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Conselheiro que pediu vista é obrigatório',
+        path: ['conselheiroPedidoVista']
+      })
+    }
+  }
 })
 
 type DecisaoInput = z.infer<typeof decisaoSchema>
@@ -71,6 +93,7 @@ interface Processo {
 interface ProcessoPauta {
   ordem: number
   relator: string
+  revisores: string[]
   processo: Processo
 }
 
@@ -86,10 +109,13 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
   const searchParams = useSearchParams()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingData, setIsLoadingData] = useState(true)
   const [processos, setProcessos] = useState<ProcessoPauta[]>([])
   const [selectedProcesso, setSelectedProcesso] = useState<ProcessoPauta | null>(null)
   const [conselheiros, setConselheiros] = useState<Conselheiro[]>([])
   const [votos, setVotos] = useState<VotoInput[]>([])
+  const [showVotacaoModal, setShowVotacaoModal] = useState(false)
+  const [votacaoResultado, setVotacaoResultado] = useState<any>(null)
 
   const {
     register,
@@ -113,6 +139,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
   useEffect(() => {
     const fetchDados = async () => {
       try {
+        setIsLoadingData(true)
         const response = await fetch(`/api/sessoes/${sessaoId}`)
         if (response.ok) {
           const sessao = await response.json()
@@ -139,6 +166,8 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
         }
       } catch (error) {
         console.error('Erro ao buscar dados da sessão:', error)
+      } finally {
+        setIsLoadingData(false)
       }
     }
 
@@ -149,9 +178,18 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
     setIsLoading(true)
     setError(null)
 
+    // Validações específicas antes do envio
+    if (data.tipoResultado === 'JULGADO' && !votacaoResultado) {
+      setError('Para processos julgados, é necessário ter a votação concluída.')
+      setIsLoading(false)
+      return
+    }
+
     try {
       const payload = {
         ...data,
+        // Limpar tipoDecisao se não for JULGADO
+        tipoDecisao: data.tipoResultado === 'JULGADO' ? data.tipoDecisao : undefined,
         votos: votos.length > 0 ? votos : undefined
       }
 
@@ -199,6 +237,50 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
     setVotos(novosVotos)
   }
 
+  const formatarListaNomes = (nomes: string[]): string => {
+    if (nomes.length === 0) return ''
+    if (nomes.length === 1) return nomes[0]
+    if (nomes.length === 2) return `${nomes[0]} e ${nomes[1]}`
+
+    const todosExcetoUltimo = nomes.slice(0, -1).join(', ')
+    const ultimo = nomes[nomes.length - 1]
+    return `${todosExcetoUltimo} e ${ultimo}`
+  }
+
+  const handleVotacaoConfirm = (resultado: any) => {
+    setVotacaoResultado(resultado)
+    // Converter resultado para o formato de votos esperado
+    const novosVotos: VotoInput[] = []
+
+    // Adicionar votos dos relatores/revisores
+    resultado.relatores.forEach((relator: any, index: number) => {
+      novosVotos.push({
+        tipoVoto: relator.tipo,
+        nomeVotante: relator.nome,
+        posicaoVoto: relator.posicao === 'ACOMPANHA' ? 'DEFERIDO' : relator.posicao,
+        acompanhaVoto: relator.acompanhaVoto,
+        ordemApresentacao: index + 1
+      })
+    })
+
+    // Adicionar votos dos conselheiros
+    resultado.conselheiros.forEach((conselheiro: any, index: number) => {
+      if (conselheiro.posicao !== 'ABSTENCAO') {
+        novosVotos.push({
+          tipoVoto: 'CONSELHEIRO',
+          nomeVotante: conselheiro.nome,
+          conselheiroId: conselheiro.conselheiroId,
+          posicaoVoto: conselheiro.posicao,
+          ordemApresentacao: resultado.relatores.length + index + 1
+        })
+      }
+    })
+
+    setVotos(novosVotos)
+    // Definir tipo de decisão baseado no resultado
+    setValue('tipoDecisao', resultado.resultado.decisaoFinal)
+  }
+
   const getTipoProcessoLabel = (tipo: string) => {
     switch (tipo) {
       case 'COMPENSACAO': return 'Compensação'
@@ -216,6 +298,14 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
       case 'JULGADO': return 'border-green-200 bg-green-50'
       default: return 'border-gray-200 bg-gray-50'
     }
+  }
+
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    )
   }
 
   return (
@@ -310,6 +400,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                   type="button"
                   variant="outline"
                   size="sm"
+                  className="cursor-pointer"
                   onClick={() => {
                     setSelectedProcesso(null)
                     setValue('processoId', '')
@@ -337,17 +428,15 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <RadioGroup
-                value={tipoResultado}
-                onValueChange={(value) => setValue('tipoResultado', value as any)}
-                className="grid grid-cols-1 md:grid-cols-2 gap-4"
-              >
-                <div className={`flex items-start space-x-3 p-4 border-2 rounded-lg cursor-pointer ${tipoResultado === 'SUSPENSO' ? getTipoResultadoColor('SUSPENSO') : 'border-gray-200'}`}>
-                  <RadioGroupItem value="SUSPENSO" id="suspenso" className="mt-1" />
-                  <div className="space-y-1 flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${tipoResultado === 'SUSPENSO' ? getTipoResultadoColor('SUSPENSO') : 'border-gray-200 hover:border-gray-300'}`}
+                  onClick={() => setValue('tipoResultado', 'SUSPENSO')}
+                >
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Pause className="h-4 w-4 text-yellow-600" />
-                      <Label htmlFor="suspenso" className="font-medium text-yellow-700">Suspenso</Label>
+                      <span className="font-medium text-yellow-700">Suspenso</span>
                     </div>
                     <p className="text-sm text-gray-600">
                       Processo retirado de pauta por motivo específico
@@ -355,12 +444,14 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                   </div>
                 </div>
 
-                <div className={`flex items-start space-x-3 p-4 border-2 rounded-lg cursor-pointer ${tipoResultado === 'PEDIDO_VISTA' ? getTipoResultadoColor('PEDIDO_VISTA') : 'border-gray-200'}`}>
-                  <RadioGroupItem value="PEDIDO_VISTA" id="pedido-vista" className="mt-1" />
-                  <div className="space-y-1 flex-1">
+                <div
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${tipoResultado === 'PEDIDO_VISTA' ? getTipoResultadoColor('PEDIDO_VISTA') : 'border-gray-200 hover:border-gray-300'}`}
+                  onClick={() => setValue('tipoResultado', 'PEDIDO_VISTA')}
+                >
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Search className="h-4 w-4 text-blue-600" />
-                      <Label htmlFor="pedido-vista" className="font-medium text-blue-700">Pedido de Vista</Label>
+                      <span className="font-medium text-blue-700">Pedido de Vista</span>
                     </div>
                     <p className="text-sm text-gray-600">
                       Conselheiro solicita análise adicional do processo
@@ -368,12 +459,14 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                   </div>
                 </div>
 
-                <div className={`flex items-start space-x-3 p-4 border-2 rounded-lg cursor-pointer ${tipoResultado === 'PEDIDO_DILIGENCIA' ? getTipoResultadoColor('PEDIDO_DILIGENCIA') : 'border-gray-200'}`}>
-                  <RadioGroupItem value="PEDIDO_DILIGENCIA" id="pedido-diligencia" className="mt-1" />
-                  <div className="space-y-1 flex-1">
+                <div
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${tipoResultado === 'PEDIDO_DILIGENCIA' ? getTipoResultadoColor('PEDIDO_DILIGENCIA') : 'border-gray-200 hover:border-gray-300'}`}
+                  onClick={() => setValue('tipoResultado', 'PEDIDO_DILIGENCIA')}
+                >
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-orange-600" />
-                      <Label htmlFor="pedido-diligencia" className="font-medium text-orange-700">Pedido de Diligência</Label>
+                      <span className="font-medium text-orange-700">Pedido de Diligência</span>
                     </div>
                     <p className="text-sm text-gray-600">
                       Relator solicita nova documentação ou análise
@@ -381,19 +474,21 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                   </div>
                 </div>
 
-                <div className={`flex items-start space-x-3 p-4 border-2 rounded-lg cursor-pointer ${tipoResultado === 'JULGADO' ? getTipoResultadoColor('JULGADO') : 'border-gray-200'}`}>
-                  <RadioGroupItem value="JULGADO" id="julgado" className="mt-1" />
-                  <div className="space-y-1 flex-1">
+                <div
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${tipoResultado === 'JULGADO' ? getTipoResultadoColor('JULGADO') : 'border-gray-200 hover:border-gray-300'}`}
+                  onClick={() => setValue('tipoResultado', 'JULGADO')}
+                >
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <Label htmlFor="julgado" className="font-medium text-green-700">Julgado</Label>
+                      <span className="font-medium text-green-700">Julgado</span>
                     </div>
                     <p className="text-sm text-gray-600">
                       Decisão final com votação dos conselheiros
                     </p>
                   </div>
                 </div>
-              </RadioGroup>
+              </div>
               {errors.tipoResultado && (
                 <p className="text-sm text-red-500 mt-2">{errors.tipoResultado.message}</p>
               )}
@@ -405,13 +500,16 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
             <Card>
               <CardHeader>
                 <CardTitle>Detalhes da Suspensão</CardTitle>
+                <CardDescription>
+                  Campos opcionais para detalhar a suspensão
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="motivoSuspensao">Motivo da Suspensão *</Label>
                   <Textarea
                     id="motivoSuspensao"
-                    placeholder="Descreva o motivo específico da suspensão..."
+                    placeholder="Descreva detalhes adicionais sobre a suspensão..."
+                    rows={4}
                     {...register('motivoSuspensao')}
                   />
                   {errors.motivoSuspensao && (
@@ -426,26 +524,63 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
             <Card>
               <CardHeader>
                 <CardTitle>Detalhes do Pedido de Vista</CardTitle>
+                <CardDescription>
+                  Conselheiro que pediu vista é obrigatório, observação é opcional
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="conselheiroPedidoVista">Conselheiro que pediu vista *</Label>
-                  <Input
-                    id="conselheiroPedidoVista"
-                    placeholder="Nome do conselheiro..."
-                    {...register('conselheiroPedidoVista')}
-                  />
-                  {errors.conselheiroPedidoVista && (
-                    <p className="text-sm text-red-500">{errors.conselheiroPedidoVista.message}</p>
-                  )}
+                <div className="w-1/2">
+                  <div className="space-y-2">
+                    <Label htmlFor="conselheiroPedidoVista">Conselheiro que pediu vista *</Label>
+                    <Select
+                      value={watch('conselheiroPedidoVista') || ''}
+                      onValueChange={(value) => setValue('conselheiroPedidoVista', value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecione o conselheiro..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {conselheiros
+                          .filter(conselheiro => {
+                            // Excluir relator da lista
+                            if (conselheiro.nome === selectedProcesso?.relator) {
+                              return false
+                            }
+                            // Excluir revisores da lista
+                            if (selectedProcesso?.revisores && selectedProcesso.revisores.includes(conselheiro.nome)) {
+                              return false
+                            }
+                            return true
+                          })
+                          .map((conselheiro) => (
+                          <SelectItem key={conselheiro.id} value={conselheiro.nome}>
+                            {conselheiro.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.conselheiroPedidoVista && (
+                      <p className="text-sm text-red-500">{errors.conselheiroPedidoVista.message}</p>
+                    )}
+                    {selectedProcesso?.relator && (
+                      <p className="text-xs text-gray-500">
+                        Nota: Relatores e revisores não podem pedir vista do próprio processo.
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="prazoVista">Prazo para retorno da vista</Label>
-                  <Input
-                    id="prazoVista"
-                    type="date"
-                    {...register('prazoVista')}
+                  <Label htmlFor="observacoes">Observação</Label>
+                  <Textarea
+                    id="observacoes"
+                    placeholder="Descreva detalhes adicionais sobre o pedido de vista..."
+                    rows={4}
+                    {...register('observacoes')}
+                    disabled={isLoading}
                   />
+                  {errors.observacoes && (
+                    <p className="text-sm text-red-500">{errors.observacoes.message}</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -455,26 +590,38 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
             <Card>
               <CardHeader>
                 <CardTitle>Detalhes do Pedido de Diligência</CardTitle>
+                <CardDescription>
+                  Prazo para cumprimento é obrigatório, observação é opcional
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="especificacaoDiligencia">Especificação da diligência *</Label>
+                  <Label htmlFor="especificacaoDiligencia">Observação</Label>
                   <Textarea
                     id="especificacaoDiligencia"
-                    placeholder="Descreva a documentação ou análise solicitada..."
+                    placeholder="Descreva detalhes adicionais sobre a diligência..."
+                    rows={4}
                     {...register('especificacaoDiligencia')}
                   />
                   {errors.especificacaoDiligencia && (
                     <p className="text-sm text-red-500">{errors.especificacaoDiligencia.message}</p>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="prazoDiligencia">Prazo para cumprimento</Label>
-                  <Input
-                    id="prazoDiligencia"
-                    type="date"
-                    {...register('prazoDiligencia')}
-                  />
+                <div className="space-y-2 w-1/2">
+                  <Label htmlFor="prazoDiligencia">Prazo para cumprimento *</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="prazoDiligencia"
+                      type="number"
+                      min="1"
+                      placeholder="Ex: 15"
+                      {...register('prazoDiligencia')}
+                    />
+                    <span className="text-sm text-gray-600">dias</span>
+                  </div>
+                  {errors.prazoDiligencia && (
+                    <p className="text-sm text-red-500">{errors.prazoDiligencia.message}</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -482,45 +629,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
 
           {tipoResultado === 'JULGADO' && (
             <>
-              {/* Tipo de Decisão */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tipo de Decisão</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <RadioGroup
-                    value={watch('tipoDecisao')}
-                    onValueChange={(value) => setValue('tipoDecisao', value as any)}
-                    className="grid grid-cols-1 md:grid-cols-3 gap-4"
-                  >
-                    <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                      <RadioGroupItem value="DEFERIDO" id="deferido" />
-                      <div className="space-y-1">
-                        <Label htmlFor="deferido" className="font-medium text-green-700">Deferido</Label>
-                        <p className="text-sm text-gray-600">Pedido aprovado integralmente</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                      <RadioGroupItem value="INDEFERIDO" id="indeferido" />
-                      <div className="space-y-1">
-                        <Label htmlFor="indeferido" className="font-medium text-red-700">Indeferido</Label>
-                        <p className="text-sm text-gray-600">Pedido rejeitado</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                      <RadioGroupItem value="PARCIAL" id="parcial" />
-                      <div className="space-y-1">
-                        <Label htmlFor="parcial" className="font-medium text-yellow-700">Parcial</Label>
-                        <p className="text-sm text-gray-600">Aprovado com condições</p>
-                      </div>
-                    </div>
-                  </RadioGroup>
-                  {errors.tipoDecisao && (
-                    <p className="text-sm text-red-500 mt-2">{errors.tipoDecisao.message}</p>
-                  )}
-                </CardContent>
-              </Card>
-
               {/* Sistema de Votação */}
               <Card>
                 <CardHeader>
@@ -528,182 +636,171 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                     Sistema de Votação
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="default"
                       size="sm"
-                      onClick={adicionarVoto}
+                      className="cursor-pointer"
+                      onClick={() => setShowVotacaoModal(true)}
                     >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Adicionar Voto
+                      <Users className="h-4 w-4 mr-1" />
+                      Definir Votação
                     </Button>
                   </CardTitle>
                   <CardDescription>
-                    Registre os votos de relatores, revisores e conselheiros
+                    Votação obrigatória: configure os votos de relatores, revisores e conselheiros
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {votos.map((voto, index) => (
-                    <div key={index} className="p-4 border rounded-lg space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">Voto {index + 1}</h4>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removerVoto(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
+                  {votacaoResultado ? (
+                    <div className="space-y-4">
+                      {/* Resumo do Resultado */}
+                      <Card className="border-2 border-green-200 bg-green-50 p-4">
+                        <div className="text-center">
+                          <div className="text-xl font-bold text-green-800 mb-3">
+                            Resultado: {votacaoResultado.resultado.decisaoFinal}
+                          </div>
+                          <div className="grid grid-cols-3 gap-4 mb-3">
+                            <div>
+                              <div className="text-xl font-bold text-green-600">{votacaoResultado.resultado.deferidos}</div>
+                              <div className="text-xs text-gray-600">Deferidos</div>
+                            </div>
+                            <div>
+                              <div className="text-xl font-bold text-red-600">{votacaoResultado.resultado.indeferidos}</div>
+                              <div className="text-xs text-gray-600">Indeferidos</div>
+                            </div>
+                            <div>
+                              <div className="text-xl font-bold text-yellow-600">{votacaoResultado.resultado.parciais}</div>
+                              <div className="text-xs text-gray-600">Parciais</div>
+                            </div>
+                          </div>
 
+                        </div>
+                      </Card>
+
+                      {/* Resumo dos Votos - Layout Compacto */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Tipo de Voto</Label>
-                          <Select
-                            value={voto.tipoVoto}
-                            onValueChange={(value) => atualizarVoto(index, 'tipoVoto', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="RELATOR">Relator</SelectItem>
-                              <SelectItem value="REVISOR">Revisor</SelectItem>
-                              <SelectItem value="CONSELHEIRO">Conselheiro</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Nome do Votante</Label>
-                          <Input
-                            value={voto.nomeVotante}
-                            onChange={(e) => atualizarVoto(index, 'nomeVotante', e.target.value)}
-                            placeholder="Nome completo..."
-                          />
-                        </div>
-
-                        {(voto.tipoVoto === 'RELATOR' || voto.tipoVoto === 'REVISOR') && (
-                          <div className="space-y-2">
-                            <Label>Posição do Voto</Label>
-                            <Select
-                              value={voto.posicaoVoto || ''}
-                              onValueChange={(value) => atualizarVoto(index, 'posicaoVoto', value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="DEFERIDO">Deferido</SelectItem>
-                                <SelectItem value="INDEFERIDO">Indeferido</SelectItem>
-                                <SelectItem value="PARCIAL">Parcial</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
+                        {votacaoResultado.relatores.length > 0 && (
+                          <Card className="p-3">
+                            <div className="font-medium text-gray-800 mb-2 text-sm">Relatores/Revisores</div>
+                            <div className="space-y-1">
+                              {votacaoResultado.relatores.map((relator: any, index: number) => (
+                                <div key={index} className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant={relator.tipo === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
+                                      {relator.tipo === 'RELATOR' ? 'Relator' : 'Revisor'}
+                                    </Badge>
+                                    <span className="truncate font-medium">{relator.nome}</span>
+                                  </div>
+                                  <span className={`font-medium text-xs ${relator.posicao === 'DEFERIDO' ? 'text-green-600' :
+                                    relator.posicao === 'INDEFERIDO' ? 'text-red-600' :
+                                      relator.posicao === 'PARCIAL' ? 'text-yellow-600' :
+                                        'text-blue-600'
+                                    }`}>
+                                    {relator.posicao === 'ACOMPANHA'
+                                      ? `Acomp. ${relator.acompanhaVoto?.split(' ')[0]}`
+                                      : relator.posicao}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </Card>
                         )}
 
-                        {voto.tipoVoto === 'CONSELHEIRO' && (
-                          <div className="space-y-2">
-                            <Label>Acompanha</Label>
-                            <Input
-                              value={voto.acompanhaVoto || ''}
-                              onChange={(e) => atualizarVoto(index, 'acompanhaVoto', e.target.value)}
-                              placeholder="Ex: Relator, Revisor A, etc..."
-                            />
+                        <Card className="p-3">
+                          <div className="font-medium text-gray-800 mb-3 text-sm">Conselheiros</div>
+                          <div className="max-h-24 overflow-y-auto space-y-1">
+                            {/* Votos válidos agrupados */}
+                            {['DEFERIDO', 'INDEFERIDO', 'PARCIAL'].map(posicao => {
+                              const conselheirosComEssePosicao = votacaoResultado.conselheiros.filter((conselheiro: any) => conselheiro.posicao === posicao)
+                              if (conselheirosComEssePosicao.length === 0) return null
+
+                              return (
+                                <div key={posicao} className="text-xs">
+                                  <span className={`font-medium ${posicao === 'DEFERIDO' ? 'text-green-600' :
+                                    posicao === 'INDEFERIDO' ? 'text-red-600' :
+                                      'text-yellow-600'
+                                    }`}>
+                                    {posicao}:
+                                  </span>
+                                  <span className="ml-1 text-gray-700">
+                                    {formatarListaNomes(conselheirosComEssePosicao.map((conselheiro: any) => conselheiro.nome))}
+                                  </span>
+                                </div>
+                              )
+                            })}
+
+                            {/* Abstenções agrupadas */}
+                            {votacaoResultado.conselheiros.filter((conselheiro: any) => ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(conselheiro.posicao)).length > 0 && (
+                              <div className="border-t pt-1 mt-1">
+                                {['AUSENTE', 'IMPEDIDO', 'ABSTENCAO'].map(posicao => {
+                                  const conselheirosComEssePosicao = votacaoResultado.conselheiros.filter((conselheiro: any) => conselheiro.posicao === posicao)
+                                  if (conselheirosComEssePosicao.length === 0) return null
+
+                                  return (
+                                    <div key={posicao} className="text-xs">
+                                      <span className="font-medium text-gray-600">
+                                        {posicao === 'ABSTENCAO' ? 'ABSTENÇÃO' :
+                                          posicao === 'AUSENTE' ? 'AUSENTE' : 'IMPEDIDO'}:
+                                      </span>
+                                      <span className="ml-1 text-gray-600">
+                                        {formatarListaNomes(conselheirosComEssePosicao.map((conselheiro: any) => conselheiro.nome))}
+                                      </span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Texto do Voto (Opcional)</Label>
-                        <Textarea
-                          value={voto.textoVoto || ''}
-                          onChange={(e) => atualizarVoto(index, 'textoVoto', e.target.value)}
-                          placeholder="Fundamentação do voto..."
-                        />
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          checked={voto.isPresidente || false}
-                          onCheckedChange={(checked) => atualizarVoto(index, 'isPresidente', checked)}
-                        />
-                        <Label className="text-sm">Voto de desempate do presidente</Label>
+                        </Card>
                       </div>
                     </div>
-                  ))}
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                      <p>Sistema de votação não configurado</p>
+                      <p className="text-sm mt-1">Clique em "Definir Votação" para configurar os votos</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
-              {/* Opções de Acordo */}
+
+              {/* Detalhes do Julgamento */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Análise de Acordo</CardTitle>
+                  <CardTitle>Detalhes do Julgamento</CardTitle>
+                  <CardDescription>
+                    Campos opcionais para fundamentar a decisão
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={definirAcordo || false}
-                      onCheckedChange={(checked) => setValue('definirAcordo', !!checked)}
+                  <div className="space-y-2">
+                    <Textarea
+                      id="observacoes"
+                      placeholder="Descreva detalhes adicionais sobre a decisão..."
+                      rows={4}
+                      {...register('observacoes')}
+                      disabled={isLoading}
                     />
-                    <Label>Este processo deve seguir para análise de acordo</Label>
+                    {errors.observacoes && (
+                      <p className="text-sm text-red-500">{errors.observacoes.message}</p>
+                    )}
                   </div>
-
-                  {definirAcordo && (
-                    <div className="space-y-2">
-                      <Label htmlFor="tipoAcordo">Tipo de Acordo</Label>
-                      <Select onValueChange={(value) => setValue('tipoAcordo', value as any)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o tipo de acordo..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="aceita_proposta">Aceita proposta da prefeitura</SelectItem>
-                          <SelectItem value="contra_proposta">Fará contra-proposta</SelectItem>
-                          <SelectItem value="sem_acordo">Não há possibilidade de acordo</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             </>
           )}
 
-          {/* Fundamentação */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Fundamentação</CardTitle>
-              <CardDescription>
-                Descreva os motivos e fundamentos da decisão tomada
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="fundamentacao">Fundamentação *</Label>
-                <Textarea
-                  id="fundamentacao"
-                  placeholder="Descreva os fundamentos jurídicos, análise dos documentos e motivos da decisão..."
-                  rows={6}
-                  {...register('fundamentacao')}
-                  disabled={isLoading}
-                />
-                {errors.fundamentacao && (
-                  <p className="text-sm text-red-500">{errors.fundamentacao.message}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Texto da Ata */}
           <Card>
             <CardHeader>
-              <CardTitle>Texto da Ata</CardTitle>
+              <CardTitle>Texto da Ata *</CardTitle>
               <CardDescription>
-                Texto específico que aparecerá na ata para este processo
+                Texto obrigatório que aparecerá na ata para este processo
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="ataTexto">Texto para a Ata</Label>
                 <Textarea
                   id="ataTexto"
                   placeholder="Texto detalhado do que ocorreu com o processo na sessão..."
@@ -711,6 +808,9 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                   {...register('ataTexto')}
                   disabled={isLoading}
                 />
+                {errors.ataTexto && (
+                  <p className="text-sm text-red-500">{errors.ataTexto.message}</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -720,6 +820,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
             <Button
               type="button"
               variant="outline"
+              className="cursor-pointer"
               onClick={() => router.back()}
               disabled={isLoading}
             >
@@ -727,6 +828,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
             </Button>
             <Button
               type="submit"
+              className="cursor-pointer"
               disabled={isLoading || !selectedProcesso}
             >
               {isLoading ? (
@@ -743,6 +845,18 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
             </Button>
           </div>
         </>
+      )}
+
+      {/* Modal de Votação */}
+      {selectedProcesso && (
+        <VotacaoModal
+          isOpen={showVotacaoModal}
+          onClose={() => setShowVotacaoModal(false)}
+          onConfirm={handleVotacaoConfirm}
+          processo={selectedProcesso}
+          conselheiros={conselheiros}
+          relatoresRevisores={selectedProcesso.relator ? [{ nome: selectedProcesso.relator, tipo: 'RELATOR' as const }] : []}
+        />
       )}
     </form>
   )

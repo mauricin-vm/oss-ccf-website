@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
     // Atualizar status do processo
     await prisma.processo.update({
       where: { id: data.processoId },
-      data: { status: 'COM_ACORDO' }
+      data: { status: 'EM_CUMPRIMENTO' }
     })
 
     // Log de auditoria

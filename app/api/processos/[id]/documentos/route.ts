@@ -49,7 +49,7 @@ export async function POST(
     // Verificar se o processo existe
     const processo = await prisma.processo.findUnique({
       where: { id: processoId },
-      select: { id: true, numero: true }
+      select: { id: true, numero: true, status: true }
     })
 
     if (!processo) {
@@ -103,16 +103,31 @@ export async function POST(
     const buffer = Buffer.from(bytes)
     await writeFile(filePath, buffer)
 
-    // Salvar referência no banco de dados
-    const documento = await prisma.documento.create({
-      data: {
-        processoId: processoId,
-        nome: nomePersonalizado || file.name,
-        tipo: file.type,
-        url: `/uploads/documentos/${processoDirName}/${uniqueFileName}`,
-        tamanho: file.size
+    // Usar transação para salvar documento e atualizar status
+    const resultado = await prisma.$transaction(async (tx) => {
+      // Salvar referência no banco de dados
+      const documento = await tx.documento.create({
+        data: {
+          processoId: processoId,
+          nome: nomePersonalizado || file.name,
+          tipo: file.type,
+          url: `/uploads/documentos/${processoDirName}/${uniqueFileName}`,
+          tamanho: file.size
+        }
+      })
+
+      // Atualizar status para EM_ANALISE se for RECEPCIONADO
+      if (processo.status === 'RECEPCIONADO') {
+        await tx.processo.update({
+          where: { id: processoId },
+          data: { status: 'EM_ANALISE' }
+        })
       }
+
+      return documento
     })
+
+    const documento = resultado
 
     // Log de auditoria
     const userExists = await prisma.user.findUnique({

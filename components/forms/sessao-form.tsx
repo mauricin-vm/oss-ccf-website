@@ -55,6 +55,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
   const searchParams = useSearchParams()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingPauta, setIsLoadingPauta] = useState(false)
   const [pautas, setPautas] = useState<Pauta[]>([])
   const [conselheiros, setConselheiros] = useState<Conselheiro[]>([])
   const [selectedPauta, setSelectedPauta] = useState<Pauta | null>(null)
@@ -101,19 +102,19 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
         if (response.ok) {
           const data = await response.json()
           // Filtrar apenas conselheiros ativos
-          const conselheirosAtivos = (data || []).filter((conselheiro: Conselheiro) =>
+          const conselheirosAtivos = (data.conselheiros || []).filter((conselheiro: Conselheiro) =>
             conselheiro.ativo
           )
           setConselheiros(conselheirosAtivos)
-          
+
           // Auto-selecionar conselheiros titulares
           const titulares = conselheirosAtivos
-            .filter((conselheiro: Conselheiro) => 
-              conselheiro.cargo === 'Conselheiro Titular' || 
+            .filter((conselheiro: Conselheiro) =>
+              conselheiro.cargo === 'Conselheiro Titular' ||
               conselheiro.cargo === 'Conselheira Titular'
             )
             .map((conselheiro: Conselheiro) => conselheiro.id)
-          
+
           setSelectedConselheiros(titulares)
         }
       } catch (error) {
@@ -130,6 +131,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
       const pautaIdFromUrl = pautaId || searchParams.get('pauta')
       if (!pautaIdFromUrl) return
 
+      setIsLoadingPauta(true)
       try {
         const response = await fetch(`/api/pautas/${pautaIdFromUrl}`)
         if (response.ok) {
@@ -139,20 +141,23 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
         }
       } catch (error) {
         console.error('Erro ao buscar pauta:', error)
+      } finally {
+        setIsLoadingPauta(false)
       }
     }
 
     fetchPauta()
   }, [pautaId, searchParams, setValue])
 
-  // Atualizar campo de conselheiros quando seleção muda
+  // Atualizar campo de conselheiros quando seleção muda (excluindo o presidente)
   useEffect(() => {
-    setValue('conselheiros', selectedConselheiros)
-  }, [selectedConselheiros, setValue])
+    const conselheirosParticipantes = selectedConselheiros.filter(id => id !== selectedPresidente)
+    setValue('conselheiros', conselheirosParticipantes)
+  }, [selectedConselheiros, selectedPresidente, setValue])
 
   // Atualizar campo de presidente quando seleção muda
   useEffect(() => {
-    setValue('presidenteId', selectedPresidente || undefined)
+    setValue('presidenteId', selectedPresidente || '')
   }, [selectedPresidente, setValue])
 
   const onSubmit = async (data: SessaoInput) => {
@@ -202,26 +207,27 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
   }
 
   const handlePresidenteChange = (presidenteId: string) => {
-    const realPresidenteId = presidenteId === 'none' ? '' : presidenteId
-    
     // Primeiro, remover qualquer presidente anterior dos participantes selecionados
     let newSelectedConselheiros = [...selectedConselheiros]
     if (selectedPresidente && newSelectedConselheiros.includes(selectedPresidente)) {
       newSelectedConselheiros = newSelectedConselheiros.filter(id => id !== selectedPresidente)
     }
-    
+
     // Se um novo presidente foi selecionado e está nos participantes, removê-lo
-    if (realPresidenteId && newSelectedConselheiros.includes(realPresidenteId)) {
-      newSelectedConselheiros = newSelectedConselheiros.filter(id => id !== realPresidenteId)
+    if (presidenteId && newSelectedConselheiros.includes(presidenteId)) {
+      newSelectedConselheiros = newSelectedConselheiros.filter(id => id !== presidenteId)
     }
-    
-    setSelectedPresidente(realPresidenteId)
+
+    setSelectedPresidente(presidenteId)
     setSelectedConselheiros(newSelectedConselheiros)
   }
 
   const pautasFiltradas = pautas.filter(pauta =>
     pauta.numero.toLowerCase().includes(searchPauta.toLowerCase())
   )
+
+  // Calcular conselheiros participantes (excluindo o presidente)
+  const conselheirosParticipantes = selectedConselheiros.filter(id => id !== selectedPresidente)
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -241,7 +247,11 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!selectedPauta ? (
+          {isLoadingPauta ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+            </div>
+          ) : !selectedPauta ? (
             <div className="space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -311,7 +321,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
               <div className="mt-4 space-y-2">
                 <h5 className="text-sm font-medium text-blue-900">Processos para Julgamento:</h5>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {selectedPauta.processos.map((processoPauta) => (
+                  {selectedPauta.processos.map((processoPauta) => (
                     <div key={processoPauta.processo.id} className="text-sm bg-white p-2 rounded border">
                       <div className="flex items-center gap-2">
                         <span className="w-6 h-6 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-xs font-bold">
@@ -324,9 +334,9 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
                             <p className="text-xs text-blue-600">Relator: {processoPauta.relator}</p>
                           )}
                         </div>
-                        </div>
                       </div>
-                    ))}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -369,28 +379,22 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
               </div>
 
               <div className="space-y-2">
-                <Label>Presidente da Sessão</Label>
+                <Label>Presidente da Sessão <span className="text-red-500">*</span></Label>
                 <Select
-                  value={selectedPresidente || 'none'}
+                  value={selectedPresidente || ''}
                   onValueChange={handlePresidenteChange}
                   disabled={isLoading}
                 >
                   <SelectTrigger className="w-full">
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-gray-400" />
-                      <SelectValue placeholder="Selecionar presidente (opcional)" />
+                      <SelectValue placeholder="Selecionar presidente" />
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Nenhum presidente</SelectItem>
                     {conselheiros.map((conselheiro) => (
                       <SelectItem key={conselheiro.id} value={conselheiro.id}>
-                        <div className="flex flex-col">
-                          <span>{conselheiro.nome}</span>
-                          {conselheiro.cargo && (
-                            <span className="text-xs text-gray-500">{conselheiro.cargo}</span>
-                          )}
-                        </div>
+                        {conselheiro.nome}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -413,7 +417,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
       {selectedPauta && (
         <Card>
           <CardHeader>
-            <CardTitle>Conselheiros Participantes</CardTitle>
+            <CardTitle>Conselheiros Participantes <span className="text-red-500">*</span></CardTitle>
             <CardDescription>
               Selecione os conselheiros que participarão desta sessão
             </CardDescription>
@@ -423,44 +427,44 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
               {conselheiros
                 .filter(conselheiro => conselheiro.id !== selectedPresidente)
                 .map((conselheiro) => (
-                <div key={conselheiro.id} className="flex items-center space-x-3 p-3 border rounded-lg">
-                  <Checkbox
-                    id={`conselheiro-${conselheiro.id}`}
-                    checked={selectedConselheiros.includes(conselheiro.id)}
-                    onCheckedChange={(checked) =>
-                      handleConselheiroToggle(conselheiro.id, checked as boolean)
-                    }
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <label
-                        htmlFor={`conselheiro-${conselheiro.id}`}
-                        className="text-sm font-medium cursor-pointer"
-                      >
-                        {conselheiro.nome}
-                      </label>
-                      {conselheiro.cargo && (
-                        <Badge variant="outline" className="text-xs">
-                          {conselheiro.cargo}
-                        </Badge>
+                  <div key={conselheiro.id} className="flex items-center space-x-3 p-3 border rounded-lg">
+                    <Checkbox
+                      id={`conselheiro-${conselheiro.id}`}
+                      checked={selectedConselheiros.includes(conselheiro.id)}
+                      onCheckedChange={(checked) =>
+                        handleConselheiroToggle(conselheiro.id, checked as boolean)
+                      }
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <label
+                          htmlFor={`conselheiro-${conselheiro.id}`}
+                          className="text-sm font-medium cursor-pointer"
+                        >
+                          {conselheiro.nome}
+                        </label>
+                        {conselheiro.cargo && (
+                          <Badge variant="outline" className="text-xs">
+                            {conselheiro.cargo}
+                          </Badge>
+                        )}
+                      </div>
+                      {conselheiro.email && (
+                        <p className="text-xs text-gray-600">{conselheiro.email}</p>
+                      )}
+                      {conselheiro.origem && (
+                        <p className="text-xs text-gray-500">{conselheiro.origem}</p>
                       )}
                     </div>
-                    {conselheiro.email && (
-                      <p className="text-xs text-gray-600">{conselheiro.email}</p>
-                    )}
-                    {conselheiro.origem && (
-                      <p className="text-xs text-gray-500">{conselheiro.origem}</p>
-                    )}
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
 
-            {selectedConselheiros.length > 0 && (
+            {conselheirosParticipantes.length > 0 && (
               <div className="p-3 bg-green-50 rounded-lg">
                 <p className="text-sm text-green-800">
                   <Users className="inline h-4 w-4 mr-1" />
-                  {selectedConselheiros.length} conselheiro{selectedConselheiros.length !== 1 ? 's' : ''} selecionado{selectedConselheiros.length !== 1 ? 's' : ''}
+                  {conselheirosParticipantes.length} conselheiro{conselheirosParticipantes.length !== 1 ? 's' : ''} selecionado{conselheirosParticipantes.length !== 1 ? 's' : ''}
                 </p>
               </div>
             )}

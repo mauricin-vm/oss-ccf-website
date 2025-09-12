@@ -60,7 +60,7 @@ export default function ConselheirosTab() {
         throw new Error('Erro ao carregar conselheiros')
       }
       const data = await response.json()
-      setConselheiros(data)
+      setConselheiros(data.conselheiros || [])
     } catch (error) {
       toast.error('Erro ao carregar conselheiros')
       console.error(error)
