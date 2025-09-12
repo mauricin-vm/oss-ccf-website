@@ -1,4 +1,4 @@
-import { User, Processo, Contribuinte, Tramitacao, Acordo, Parcela } from '@prisma/client'
+import { User, Processo, Contribuinte, Tramitacao, Acordo, Parcela, Pauta, Sessao, PautaProcesso } from '@prisma/client'
 
 export type UserWithoutPassword = Omit<User, 'password'>
 
@@ -8,6 +8,19 @@ export type ProcessoWithRelations = Processo & {
   acordo?: Acordo & {
     parcelas: Parcela[]
   }
+}
+
+export type PautaWithRelations = Pauta & {
+  processos: (PautaProcesso & {
+    processo: ProcessoWithRelations
+  })[]
+  sessoes?: Sessao[]
+  conselheiros?: User[]
+}
+
+export type SessaoWithRelations = Sessao & {
+  pauta: Pauta
+  conselheiros: User[]
 }
 
 export type SessionUser = {

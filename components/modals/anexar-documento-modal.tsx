@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
-import { Upload, FileText, X, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
+import { Upload, FileText, X, Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface AnexarDocumentoModalProps {
@@ -146,7 +146,7 @@ export default function AnexarDocumentoModal({
           } else {
             uploadedCount++
           }
-        } catch (err) {
+        } catch {
           errors.push(`${fileUpload.nome}: erro no upload`)
         }
 
@@ -166,7 +166,7 @@ export default function AnexarDocumentoModal({
         onSuccess()
         handleClose()
       }
-    } catch (error) {
+    } catch {
       setError('Erro inesperado durante o upload')
     } finally {
       setIsUploading(false)

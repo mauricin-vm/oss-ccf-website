@@ -6,9 +6,10 @@ import { SessionUser, SessaoUpdateData } from '@/types'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     
     if (!session) {
@@ -16,7 +17,7 @@ export async function GET(
     }
 
     const sessao = await prisma.sessaoJulgamento.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         pauta: {
           include: {
@@ -57,9 +58,9 @@ export async function GET(
         conselheiros: {
           select: {
             id: true,
-            name: true,
+            nome: true,
             email: true,
-            role: true
+            cargo: true
           }
         }
       }
@@ -108,9 +109,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     
     if (!session) {
@@ -131,7 +133,7 @@ export async function PUT(
     
     // Buscar sessão atual
     const sessaoAtual = await prisma.sessaoJulgamento.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         pauta: true,
         conselheiros: true
@@ -173,17 +175,17 @@ export async function PUT(
     }
 
     if (body.conselheiros && Array.isArray(body.conselheiros)) {
-      // Verificar se todos os conselheiros são elegíveis
-      const conselheiros = await prisma.user.findMany({
+      // Verificar se todos os conselheiros são elegíveis (ativos)
+      const conselheiros = await prisma.conselheiro.findMany({
         where: { 
           id: { in: body.conselheiros },
-          role: { in: ['ADMIN', 'FUNCIONARIO'] }
+          ativo: true
         }
       })
 
       if (conselheiros.length !== body.conselheiros.length) {
         return NextResponse.json(
-          { error: 'Um ou mais conselheiros não são elegíveis' },
+          { error: 'Um ou mais conselheiros não são elegíveis ou não estão ativos' },
           { status: 400 }
         )
       }
@@ -194,7 +196,7 @@ export async function PUT(
     }
 
     const sessaoAtualizada = await prisma.sessaoJulgamento.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         pauta: {
@@ -223,9 +225,9 @@ export async function PUT(
         conselheiros: {
           select: {
             id: true,
-            name: true,
+            nome: true,
             email: true,
-            role: true
+            cargo: true
           }
         }
       }
@@ -237,7 +239,7 @@ export async function PUT(
         usuarioId: user.id,
         acao: 'UPDATE',
         entidade: 'SessaoJulgamento',
-        entidadeId: params.id,
+        entidadeId: id,
         dadosAnteriores: {
           ata: sessaoAtual.ata,
           dataFim: sessaoAtual.dataFim,
@@ -285,11 +287,175 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
+export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    const session = await getServerSession(authOptions)
+    
+    if (!session) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
+    const user = session.user as SessionUser
+
+    // Apenas Admin e Funcionário podem editar sessões
+    if (user.role === 'VISUALIZADOR') {
+      return NextResponse.json(
+        { error: 'Sem permissão para editar sessões' },
+        { status: 403 }
+      )
+    }
+
+    const body = await request.json()
+    
+    // Buscar sessão atual
+    const sessaoAtual = await prisma.sessaoJulgamento.findUnique({
+      where: { id },
+      include: {
+        pauta: true,
+        conselheiros: true
+      }
+    })
+
+    if (!sessaoAtual) {
+      return NextResponse.json(
+        { error: 'Sessão não encontrada' },
+        { status: 404 }
+      )
+    }
+
+    // Verificar se a sessão pode ser editada (apenas sessões não finalizadas)
+    if (sessaoAtual.dataFim) {
+      return NextResponse.json(
+        { error: 'Sessões finalizadas não podem ser editadas' },
+        { status: 400 }
+      )
+    }
+
+    // Preparar dados de atualização
+    const updateData: any = {
+      updatedAt: new Date()
+    }
+
+    if (body.numeroAta !== undefined) {
+      updateData.numeroAta = body.numeroAta
+    }
+
+    if (body.presidenteId !== undefined) {
+      updateData.presidenteId = body.presidenteId
+    }
+
+    if (body.dataInicio) {
+      updateData.dataInicio = new Date(body.dataInicio)
+    }
+
+    if (body.assuntosAdministrativos !== undefined) {
+      updateData.assuntosAdministrativos = body.assuntosAdministrativos
+    }
+
+    const sessaoAtualizada = await prisma.sessaoJulgamento.update({
+      where: { id },
+      data: updateData,
+      include: {
+        pauta: {
+          include: {
+            processos: {
+              include: {
+                processo: {
+                  include: {
+                    contribuinte: true
+                  }
+                }
+              },
+              orderBy: { ordem: 'asc' }
+            }
+          }
+        },
+        decisoes: {
+          include: {
+            processo: {
+              include: {
+                contribuinte: true
+              }
+            }
+          }
+        },
+        conselheiros: {
+          select: {
+            id: true,
+            nome: true,
+            email: true,
+            cargo: true
+          }
+        }
+      }
+    })
+
+    // Log de auditoria
+    await prisma.logAuditoria.create({
+      data: {
+        usuarioId: user.id,
+        acao: 'UPDATE',
+        entidade: 'SessaoJulgamento',
+        entidadeId: id,
+        dadosAnteriores: {
+          numeroAta: sessaoAtual.numeroAta,
+          presidenteId: sessaoAtual.presidenteId,
+          dataInicio: sessaoAtual.dataInicio,
+          assuntosAdministrativos: sessaoAtual.assuntosAdministrativos
+        },
+        dadosNovos: {
+          numeroAta: sessaoAtualizada.numeroAta,
+          presidenteId: sessaoAtualizada.presidenteId,
+          dataInicio: sessaoAtualizada.dataInicio,
+          assuntosAdministrativos: sessaoAtualizada.assuntosAdministrativos
+        }
+      }
+    })
+
+    // Converter valores Decimal para number antes de retornar
+    const sessaoAtualizadaSerializada = {
+      ...sessaoAtualizada,
+      pauta: {
+        ...sessaoAtualizada.pauta,
+        processos: sessaoAtualizada.pauta.processos.map(processoPauta => ({
+          ...processoPauta,
+          processo: {
+            ...processoPauta.processo,
+            valorOriginal: processoPauta.processo.valorOriginal ? Number(processoPauta.processo.valorOriginal) : null,
+            valorNegociado: processoPauta.processo.valorNegociado ? Number(processoPauta.processo.valorNegociado) : null
+          }
+        }))
+      },
+      decisoes: sessaoAtualizada.decisoes.map(decisao => ({
+        ...decisao,
+        processo: {
+          ...decisao.processo,
+          valorOriginal: decisao.processo.valorOriginal ? Number(decisao.processo.valorOriginal) : null,
+          valorNegociado: decisao.processo.valorNegociado ? Number(decisao.processo.valorNegociado) : null
+        }
+      }))
+    }
+
+    return NextResponse.json(sessaoAtualizadaSerializada)
+  } catch (error) {
+    console.error('Erro ao atualizar sessão:', error)
+    return NextResponse.json(
+      { error: 'Erro interno do servidor' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     
     if (!session) {
@@ -307,7 +473,7 @@ export async function DELETE(
     }
 
     const sessao = await prisma.sessaoJulgamento.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { 
         pauta: true,
         decisoes: true
@@ -336,7 +502,7 @@ export async function DELETE(
     })
 
     await prisma.sessaoJulgamento.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     // Log de auditoria
@@ -345,7 +511,7 @@ export async function DELETE(
         usuarioId: user.id,
         acao: 'DELETE',
         entidade: 'SessaoJulgamento',
-        entidadeId: params.id,
+        entidadeId: id,
         dadosAnteriores: {
           pautaNumero: sessao.pauta.numero,
           dataInicio: sessao.dataInicio,

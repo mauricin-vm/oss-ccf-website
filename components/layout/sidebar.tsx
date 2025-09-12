@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
   Home,
@@ -16,7 +17,8 @@ import {
   ChevronRight,
   Building2,
   Shield,
-  Activity
+  Activity,
+  Menu
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
@@ -29,6 +31,7 @@ interface SidebarProps {
 
 export default function Sidebar({ userRole, userName }: SidebarProps) {
   const pathname = usePathname()
+  const [isCollapsed, setIsCollapsed] = useState(false)
 
   const menuItems = [
     {
@@ -117,9 +120,22 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
   )
 
   return (
-    <div className="flex h-full w-64 flex-col bg-gray-900">
-      <div className="flex h-16 items-center justify-center border-b border-gray-800">
-        <h1 className="text-xl font-bold text-white">CCF</h1>
+    <div className={cn(
+      "flex h-full flex-col bg-gray-900 transition-all duration-300",
+      isCollapsed ? "w-16" : "w-64"
+    )}>
+      <div className="flex h-16 items-center justify-between border-b border-gray-800 px-4">
+        {!isCollapsed && (
+          <h1 className="text-xl font-bold text-white">CCF</h1>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="text-gray-400 hover:text-white hover:bg-gray-800 cursor-pointer"
+        >
+          <Menu className="h-4 w-4" />
+        </Button>
       </div>
 
       <ScrollArea className="flex-1 px-3 py-4">
@@ -133,14 +149,18 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  isCollapsed ? 'justify-center gap-0' : 'gap-3',
                   isActive
                     ? 'bg-gray-800 text-white'
                     : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                 )}
+                title={isCollapsed ? item.title : undefined}
               >
                 <Icon className="h-4 w-4" />
-                {item.title}
+                {!isCollapsed && (
+                  <span className="transition-opacity duration-300">{item.title}</span>
+                )}
               </Link>
             )
           })}
@@ -148,9 +168,11 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
           {filteredAdminItems.length > 0 && (
             <>
               <div className="my-4 border-t border-gray-800" />
-              <p className="mb-2 px-3 text-xs font-semibold text-gray-500">
-                ADMINISTRAÇÃO
-              </p>
+              {!isCollapsed && (
+                <p className="mb-2 px-3 text-xs font-semibold text-gray-500 transition-opacity duration-300">
+                  ADMINISTRAÇÃO
+                </p>
+              )}
               {filteredAdminItems.map((item) => {
                 const Icon = item.icon
                 const isActive = pathname === item.href
@@ -160,14 +182,18 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      isCollapsed ? 'justify-center gap-0' : 'gap-3',
                       isActive
                         ? 'bg-gray-800 text-white'
                         : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                     )}
+                    title={isCollapsed ? item.title : undefined}
                   >
                     <Icon className="h-4 w-4" />
-                    {item.title}
+                    {!isCollapsed && (
+                      <span className="transition-opacity duration-300">{item.title}</span>
+                    )}
                   </Link>
                 )
               })}
@@ -177,22 +203,25 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
       </ScrollArea>
 
       <div className="border-t border-gray-800 p-4">
-        <div className="mb-3 text-sm">
-          <p className="text-gray-400">Conectado como:</p>
-          <p className="font-medium text-white">{userName}</p>
-          <p className="text-xs text-gray-500">
-            {userRole === 'ADMIN' && 'Administrador'}
-            {userRole === 'FUNCIONARIO' && 'Funcionário'}
-            {userRole === 'VISUALIZADOR' && 'Visualizador'}
-          </p>
-        </div>
+        {!isCollapsed && (
+          <div className="mb-3 text-sm transition-opacity duration-300">
+            <p className="text-gray-400">Conectado como:</p>
+            <p className="font-medium text-white">{userName}</p>
+          </div>
+        )}
         <Button
           variant="ghost"
-          className="w-full justify-start text-gray-400 hover:bg-gray-800 hover:text-white"
+          className={cn(
+            "w-full text-gray-400 hover:bg-gray-800 hover:text-white cursor-pointer transition-all duration-300",
+            isCollapsed ? "justify-center px-2" : "justify-start"
+          )}
           onClick={() => signOut({ callbackUrl: '/login' })}
+          title={isCollapsed ? 'Sair' : undefined}
         >
-          <LogOut className="mr-2 h-4 w-4" />
-          Sair
+          <LogOut className={cn("h-4 w-4", !isCollapsed && "mr-2")} />
+          {!isCollapsed && (
+            <span className="transition-opacity duration-300">Sair</span>
+          )}
         </Button>
       </div>
     </div>

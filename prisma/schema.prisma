@@ -25,11 +25,34 @@ enum StatusProcesso {
   EM_ANALISE
   AGUARDANDO_DOCUMENTOS
   EM_PAUTA
+  SUSPENSO
+  PEDIDO_VISTA
+  PEDIDO_DILIGENCIA
   JULGADO
+  AGUARDANDO_ACORDO
   ACORDO_FIRMADO
   EM_CUMPRIMENTO
   FINALIZADO
   ARQUIVADO
+}
+
+enum TipoResultadoJulgamento {
+  SUSPENSO
+  PEDIDO_VISTA
+  PEDIDO_DILIGENCIA
+  JULGADO
+}
+
+enum TipoDecisao {
+  DEFERIDO
+  INDEFERIDO
+  PARCIAL
+}
+
+enum TipoVoto {
+  RELATOR
+  REVISOR
+  CONSELHEIRO
 }
 
 enum StatusPagamento {
@@ -247,6 +270,14 @@ model ProcessoPauta {
   ordem             Int
   relator           String?
   
+  // Novo: status específico na sessão
+  statusSessao      TipoResultadoJulgamento?
+  ataTexto          String?         @db.Text
+  motivoSuspensao   String?         @db.Text
+  prazoVista        DateTime?
+  prazoDialigencia  DateTime?
+  observacoesSessao String?         @db.Text
+  
   @@unique([processoId, pautaId])
   @@index([processoId])
   @@index([pautaId])
@@ -261,6 +292,11 @@ model SessaoJulgamento {
   dataInicio        DateTime
   dataFim           DateTime?
   ata               String?         @db.Text
+  numeroAta         String?
+  assuntosAdministrativos String?   @db.Text
+  
+  presidenteId      String?
+  presidente        Conselheiro?    @relation("SessaoPresidente", fields: [presidenteId], references: [id])
   
   conselheiros      Conselheiro[]   @relation("SessaoConselheiro")
   decisoes          Decisao[]
@@ -278,11 +314,26 @@ model Decisao {
   sessaoId          String?
   sessao            SessaoJulgamento? @relation(fields: [sessaoId], references: [id])
   
-  tipo              String          // "deferido", "indeferido", "parcial"
+  // Expandido para suportar todos os tipos
+  tipoResultado     TipoResultadoJulgamento
+  tipoDecisao       TipoDecisao?    // Apenas para JULGADO
   fundamentacao     String          @db.Text
   dataDecisao       DateTime        @default(now())
   numeroAcordao     String?         @unique
   dataPublicacao    DateTime?
+  
+  // Campos específicos para cada tipo
+  motivoSuspensao   String?         @db.Text
+  conselheiroPedidoVista String?    // Nome do conselheiro que pediu vista
+  prazoVista        DateTime?       // Prazo para retorno da vista
+  especificacaoDiligencia String?   @db.Text
+  prazoDiligencia   DateTime?       
+  
+  // Para acordos
+  definirAcordo     Boolean         @default(false)
+  tipoAcordo        String?         // "aceita_proposta", "contra_proposta", "sem_acordo"
+  
+  votos             Voto[]
   
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -379,6 +430,8 @@ model Conselheiro {
   ativo             Boolean         @default(true)
   
   sessoes           SessaoJulgamento[] @relation("SessaoConselheiro")
+  sessoesPresididas SessaoJulgamento[] @relation("SessaoPresidente")
+  votos             Voto[]
   
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -422,6 +475,31 @@ model HistoricoPauta {
   @@index([pautaId])
   @@index([usuarioId])
   @@index([createdAt])
+}
+
+model Voto {
+  id                String          @id @default(cuid())
+  
+  decisaoId         String
+  decisao           Decisao         @relation(fields: [decisaoId], references: [id], onDelete: Cascade)
+  
+  conselheiroId     String?
+  conselheiro       Conselheiro?    @relation(fields: [conselheiroId], references: [id])
+  
+  tipoVoto          TipoVoto
+  nomeVotante       String          // Nome do relator/revisor/conselheiro
+  textoVoto         String?         @db.Text
+  posicaoVoto       TipoDecisao?    // Para relatores/revisores
+  acompanhaVoto     String?         // Para conselheiros: "relator", "revisor_1", etc.
+  
+  ordemApresentacao Int?            // Ordem de apresentação dos votos
+  isPresidente      Boolean         @default(false) // Voto de desempate do presidente
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@index([decisaoId])
+  @@index([conselheiroId])
 }
 
 model LogAuditoria {

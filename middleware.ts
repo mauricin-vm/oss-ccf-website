@@ -30,7 +30,7 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token, req }) => {
+      authorized: ({ token }) => {
         // Permite acesso se há token válido
         return !!token
       }

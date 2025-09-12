@@ -35,7 +35,7 @@ export default function TramitacoesPage() {
   const user = session?.user as SessionUser
   
   const [tramitacoes, setTramitacoes] = useState<TramitacaoWithRelations[]>([])
-  const [setores, setSetores] = useState<any[]>([])
+  const [setores, setSetores] = useState<Array<{ id: string; nome: string; sigla: string }>>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')

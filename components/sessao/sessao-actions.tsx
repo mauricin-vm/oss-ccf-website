@@ -115,7 +115,7 @@ export default function SessaoActions({ sessao }: SessaoActionsProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {isActive && canFinalize && (
-            <DropdownMenuItem onClick={() => setShowFinalizarDialog(true)}>
+            <DropdownMenuItem onClick={() => setShowFinalizarDialog(true)} className="cursor-pointer">
               <CheckCircle className="mr-2 h-4 w-4" />
               Finalizar Sessão
             </DropdownMenuItem>
@@ -126,7 +126,7 @@ export default function SessaoActions({ sessao }: SessaoActionsProps) {
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={() => setShowDeleteDialog(true)}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Deletar Sessão
@@ -149,13 +149,13 @@ export default function SessaoActions({ sessao }: SessaoActionsProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>
+            <AlertDialogCancel disabled={isLoading} className="cursor-pointer">
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleFinalizar}
               disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
             >
               {isLoading ? (
                 <>
@@ -183,7 +183,7 @@ export default function SessaoActions({ sessao }: SessaoActionsProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>
+            <AlertDialogCancel disabled={isLoading} className="cursor-pointer">
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction 

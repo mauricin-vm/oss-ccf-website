@@ -30,7 +30,7 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
     setValue,
     formState: { errors }
   } = useForm<ProcessoInput>({
-    resolver: zodResolver(processoSchema) as any,
+    resolver: zodResolver(processoSchema),
     defaultValues: {
       tipo: '',
       valorOriginal: undefined,
@@ -85,7 +85,7 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />

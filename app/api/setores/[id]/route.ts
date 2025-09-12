@@ -16,16 +16,17 @@ const setorDtoSchema = z.object({
 // GET - Buscar setor por ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
     const setor = await prisma.setor.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!setor) {
@@ -42,9 +43,10 @@ export async function GET(
 // PUT - Atualizar setor
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -60,7 +62,7 @@ export async function PUT(
 
     // Verificar se o setor existe
     const setor = await prisma.setor.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
 
     if (!setor) {
@@ -71,7 +73,7 @@ export async function PUT(
     const existingSetor = await prisma.setor.findFirst({
       where: {
         AND: [
-          { id: { not: params.id } },
+          { id: { not: id } },
           {
             OR: [
               { nome: validatedData.nome },
@@ -98,7 +100,7 @@ export async function PUT(
     }
 
     const updatedSetor = await prisma.setor.update({
-      where: { id: params.id },
+      where: { id: id },
       data: dataToUpdate
     })
 
@@ -117,9 +119,10 @@ export async function PUT(
 // DELETE - Deletar setor
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -132,7 +135,7 @@ export async function DELETE(
 
     // Verificar se o setor existe
     const setor = await prisma.setor.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
 
     if (!setor) {
@@ -140,7 +143,7 @@ export async function DELETE(
     }
 
     await prisma.setor.delete({
-      where: { id: params.id }
+      where: { id: id }
     })
 
     return NextResponse.json({ message: 'Setor deletado com sucesso' })

@@ -332,7 +332,7 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
                     <SelectItem value="CCF">
                       CCF - Câmara de Conciliação Fiscal
                     </SelectItem>
-                    {setores.map((setor) => (
+                    {setores.filter(setor => setor.sigla !== 'CCF').map((setor) => (
                       <SelectItem key={setor.id} value={setor.sigla}>
                         {setor.sigla} - {setor.nome}
                       </SelectItem>
@@ -354,7 +354,7 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
                       type="radio"
                       value="setor"
                       checked={destinationType === 'setor'}
-                      onChange={(e) => {
+                      onChange={() => {
                         setDestinationType('setor')
                         setValue('setorDestino', '', { shouldValidate: true })
                       }}
@@ -367,7 +367,7 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
                       type="radio"
                       value="pessoa"
                       checked={destinationType === 'pessoa'}
-                      onChange={(e) => {
+                      onChange={() => {
                         setDestinationType('pessoa')
                         setValue('setorDestino', '', { shouldValidate: true })
                       }}

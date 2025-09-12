@@ -71,6 +71,14 @@ export async function GET(request: NextRequest) {
               }
             }
           },
+          presidente: {
+            select: {
+              id: true,
+              nome: true,
+              email: true,
+              cargo: true
+            }
+          },
           conselheiros: {
             select: {
               id: true,
@@ -206,7 +214,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar se todos os conselheiros existem e estão ativos
+    // Verificar se o presidente existe e está ativo (se fornecido)
+    let presidente = null
+    if (data.presidenteId) {
+      presidente = await prisma.conselheiro.findUnique({
+        where: { id: data.presidenteId, ativo: true }
+      })
+
+      if (!presidente) {
+        return NextResponse.json(
+          { error: 'Presidente selecionado não encontrado ou inativo' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Verificar se todos os conselheiros participantes existem e estão ativos
     const conselheiros = await prisma.conselheiro.findMany({
       where: { 
         id: { in: data.conselheiros },
@@ -227,6 +250,7 @@ export async function POST(request: NextRequest) {
         pautaId: data.pautaId,
         dataInicio: data.dataInicio,
         ata: data.ata || '',
+        presidenteId: data.presidenteId || null,
         conselheiros: {
           connect: data.conselheiros.map(id => ({ id }))
         }
@@ -244,6 +268,14 @@ export async function POST(request: NextRequest) {
               },
               orderBy: { ordem: 'asc' }
             }
+          }
+        },
+        presidente: {
+          select: {
+            id: true,
+            nome: true,
+            email: true,
+            cargo: true
           }
         },
         conselheiros: {
@@ -274,6 +306,11 @@ export async function POST(request: NextRequest) {
           pautaNumero: pauta.numero,
           dataInicio: sessao.dataInicio,
           totalProcessos: pauta.processos.length,
+          presidente: presidente ? {
+            id: presidente.id,
+            nome: presidente.nome,
+            email: presidente.email
+          } : null,
           conselheiros: conselheiros.map(c => ({
             id: c.id,
             nome: c.nome,

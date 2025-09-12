@@ -6,9 +6,10 @@ import { SessionUser, AcordoUpdateData } from '@/types'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     
     if (!session) {
@@ -16,7 +17,7 @@ export async function GET(
     }
 
     const acordo = await prisma.acordo.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         processo: {
           include: {
@@ -68,9 +69,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     
     if (!session) {
@@ -91,7 +93,7 @@ export async function PUT(
     
     // Buscar acordo atual
     const acordoAtual = await prisma.acordo.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         processo: true,
         parcelas: {
@@ -145,7 +147,7 @@ export async function PUT(
     }
 
     const acordoAtualizado = await prisma.acordo.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         processo: {
@@ -172,7 +174,7 @@ export async function PUT(
       // Cancelar parcelas pendentes
       await prisma.parcela.updateMany({
         where: { 
-          acordoId: params.id,
+          acordoId: id,
           status: 'PENDENTE'
         },
         data: { status: 'CANCELADO' }
@@ -185,7 +187,7 @@ export async function PUT(
         usuarioId: user.id,
         acao: 'UPDATE',
         entidade: 'Acordo',
-        entidadeId: params.id,
+        entidadeId: id,
         dadosAnteriores: {
           status: acordoAtual.status,
           dataVencimento: acordoAtual.dataVencimento,
@@ -211,9 +213,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     
     if (!session) {
@@ -231,7 +234,7 @@ export async function DELETE(
     }
 
     const acordo = await prisma.acordo.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { 
         processo: true,
         parcelas: {
@@ -259,11 +262,11 @@ export async function DELETE(
 
     // Deletar em cascata: parcelas primeiro, depois acordo
     await prisma.parcela.deleteMany({
-      where: { acordoId: params.id }
+      where: { acordoId: id }
     })
 
     await prisma.acordo.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     // Retornar processo ao status anterior
@@ -278,7 +281,7 @@ export async function DELETE(
         usuarioId: user.id,
         acao: 'DELETE',
         entidade: 'Acordo',
-        entidadeId: params.id,
+        entidadeId: id,
         dadosAnteriores: {
           processoNumero: acordo.processo.numero,
           valorTotal: acordo.valorTotal,

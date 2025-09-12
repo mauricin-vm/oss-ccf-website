@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileText, Plus, Download, Calendar, User, Trash2 } from 'lucide-react'
+import { FileText, Plus, Download, Calendar, Trash2 } from 'lucide-react'
 import AnexarDocumentoModal from '@/components/modals/anexar-documento-modal'
 import { toast } from 'sonner'
 
@@ -150,7 +150,7 @@ export default function ProcessoDocumentos({ processo, canEdit }: ProcessoDocume
               </p>
               {canEdit && (
                 <p className="text-sm text-gray-400 mt-1">
-                  Clique em "Anexar Documento" para adicionar arquivos
+                  Clique em &ldquo;Anexar Documento&rdquo; para adicionar arquivos
                 </p>
               )}
             </div>

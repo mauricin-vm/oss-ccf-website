@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { notFound, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -22,96 +22,18 @@ import {
   CheckCircle,
   XCircle,
   Plus,
-  Download,
   ArrowRight,
   History,
   User
 } from 'lucide-react'
 import Link from 'next/link'
-import { SessionUser } from '@/types'
+import { SessionUser, ProcessoWithRelations } from '@/types'
 import ProcessoDocumentos from '@/components/processo/processo-documentos'
 import AdicionarHistoricoModal from '@/components/modals/adicionar-historico-modal'
 import AlterarStatusModal from '@/components/modals/alterar-status-modal'
+import ProcessoActions from '@/components/processo/processo-actions'
 
 
-interface Processo {
-  id: string
-  numero: string
-  tipo: string
-  status: string
-  valorOriginal: any
-  valorNegociado: any
-  dataAbertura: string
-  observacoes?: string
-  createdAt: string
-  contribuinte: {
-    id: string
-    nome: string
-    cpfCnpj?: string
-    email?: string
-    telefone?: string
-    endereco?: string
-    cidade?: string
-    estado?: string
-    cep?: string
-  }
-  createdBy: {
-    id: string
-    name: string
-    email: string
-    role: string
-  }
-  tramitacoes: {
-    id: string
-    setorOrigem: string
-    setorDestino: string
-    dataEnvio: string
-    dataRecebimento?: string
-    prazoResposta?: string
-    observacoes?: string
-    createdAt: string
-    usuario: {
-      id: string
-      name: string
-      email: string
-      role: string
-    }
-  }[]
-  documentos: {
-    id: string
-    nome: string
-    tipo: string
-    url: string
-    tamanho: number
-    createdAt: string
-  }[]
-  historicos: {
-    id: string
-    titulo: string
-    descricao: string
-    tipo: string
-    createdAt: string
-    usuario: {
-      id: string
-      name: string
-      email: string
-      role: string
-    }
-  }[]
-  acordo?: {
-    id: string
-    numeroTermo: string
-    dataAssinatura: string
-    valorTotal: any
-    parcelas: {
-      id: string
-      numero: number
-      valor: any
-      dataVencimento: string
-      status: string
-    }[]
-  }
-}
 
 interface Props {
   params: Promise<{ id: string }>
@@ -121,7 +43,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
   const { data: session } = useSession()
   const router = useRouter()
-  const [processo, setProcesso] = useState<Processo | null>(null)
+  const [processo, setProcesso] = useState<ProcessoWithRelations | null>(null)
   const [loading, setLoading] = useState(true)
   const [showHistoricoModal, setShowHistoricoModal] = useState(false)
   const [showStatusModal, setShowStatusModal] = useState(false)
@@ -134,18 +56,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
     resolveParams()
   }, [params])
 
-  useEffect(() => {
-    if (!session) {
-      router.push('/login')
-      return
-    }
-    
-    if (resolvedParams) {
-      loadProcesso()
-    }
-  }, [session, resolvedParams])
-
-  const loadProcesso = async () => {
+  const loadProcesso = useCallback(async () => {
     if (!resolvedParams) return
     
     try {
@@ -162,7 +73,18 @@ export default function ProcessoDetalhesPage({ params }: Props) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [resolvedParams])
+
+  useEffect(() => {
+    if (!session) {
+      router.push('/login')
+      return
+    }
+    
+    if (resolvedParams) {
+      loadProcesso()
+    }
+  }, [session, resolvedParams, router, loadProcesso])
 
   const handleMarcarRecebida = async (tramitacaoId: string) => {
     try {
@@ -231,29 +153,31 @@ export default function ProcessoDetalhesPage({ params }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/processos">
-            <Button variant="outline" size="icon" className="cursor-pointer">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold">{processo.numero}</h1>
-            <p className="text-gray-600">
-              {processo.contribuinte.nome}
-            </p>
-          </div>
+      <div className="flex items-center gap-4">
+        <Link href="/processos">
+          <Button variant="outline" size="icon" className="cursor-pointer">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold">{processo.numero}</h1>
+          <p className="text-gray-600">
+            {processo.contribuinte.nome}
+          </p>
         </div>
-        
-        {canEdit && (
-          <Link href={`/processos/${processo.id}/editar`}>
-            <Button className="cursor-pointer">
-              <Edit className="mr-2 h-4 w-4" />
-              Editar Processo
-            </Button>
-          </Link>
-        )}
+        <div className="flex gap-2">
+          {canEdit && (
+            <Link href={`/processos/${processo.id}/editar`}>
+              <Button className="cursor-pointer">
+                <Edit className="mr-2 h-4 w-4" />
+                Editar Processo
+              </Button>
+            </Link>
+          )}
+          {canEdit && (
+            <ProcessoActions processo={processo} userRole={user.role} />
+          )}
+        </div>
       </div>
 
       {/* Status e Informações Principais */}
@@ -637,6 +561,15 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     'SISTEMA': CheckCircle
                   }[historico.tipo] || History
                   
+                  const tipoLabel = {
+                    'EVENTO': 'Evento',
+                    'OBSERVACAO': 'Observação',
+                    'ALTERACAO': 'Alteração',
+                    'COMUNICACAO': 'Comunicação',
+                    'DECISAO': 'Decisão',
+                    'SISTEMA': 'Sistema'
+                  }[historico.tipo] || historico.tipo
+                  
                   const Icon = tipoIcon
                   
                   return (
@@ -652,7 +585,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="font-medium">{historico.titulo}</h4>
                           <Badge variant="outline" className="text-xs">
-                            {historico.tipo}
+                            {tipoLabel}
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
@@ -679,7 +612,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     <p>Nenhum histórico adicional registrado</p>
                     {canEdit && (
                       <p className="text-sm mt-1">
-                        Clique em "Adicionar Histórico" para registrar eventos
+                        Clique em &ldquo;Adicionar Histórico&rdquo; para registrar eventos
                       </p>
                     )}
                   </div>

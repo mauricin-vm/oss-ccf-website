@@ -33,16 +33,24 @@ const decisaoSchema = z.object({
   tipoResultado: z.enum(['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO'], {
     required_error: 'Tipo de resultado é obrigatório'
   }),
+  // Para JULGADO
   tipoDecisao: z.enum(['DEFERIDO', 'INDEFERIDO', 'PARCIAL']).optional(),
+  // Para todos
   fundamentacao: z.string().min(10, 'Fundamentação deve ter pelo menos 10 caracteres'),
+  // Para SUSPENSO
   motivoSuspensao: z.string().optional(),
+  // Para PEDIDO_VISTA
   conselheiroPedidoVista: z.string().optional(),
   prazoVista: z.string().optional(),
+  // Para PEDIDO_DILIGENCIA
   especificacaoDiligencia: z.string().optional(),
   prazoDiligencia: z.string().optional(),
+  // Para acordos
   definirAcordo: z.boolean().optional(),
   tipoAcordo: z.enum(['aceita_proposta', 'contra_proposta', 'sem_acordo']).optional(),
+  // Texto da ata específico do processo
   ataTexto: z.string().optional(),
+  // Votos
   votos: z.array(votoSchema).optional()
 })
 
@@ -58,14 +66,21 @@ interface Processo {
   id: string
   numero: string
   tipo: string
-  valorOriginal: number
-  valorNegociado?: number
+  valor: number
   status: string
   contribuinte: {
     nome: string
-    documento?: string
-    email?: string
+    documento: string
+    email: string
   }
+  tramitacoes: Array<{
+    id: string
+    setor: string
+    status: string
+    observacoes: string
+    prazo: Date
+    createdAt: Date
+  }>
 }
 
 interface ProcessoPauta {
@@ -81,6 +96,10 @@ interface Conselheiro {
   cargo?: string
 }
 
+interface SessaoData {
+  conselheiros: Conselheiro[]
+}
+
 export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -90,6 +109,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
   const [selectedProcesso, setSelectedProcesso] = useState<ProcessoPauta | null>(null)
   const [conselheiros, setConselheiros] = useState<Conselheiro[]>([])
   const [votos, setVotos] = useState<VotoInput[]>([])
+  const [showVotacao, setShowVotacao] = useState(false)
 
   const {
     register,
@@ -106,9 +126,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
     }
   })
 
-  const tipoResultado = watch('tipoResultado')
-  const definirAcordo = watch('definirAcordo')
-
   // Buscar dados da sessão
   useEffect(() => {
     const fetchDados = async () => {
@@ -117,6 +134,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
         if (response.ok) {
           const sessao = await response.json()
 
+          // Filtrar processos que ainda não foram julgados
           const processosNaoJulgados = sessao.pauta.processos.filter(
             (p: ProcessoPauta) => !sessao.decisoes.some(
               (d: { processoId: string }) => d.processoId === p.processo.id
@@ -126,6 +144,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
           setProcessos(processosNaoJulgados)
           setConselheiros(sessao.conselheiros || [])
 
+          // Se processo foi especificado na URL, selecionar automaticamente
           const processoIdFromUrl = searchParams.get('processo')
           if (processoIdFromUrl) {
             const processo = processosNaoJulgados.find(
@@ -150,6 +169,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
     setError(null)
 
     try {
+      // Adicionar votos ao payload se houver
       const payload = {
         ...data,
         votos: votos.length > 0 ? votos : undefined
@@ -168,6 +188,8 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
         throw new Error(errorData.error || 'Erro ao registrar decisão')
       }
 
+      await response.json()
+
       if (onSuccess) {
         onSuccess()
       } else {
@@ -177,6 +199,29 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
       setError(error instanceof Error ? error.message : 'Erro inesperado')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleSelectProcesso = (processo: ProcessoPauta) => {
+    setSelectedProcesso(processo)
+    setValue('processoId', processo.processo.id)
+  }
+
+  const getTipoProcessoLabel = (tipo: string) => {
+    switch (tipo) {
+      case 'COMPENSACAO': return 'Compensação'
+      case 'DACAO_PAGAMENTO': return 'Dação em Pagamento'
+      case 'TRANSACAO_EXCEPCIONAL': return 'Transação Excepcional'
+      default: return tipo
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'EM_PAUTA': return 'bg-blue-100 text-blue-800'
+      case 'EM_ANALISE': return 'bg-yellow-100 text-yellow-800'
+      case 'AGUARDANDO_DOCUMENTOS': return 'bg-orange-100 text-orange-800'
+      default: return 'bg-gray-100 text-gray-800'
     }
   }
 
@@ -199,12 +244,16 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
     setVotos(novosVotos)
   }
 
-  const getTipoProcessoLabel = (tipo: string) => {
+  const tipoResultado = watch('tipoResultado')
+  const definirAcordo = watch('definirAcordo')
+
+  const getTipoResultadoIcon = (tipo: string) => {
     switch (tipo) {
-      case 'COMPENSACAO': return 'Compensação'
-      case 'DACAO_PAGAMENTO': return 'Dação em Pagamento'
-      case 'TRANSACAO_EXCEPCIONAL': return 'Transação Excepcional'
-      default: return tipo
+      case 'SUSPENSO': return <Pause className="h-4 w-4" />
+      case 'PEDIDO_VISTA': return <Search className="h-4 w-4" />
+      case 'PEDIDO_DILIGENCIA': return <Clock className="h-4 w-4" />
+      case 'JULGADO': return <CheckCircle className="h-4 w-4" />
+      default: return <Gavel className="h-4 w-4" />
     }
   }
 
@@ -252,10 +301,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                 processos.map((processoPauta) => (
                   <div
                     key={processoPauta.processo.id}
-                    onClick={() => {
-                      setSelectedProcesso(processoPauta)
-                      setValue('processoId', processoPauta.processo.id)
-                    }}
+                    onClick={() => handleSelectProcesso(processoPauta)}
                     className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
                   >
                     <div className="flex items-center justify-between">
@@ -270,12 +316,15 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                             <Badge variant="outline">
                               {getTipoProcessoLabel(processoPauta.processo.tipo)}
                             </Badge>
+                            <Badge className={getStatusColor(processoPauta.processo.status)}>
+                              {processoPauta.processo.status.replace('_', ' ')}
+                            </Badge>
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium">
-                          R$ {(processoPauta.processo.valorOriginal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          R$ {processoPauta.processo.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                         {processoPauta.relator && (
                           <p className="text-xs text-blue-600">Relator: {processoPauta.relator}</p>
@@ -301,7 +350,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                         {getTipoProcessoLabel(selectedProcesso.processo.tipo)}
                       </Badge>
                       <span className="text-sm text-blue-700">
-                        R$ {(selectedProcesso.processo.valorOriginal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {selectedProcesso.processo.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                   </div>
@@ -318,6 +367,39 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                   Alterar
                 </Button>
               </div>
+
+              {/* Detalhes do Contribuinte */}
+              <div className="mt-4 p-3 bg-white rounded border">
+                <h5 className="text-sm font-medium text-blue-900 mb-2">Dados do Contribuinte:</h5>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-gray-400" />
+                    <span>{selectedProcesso.processo.contribuinte.nome}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Building className="h-4 w-4 text-gray-400" />
+                    <span>{selectedProcesso.processo.contribuinte.documento}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-gray-400" />
+                    <span>{selectedProcesso.processo.contribuinte.email}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Última Tramitação */}
+              {selectedProcesso.processo.tramitacoes.length > 0 && (
+                <div className="mt-4 p-3 bg-white rounded border">
+                  <h5 className="text-sm font-medium text-blue-900 mb-2">Última Tramitação:</h5>
+                  <div className="text-sm text-gray-700">
+                    <p><strong>Setor:</strong> {selectedProcesso.processo.tramitacoes[0].setor}</p>
+                    <p><strong>Status:</strong> {selectedProcesso.processo.tramitacoes[0].status}</p>
+                    {selectedProcesso.processo.tramitacoes[0].observacoes && (
+                      <p><strong>Observações:</strong> {selectedProcesso.processo.tramitacoes[0].observacoes}</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {errors.processoId && (
@@ -326,7 +408,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
         </CardContent>
       </Card>
 
-      {/* Tipo de Resultado */}
+      {/* Tipo de Resultado do Julgamento */}
       {selectedProcesso && (
         <>
           <Card>
@@ -400,317 +482,86 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
             </CardContent>
           </Card>
 
-          {/* Campos específicos por tipo de resultado */}
-          {tipoResultado === 'SUSPENSO' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Detalhes da Suspensão</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="motivoSuspensao">Motivo da Suspensão *</Label>
-                  <Textarea
-                    id="motivoSuspensao"
-                    placeholder="Descreva o motivo específico da suspensão..."
-                    {...register('motivoSuspensao')}
-                  />
-                  {errors.motivoSuspensao && (
-                    <p className="text-sm text-red-500">{errors.motivoSuspensao.message}</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {tipoResultado === 'PEDIDO_VISTA' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Detalhes do Pedido de Vista</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="conselheiroPedidoVista">Conselheiro que pediu vista *</Label>
-                  <Input
-                    id="conselheiroPedidoVista"
-                    placeholder="Nome do conselheiro..."
-                    {...register('conselheiroPedidoVista')}
-                  />
-                  {errors.conselheiroPedidoVista && (
-                    <p className="text-sm text-red-500">{errors.conselheiroPedidoVista.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="prazoVista">Prazo para retorno da vista</Label>
-                  <Input
-                    id="prazoVista"
-                    type="date"
-                    {...register('prazoVista')}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {tipoResultado === 'PEDIDO_DILIGENCIA' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Detalhes do Pedido de Diligência</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="especificacaoDiligencia">Especificação da diligência *</Label>
-                  <Textarea
-                    id="especificacaoDiligencia"
-                    placeholder="Descreva a documentação ou análise solicitada..."
-                    {...register('especificacaoDiligencia')}
-                  />
-                  {errors.especificacaoDiligencia && (
-                    <p className="text-sm text-red-500">{errors.especificacaoDiligencia.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="prazoDiligencia">Prazo para cumprimento</Label>
-                  <Input
-                    id="prazoDiligencia"
-                    type="date"
-                    {...register('prazoDiligencia')}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {tipoResultado === 'JULGADO' && (
-            <>
-              {/* Tipo de Decisão */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tipo de Decisão</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <RadioGroup
-                    value={watch('tipoDecisao')}
-                    onValueChange={(value) => setValue('tipoDecisao', value as any)}
-                    className="grid grid-cols-1 md:grid-cols-3 gap-4"
-                  >
-                    <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                      <RadioGroupItem value="DEFERIDO" id="deferido" />
-                      <div className="space-y-1">
-                        <Label htmlFor="deferido" className="font-medium text-green-700">Deferido</Label>
-                        <p className="text-sm text-gray-600">Pedido aprovado integralmente</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                      <RadioGroupItem value="INDEFERIDO" id="indeferido" />
-                      <div className="space-y-1">
-                        <Label htmlFor="indeferido" className="font-medium text-red-700">Indeferido</Label>
-                        <p className="text-sm text-gray-600">Pedido rejeitado</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                      <RadioGroupItem value="PARCIAL" id="parcial" />
-                      <div className="space-y-1">
-                        <Label htmlFor="parcial" className="font-medium text-yellow-700">Parcial</Label>
-                        <p className="text-sm text-gray-600">Aprovado com condições</p>
-                      </div>
-                    </div>
-                  </RadioGroup>
-                  {errors.tipoDecisao && (
-                    <p className="text-sm text-red-500 mt-2">{errors.tipoDecisao.message}</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Sistema de Votação */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    Sistema de Votação
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={adicionarVoto}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Adicionar Voto
-                    </Button>
-                  </CardTitle>
-                  <CardDescription>
-                    Registre os votos de relatores, revisores e conselheiros
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {votos.map((voto, index) => (
-                    <div key={index} className="p-4 border rounded-lg space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">Voto {index + 1}</h4>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removerVoto(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Tipo de Voto</Label>
-                          <Select
-                            value={voto.tipoVoto}
-                            onValueChange={(value) => atualizarVoto(index, 'tipoVoto', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="RELATOR">Relator</SelectItem>
-                              <SelectItem value="REVISOR">Revisor</SelectItem>
-                              <SelectItem value="CONSELHEIRO">Conselheiro</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Nome do Votante</Label>
-                          <Input
-                            value={voto.nomeVotante}
-                            onChange={(e) => atualizarVoto(index, 'nomeVotante', e.target.value)}
-                            placeholder="Nome completo..."
-                          />
-                        </div>
-
-                        {(voto.tipoVoto === 'RELATOR' || voto.tipoVoto === 'REVISOR') && (
-                          <div className="space-y-2">
-                            <Label>Posição do Voto</Label>
-                            <Select
-                              value={voto.posicaoVoto || ''}
-                              onValueChange={(value) => atualizarVoto(index, 'posicaoVoto', value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="DEFERIDO">Deferido</SelectItem>
-                                <SelectItem value="INDEFERIDO">Indeferido</SelectItem>
-                                <SelectItem value="PARCIAL">Parcial</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-
-                        {voto.tipoVoto === 'CONSELHEIRO' && (
-                          <div className="space-y-2">
-                            <Label>Acompanha</Label>
-                            <Input
-                              value={voto.acompanhaVoto || ''}
-                              onChange={(e) => atualizarVoto(index, 'acompanhaVoto', e.target.value)}
-                              placeholder="Ex: Relator, Revisor A, etc..."
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Texto do Voto (Opcional)</Label>
-                        <Textarea
-                          value={voto.textoVoto || ''}
-                          onChange={(e) => atualizarVoto(index, 'textoVoto', e.target.value)}
-                          placeholder="Fundamentação do voto..."
-                        />
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          checked={voto.isPresidente || false}
-                          onCheckedChange={(checked) => atualizarVoto(index, 'isPresidente', checked)}
-                        />
-                        <Label className="text-sm">Voto de desempate do presidente</Label>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Opções de Acordo */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Análise de Acordo</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={definirAcordo || false}
-                      onCheckedChange={(checked) => setValue('definirAcordo', !!checked)}
-                    />
-                    <Label>Este processo deve seguir para análise de acordo</Label>
-                  </div>
-
-                  {definirAcordo && (
-                    <div className="space-y-2">
-                      <Label htmlFor="tipoAcordo">Tipo de Acordo</Label>
-                      <Select onValueChange={(value) => setValue('tipoAcordo', value as any)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o tipo de acordo..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="aceita_proposta">Aceita proposta da prefeitura</SelectItem>
-                          <SelectItem value="contra_proposta">Fará contra-proposta</SelectItem>
-                          <SelectItem value="sem_acordo">Não há possibilidade de acordo</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </>
-          )}
-
-          {/* Fundamentação */}
           <Card>
             <CardHeader>
-              <CardTitle>Fundamentação</CardTitle>
+              <CardTitle>Fundamentação da Decisão</CardTitle>
               <CardDescription>
                 Descreva os motivos e fundamentos da decisão tomada
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fundamentacao">Fundamentação *</Label>
+                <Label htmlFor="descricao">Descrição da Decisão *</Label>
                 <Textarea
-                  id="fundamentacao"
+                  id="descricao"
                   placeholder="Descreva os fundamentos jurídicos, análise dos documentos e motivos da decisão..."
                   rows={6}
-                  {...register('fundamentacao')}
+                  {...register('descricao')}
                   disabled={isLoading}
                 />
-                {errors.fundamentacao && (
-                  <p className="text-sm text-red-500">{errors.fundamentacao.message}</p>
+                {errors.descricao && (
+                  <p className="text-sm text-red-500">{errors.descricao.message}</p>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="observacoes">Observações Adicionais</Label>
+                <Textarea
+                  id="observacoes"
+                  placeholder="Observações complementares, recomendações ou orientações..."
+                  rows={3}
+                  {...register('observacoes')}
+                  disabled={isLoading}
+                />
+                <p className="text-xs text-gray-500">
+                  Campo opcional para informações complementares
+                </p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Texto da Ata */}
+          {/* Resumo */}
           <Card>
             <CardHeader>
-              <CardTitle>Texto da Ata</CardTitle>
-              <CardDescription>
-                Texto específico que aparecerá na ata para este processo
-              </CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Resumo da Decisão
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="ataTexto">Texto para a Ata</Label>
-                <Textarea
-                  id="ataTexto"
-                  placeholder="Texto detalhado do que ocorreu com o processo na sessão..."
-                  rows={4}
-                  {...register('ataTexto')}
-                  disabled={isLoading}
-                />
+            <CardContent>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Processo:</span>
+                  <span className="font-medium">{selectedProcesso.processo.numero}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Contribuinte:</span>
+                  <span className="font-medium">{selectedProcesso.processo.contribuinte.nome}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Tipo:</span>
+                  <span className="font-medium">{getTipoProcessoLabel(selectedProcesso.processo.tipo)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Valor:</span>
+                  <span className="font-medium">
+                    R$ {selectedProcesso.processo.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Decisão:</span>
+                  <Badge
+                    className={
+                      watch('tipo') === 'deferido' ? 'bg-green-100 text-green-800' :
+                        watch('tipo') === 'indeferido' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                    }
+                  >
+                    {watch('tipo') === 'deferido' ? 'Deferido' :
+                      watch('tipo') === 'indeferido' ? 'Indeferido' :
+                        'Parcial'}
+                  </Badge>
+                </div>
               </div>
             </CardContent>
           </Card>

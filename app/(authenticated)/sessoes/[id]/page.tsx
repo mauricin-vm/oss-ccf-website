@@ -5,11 +5,11 @@ import { redirect, notFound } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { 
-  Gavel, 
-  Calendar, 
-  Users, 
-  FileText, 
+import {
+  Gavel,
+  Calendar,
+  Users,
+  FileText,
   Clock,
   CheckCircle,
   ArrowLeft
@@ -18,6 +18,10 @@ import Link from 'next/link'
 import { SessionUser } from '@/types'
 import SessaoActions from '@/components/sessao/sessao-actions'
 import EditarAtaForm from '@/components/forms/editar-ata-form'
+import EditarInformacoesSessaoForm from '@/components/forms/editar-informacoes-sessao-form'
+import AssuntosAdministrativosForm from '@/components/forms/assuntos-administrativos-form'
+import EditarConselheirosForm from '@/components/forms/editar-conselheiros-sessao-form'
+import { formatLocalDate } from '@/lib/utils/date'
 
 interface SessaoPageProps {
   params: Promise<{ id: string }>
@@ -59,9 +63,23 @@ async function getSessao(id: string) {
             include: {
               contribuinte: true
             }
+          },
+          votos: {
+            include: {
+              conselheiro: true
+            },
+            orderBy: { ordemApresentacao: 'asc' }
           }
         },
         orderBy: { createdAt: 'asc' }
+      },
+      presidente: {
+        select: {
+          id: true,
+          nome: true,
+          email: true,
+          cargo: true
+        }
       },
       conselheiros: {
         select: {
@@ -103,7 +121,7 @@ async function getSessao(id: string) {
 
 export default async function SessaoPage({ params }: SessaoPageProps) {
   const session = await getServerSession(authOptions)
-  
+
   if (!session) {
     redirect('/login')
   }
@@ -121,14 +139,14 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
 
   const getStatusSessao = () => {
     if (sessao.dataFim) {
-      return { 
-        label: 'Finalizada', 
+      return {
+        label: 'Finalizada',
         color: 'bg-green-100 text-green-800',
         icon: CheckCircle
       }
     } else {
-      return { 
-        label: 'Em Andamento', 
+      return {
+        label: 'Em Andamento',
         color: 'bg-yellow-100 text-yellow-800',
         icon: Clock
       }
@@ -138,11 +156,11 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
   const getDuracaoSessao = () => {
     const inicio = new Date(sessao.dataInicio)
     const fim = sessao.dataFim ? new Date(sessao.dataFim) : new Date()
-    
+
     const diffMs = fim.getTime() - inicio.getTime()
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
     const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
-    
+
     if (diffHours > 0) {
       return `${diffHours}h ${diffMinutes}m`
     } else {
@@ -154,13 +172,105 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
     const totalProcessos = sessao.pauta.processos.length
     const processosJulgados = sessao.decisoes.length
     const percentual = totalProcessos > 0 ? Math.round((processosJulgados / totalProcessos) * 100) : 0
-    
+
     return {
       total: totalProcessos,
       julgados: processosJulgados,
       pendentes: totalProcessos - processosJulgados,
       percentual
     }
+  }
+
+  const getResultadoBadge = (decisao: any) => {
+    if (!decisao) return null
+
+    switch (decisao.tipoResultado) {
+      case 'SUSPENSO':
+        return <Badge className="bg-yellow-100 text-yellow-800">Suspenso</Badge>
+      case 'PEDIDO_VISTA':
+        return <Badge className="bg-blue-100 text-blue-800">Pedido de Vista</Badge>
+      case 'PEDIDO_DILIGENCIA':
+        return <Badge className="bg-orange-100 text-orange-800">Pedido de Diligência</Badge>
+      case 'JULGADO':
+        const tipoDecisao = decisao.tipoDecisao
+        return (
+          <Badge
+            className={
+              tipoDecisao === 'DEFERIDO' ? 'bg-green-100 text-green-800' :
+              tipoDecisao === 'INDEFERIDO' ? 'bg-red-100 text-red-800' :
+              'bg-yellow-100 text-yellow-800'
+            }
+          >
+            {tipoDecisao === 'DEFERIDO' ? 'Deferido' :
+             tipoDecisao === 'INDEFERIDO' ? 'Indeferido' :
+             'Parcial'}
+          </Badge>
+        )
+      default:
+        return <Badge variant="outline">Aguardando</Badge>
+    }
+  }
+
+  const getCardBackground = (decisao: any) => {
+    if (!decisao) return 'bg-gray-50'
+
+    switch (decisao.tipoResultado) {
+      case 'SUSPENSO':
+        return 'bg-yellow-50 border-yellow-200'
+      case 'PEDIDO_VISTA':
+        return 'bg-blue-50 border-blue-200'
+      case 'PEDIDO_DILIGENCIA':
+        return 'bg-orange-50 border-orange-200'
+      case 'JULGADO':
+        return 'bg-green-50 border-green-200'
+      default:
+        return 'bg-gray-50'
+    }
+  }
+
+  const getResultadoDetails = (decisao: any) => {
+    if (!decisao) return null
+
+    const details = []
+    
+    switch (decisao.tipoResultado) {
+      case 'SUSPENSO':
+        if (decisao.motivoSuspensao) {
+          details.push(`Motivo: ${decisao.motivoSuspensao}`)
+        }
+        break
+      case 'PEDIDO_VISTA':
+        if (decisao.conselheiroPedidoVista) {
+          details.push(`Solicitado por: ${decisao.conselheiroPedidoVista}`)
+        }
+        if (decisao.prazoVista) {
+          details.push(`Prazo: ${new Date(decisao.prazoVista).toLocaleDateString('pt-BR')}`)
+        }
+        break
+      case 'PEDIDO_DILIGENCIA':
+        if (decisao.especificacaoDiligencia) {
+          details.push(`Especificação: ${decisao.especificacaoDiligencia}`)
+        }
+        if (decisao.prazoDiligencia) {
+          details.push(`Prazo: ${new Date(decisao.prazoDiligencia).toLocaleDateString('pt-BR')}`)
+        }
+        break
+      case 'JULGADO':
+        if (decisao.definirAcordo) {
+          details.push('Processo seguirá para análise de acordo')
+          if (decisao.tipoAcordo) {
+            const tiposAcordo = {
+              'aceita_proposta': 'Aceita proposta da prefeitura',
+              'contra_proposta': 'Fará contra-proposta',
+              'sem_acordo': 'Não há possibilidade de acordo'
+            }
+            details.push(`Tipo: ${tiposAcordo[decisao.tipoAcordo] || decisao.tipoAcordo}`)
+          }
+        }
+        break
+    }
+
+    return details
   }
 
   const status = getStatusSessao()
@@ -185,7 +295,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
             </Badge>
           </div>
           <p className="text-gray-600">
-            Pauta: {sessao.pauta.numero} - {new Date(sessao.pauta.dataPauta).toLocaleDateString('pt-BR')}
+            Pauta: {sessao.pauta.numero} - {formatLocalDate(sessao.pauta.dataPauta.toISOString().split('T')[0])}
           </p>
         </div>
         <div className="flex gap-2">
@@ -232,7 +342,38 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                 <span className="text-gray-600">Status:</span>
                 <p className="font-medium">{status.label}</p>
               </div>
+              {sessao.numeroAta && (
+                <div>
+                  <span className="text-gray-600">Número da Ata:</span>
+                  <p className="font-medium">{sessao.numeroAta}</p>
+                </div>
+              )}
+              {sessao.presidente && (
+                <div>
+                  <span className="text-gray-600">Presidente da Sessão:</span>
+                  <p className="font-medium">{sessao.presidente.nome}</p>
+                </div>
+              )}
             </div>
+
+
+            {canEdit && isActive && (
+              <div className="flex gap-2 pt-4 border-t">
+                <EditarInformacoesSessaoForm
+                  sessaoId={sessao.id}
+                  currentData={{
+                    numeroAta: sessao.numeroAta,
+                    presidenteId: sessao.presidenteId,
+                    dataInicio: sessao.dataInicio,
+                    conselheiros: sessao.conselheiros.map(c => ({ id: c.id, nome: c.nome }))
+                  }}
+                />
+                <AssuntosAdministrativosForm
+                  sessaoId={sessao.id}
+                  currentText={sessao.assuntosAdministrativos || ''}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -246,20 +387,27 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
               {sessao.conselheiros.length} conselheiro{sessao.conselheiros.length !== 1 ? 's' : ''} participando
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {sessao.conselheiros.map((conselheiro) => (
-                <div key={conselheiro.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{conselheiro.nome}</p>
-                    <p className="text-sm text-gray-600">{conselheiro.email}</p>
-                  </div>
-                  <Badge variant="outline">
-                    {conselheiro.cargo || 'Conselheiro'}
-                  </Badge>
-                </div>
-              ))}
+          <CardContent className="space-y-4">
+            <div className="text-sm">
+              {sessao.conselheiros
+                .sort((a, b) => a.nome.localeCompare(b.nome))
+                .map((conselheiro, index) => (
+                  <span key={conselheiro.id}>
+                    <span className="font-medium">{conselheiro.nome}</span>
+                    {index < sessao.conselheiros.length - 1 && <span className="text-gray-400"> • </span>}
+                  </span>
+                ))}
             </div>
+
+            {canEdit && isActive && (
+              <div className="flex gap-2 pt-4 mt-8 border-t">
+                <EditarConselheirosForm
+                  sessaoId={sessao.id}
+                  currentConselheiros={sessao.conselheiros.map(c => ({ id: c.id, nome: c.nome }))}
+                  presidenteId={sessao.presidenteId || undefined}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -278,7 +426,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
         <CardContent>
           <div className="space-y-4">
             <div className="w-full bg-gray-200 rounded-full h-3">
-              <div 
+              <div
                 className="bg-blue-600 h-3 rounded-full transition-all duration-300"
                 style={{ width: `${progresso.percentual}%` }}
               />
@@ -314,21 +462,25 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
             {sessao.pauta.processos.map((processoPauta) => {
               const decisao = sessao.decisoes.find(d => d.processoId === processoPauta.processo.id)
               const isJulgado = !!decisao
-              
+              const cardBackground = getCardBackground(decisao)
+              const resultadoDetails = getResultadoDetails(decisao)
+
               return (
-                <div 
-                  key={processoPauta.processo.id} 
-                  className={`border rounded-lg p-4 ${isJulgado ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}
+                <div
+                  key={processoPauta.processo.id}
+                  className={`border rounded-lg p-4 ${cardBackground}`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                        isJulgado ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                      }`}>
+                        isJulgado ? 
+                          (decisao.tipoResultado === 'JULGADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800') 
+                          : 'bg-blue-100 text-blue-800'
+                        }`}>
                         {processoPauta.ordem}
                       </span>
                       <div>
-                        <Link 
+                        <Link
                           href={`/processos/${processoPauta.processo.id}`}
                           className="font-medium hover:text-blue-600"
                         >
@@ -340,40 +492,88 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                         )}
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right space-y-2">
                       {isJulgado ? (
-                        <Badge 
-                          className={
-                            decisao?.tipo === 'deferido' ? 'bg-green-100 text-green-800' :
-                            decisao?.tipo === 'indeferido' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }
-                        >
-                          {decisao?.tipo === 'deferido' ? 'Deferido' :
-                           decisao?.tipo === 'indeferido' ? 'Indeferido' :
-                           'Parcial'}
-                        </Badge>
+                        getResultadoBadge(decisao)
                       ) : (
                         <Badge variant="outline">Aguardando</Badge>
                       )}
                       {canEdit && !isJulgado && isActive && (
-                        <Link href={`/sessoes/${sessao.id}/decisoes/nova?processo=${processoPauta.processo.id}`}>
-                          <Button size="sm" variant="outline" className="mt-2 cursor-pointer">
-                            <Gavel className="mr-1 h-3 w-3" />
-                            Julgar
-                          </Button>
-                        </Link>
+                        <div>
+                          <Link href={`/sessoes/${sessao.id}/decisoes/nova?processo=${processoPauta.processo.id}`}>
+                            <Button size="sm" variant="outline" className="cursor-pointer">
+                              <Gavel className="mr-1 h-3 w-3" />
+                              Julgar
+                            </Button>
+                          </Link>
+                        </div>
                       )}
                     </div>
                   </div>
-                  
+
                   {decisao && (
-                    <div className="mt-3 p-3 bg-white rounded border">
-                      <h5 className="text-sm font-medium mb-1">Decisão:</h5>
-                      <p className="text-sm text-gray-700">{decisao.descricao}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Registrada em {new Date(decisao.createdAt).toLocaleString('pt-BR')}
-                      </p>
+                    <div className="mt-3 space-y-2">
+                      <div className="p-3 bg-white rounded border">
+                        <h5 className="text-sm font-medium mb-2">Fundamentação:</h5>
+                        <p className="text-sm text-gray-700">{decisao.fundamentacao}</p>
+                        
+                        {resultadoDetails && resultadoDetails.length > 0 && (
+                          <div className="mt-3 pt-2 border-t">
+                            <h6 className="text-xs font-medium text-gray-600 mb-1">Detalhes:</h6>
+                            {resultadoDetails.map((detail, index) => (
+                              <p key={index} className="text-xs text-gray-600">{detail}</p>
+                            ))}
+                          </div>
+                        )}
+
+                        {decisao.votos && decisao.votos.length > 0 && (
+                          <div className="mt-3 pt-2 border-t">
+                            <h6 className="text-xs font-medium text-gray-600 mb-2">Votos registrados:</h6>
+                            <div className="space-y-1">
+                              {decisao.votos.map((voto: any, index: number) => (
+                                <div key={index} className="text-xs text-gray-600 flex items-center gap-2">
+                                  <span className="font-medium">{voto.nomeVotante}</span>
+                                  <span className="text-gray-400">·</span>
+                                  <span>{voto.tipoVoto}</span>
+                                  {voto.posicaoVoto && (
+                                    <>
+                                      <span className="text-gray-400">·</span>
+                                      <span className={
+                                        voto.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
+                                        voto.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
+                                        'text-yellow-600'
+                                      }>
+                                        {voto.posicaoVoto}
+                                      </span>
+                                    </>
+                                  )}
+                                  {voto.acompanhaVoto && (
+                                    <>
+                                      <span className="text-gray-400">·</span>
+                                      <span>Acompanha {voto.acompanhaVoto}</span>
+                                    </>
+                                  )}
+                                  {voto.isPresidente && (
+                                    <span className="text-blue-600 font-medium">(Presidente)</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <p className="text-xs text-gray-500 mt-2">
+                          Registrada em {new Date(decisao.dataDecisao).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+
+                      {/* Texto da Ata específico do processo */}
+                      {processoPauta.ataTexto && (
+                        <div className="p-3 bg-blue-50 rounded border border-blue-200">
+                          <h5 className="text-sm font-medium text-blue-900 mb-1">Texto da Ata:</h5>
+                          <p className="text-sm text-blue-800">{processoPauta.ataTexto}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -383,31 +583,6 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
         </CardContent>
       </Card>
 
-      {/* Ata da Sessão */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Ata da Sessão
-          </CardTitle>
-          <CardDescription>
-            Registro das discussões e observações da sessão
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {canEdit && isActive ? (
-            <EditarAtaForm sessaoId={sessao.id} ataAtual={sessao.ata || ''} />
-          ) : (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              {sessao.ata ? (
-                <p className="text-gray-700 whitespace-pre-wrap">{sessao.ata}</p>
-              ) : (
-                <p className="text-gray-500 italic">Nenhuma ata registrada ainda</p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Decisões Registradas */}
       {sessao.decisoes.length > 0 && (
@@ -420,34 +595,78 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {sessao.decisoes.map((decisao) => (
-                <div key={decisao.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <Link 
-                      href={`/processos/${decisao.processo.id}`}
-                      className="font-medium hover:text-blue-600"
-                    >
-                      {decisao.processo.numero}
-                    </Link>
-                    <Badge 
-                      className={
-                        decisao.tipo === 'deferido' ? 'bg-green-100 text-green-800' :
-                        decisao.tipo === 'indeferido' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }
-                    >
-                      {decisao.tipo === 'deferido' ? 'Deferido' :
-                       decisao.tipo === 'indeferido' ? 'Indeferido' :
-                       'Parcial'}
-                    </Badge>
+              {sessao.decisoes.map((decisao) => {
+                const resultadoDetails = getResultadoDetails(decisao)
+                
+                return (
+                  <div key={decisao.id} className={`border rounded-lg p-4 ${getCardBackground(decisao)}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <Link
+                        href={`/processos/${decisao.processo.id}`}
+                        className="font-medium hover:text-blue-600"
+                      >
+                        {decisao.processo.numero}
+                      </Link>
+                      {getResultadoBadge(decisao)}
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{decisao.processo.contribuinte.nome}</p>
+                    
+                    <div className="bg-white p-3 rounded border">
+                      <h5 className="text-sm font-medium mb-2">Fundamentação:</h5>
+                      <p className="text-sm text-gray-700">{decisao.fundamentacao}</p>
+
+                      {resultadoDetails && resultadoDetails.length > 0 && (
+                        <div className="mt-3 pt-2 border-t">
+                          <h6 className="text-xs font-medium text-gray-600 mb-1">Detalhes:</h6>
+                          {resultadoDetails.map((detail, index) => (
+                            <p key={index} className="text-xs text-gray-600">{detail}</p>
+                          ))}
+                        </div>
+                      )}
+
+                      {decisao.votos && decisao.votos.length > 0 && (
+                        <div className="mt-3 pt-2 border-t">
+                          <h6 className="text-xs font-medium text-gray-600 mb-2">Votos registrados:</h6>
+                          <div className="space-y-1">
+                            {decisao.votos.map((voto: any, index: number) => (
+                              <div key={index} className="text-xs text-gray-600 flex items-center gap-2">
+                                <span className="font-medium">{voto.nomeVotante}</span>
+                                <span className="text-gray-400">·</span>
+                                <span>{voto.tipoVoto}</span>
+                                {voto.posicaoVoto && (
+                                  <>
+                                    <span className="text-gray-400">·</span>
+                                    <span className={
+                                      voto.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
+                                      voto.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
+                                      'text-yellow-600'
+                                    }>
+                                      {voto.posicaoVoto}
+                                    </span>
+                                  </>
+                                )}
+                                {voto.acompanhaVoto && (
+                                  <>
+                                    <span className="text-gray-400">·</span>
+                                    <span>Acompanha {voto.acompanhaVoto}</span>
+                                  </>
+                                )}
+                                {voto.isPresidente && (
+                                  <span className="text-blue-600 font-medium">(Presidente)</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <p className="text-xs text-gray-500 mt-2">
+                        Registrada em {new Date(decisao.dataDecisao).toLocaleString('pt-BR')}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600 mb-2">{decisao.processo.contribuinte.nome}</p>
-                  <p className="text-sm bg-gray-50 p-3 rounded">{decisao.descricao}</p>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Registrada em {new Date(decisao.createdAt).toLocaleString('pt-BR')}
-                  </p>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </CardContent>
         </Card>

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { useState, useEffect } from 'react'
+import { signIn, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -17,7 +17,7 @@ import { z } from 'zod'
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  email: z.string().email('Email inválido'),
+  email: z.string().email({ message: 'Email inválido' }),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
   accessCode: z.string().min(1, 'Código de acesso é obrigatório')
 })
@@ -25,12 +25,22 @@ const registerSchema = z.object({
 type RegisterInput = z.infer<typeof registerSchema>
 
 export default function LoginPage() {
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [registerError, setRegisterError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isRegistering, setIsRegistering] = useState(false)
   const [showRegisterDialog, setShowRegisterDialog] = useState(false)
+
+  // Redirecionar se já estiver autenticado
+  useEffect(() => {
+    if (status === 'loading') return
+    
+    if (session) {
+      router.replace('/dashboard')
+    }
+  }, [session, status, router])
 
   const {
     register,
@@ -77,13 +87,6 @@ export default function LoginPage() {
     setIsRegistering(true)
     setRegisterError(null)
 
-    // Verificar código de acesso
-    if (data.accessCode !== 'Jurfis.3490') {
-      setRegisterError('Código de acesso inválido')
-      setIsRegistering(false)
-      return
-    }
-
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -93,7 +96,8 @@ export default function LoginPage() {
         body: JSON.stringify({
           name: data.name,
           email: data.email,
-          password: data.password
+          password: data.password,
+          accessCode: data.accessCode
         })
       })
 
@@ -105,7 +109,7 @@ export default function LoginPage() {
       // Fechar modal e fazer login automático
       setShowRegisterDialog(false)
       resetRegisterForm()
-      
+
       // Fazer login automático
       const result = await signIn('credentials', {
         email: data.email,
@@ -124,6 +128,20 @@ export default function LoginPage() {
     } finally {
       setIsRegistering(false)
     }
+  }
+
+  // Mostrar loading enquanto verifica sessão ou se já está logado
+  if (status === 'loading' || session) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="text-gray-600">
+            {status === 'loading' ? 'Verificando sessão...' : 'Redirecionando...'}
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -145,7 +163,7 @@ export default function LoginPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -160,7 +178,7 @@ export default function LoginPage() {
                 <p className="text-sm text-red-500">{errors.email.message}</p>
               )}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
               <Input
@@ -175,7 +193,7 @@ export default function LoginPage() {
               )}
             </div>
           </CardContent>
-          
+
           <CardFooter className="pt-6">
             <Button
               type="submit"
@@ -193,7 +211,7 @@ export default function LoginPage() {
             </Button>
           </CardFooter>
         </form>
-        
+
         <div className="px-6 pb-4">
           <div className="text-center space-y-3">
             <Dialog open={showRegisterDialog} onOpenChange={setShowRegisterDialog}>
@@ -217,7 +235,7 @@ export default function LoginPage() {
                       <AlertDescription>{registerError}</AlertDescription>
                     </Alert>
                   )}
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="register-name">Nome Completo</Label>
                     <Input
@@ -231,7 +249,7 @@ export default function LoginPage() {
                       <p className="text-sm text-red-500">{registerErrors.name.message}</p>
                     )}
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="register-email">Email</Label>
                     <Input
@@ -246,7 +264,7 @@ export default function LoginPage() {
                       <p className="text-sm text-red-500">{registerErrors.email.message}</p>
                     )}
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="register-password">Senha</Label>
                     <Input
@@ -261,7 +279,7 @@ export default function LoginPage() {
                       <p className="text-sm text-red-500">{registerErrors.password.message}</p>
                     )}
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="register-code">Código de Acesso</Label>
                     <Input
@@ -274,7 +292,7 @@ export default function LoginPage() {
                       <p className="text-sm text-red-500">{registerErrors.accessCode.message}</p>
                     )}
                   </div>
-                  
+
                   <div className="flex gap-2 pt-4">
                     <Button
                       type="button"
@@ -303,9 +321,10 @@ export default function LoginPage() {
                 </form>
               </DialogContent>
             </Dialog>
-            
+
             <div className="text-xs text-gray-500 text-center space-y-1">
               <p>Precisa de acesso? Entre em contato com o administrador</p>
+              <p>(67) 3314-3490</p>
             </div>
           </div>
         </div>

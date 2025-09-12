@@ -72,7 +72,17 @@ export default function ProcessosPage() {
       const data = await response.json()
       
       // Mapear os dados para o formato esperado
-      const processosFormatados = data.processos.map((processo: any) => ({
+      const processosFormatados = data.processos.map((processo: {
+        id: string;
+        numero: string;
+        tipo: 'COMPENSACAO' | 'DACAO_PAGAMENTO' | 'TRANSACAO_EXCEPCIONAL';
+        status: string;
+        valorOriginal: number;
+        createdAt: string;
+        observacoes?: string;
+        contribuinte: { nome: string };
+        tramitacoes: Array<{ id: string; createdAt: string }>;
+      }) => ({
         id: processo.id,
         numero: processo.numero,
         tipo: processo.tipo,

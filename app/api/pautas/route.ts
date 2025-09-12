@@ -195,8 +195,7 @@ export async function POST(request: NextRequest) {
         data: { status: 'EM_PAUTA' }
       }),
       // Criar histórico para cada processo
-      ...data.processos.map((processoPauta, index) => {
-        const processo = processos.find(p => p.id === processoPauta.processoId)
+      ...data.processos.map((processoPauta) => {
         const distribucaoInfo = processoPauta.relator ? ` - Distribuído para: ${processoPauta.relator}` : ''
         return prisma.$queryRaw`
           INSERT INTO "HistoricoProcesso" ("id", "processoId", "usuarioId", "titulo", "descricao", "tipo", "createdAt")

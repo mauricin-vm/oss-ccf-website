@@ -6,9 +6,10 @@ import { SessionUser } from '@/types'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     
     if (!session) {
@@ -27,7 +28,7 @@ export async function PUT(
 
     // Buscar tramitação
     const tramitacao = await prisma.tramitacao.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { 
         processo: {
           include: {
@@ -54,7 +55,7 @@ export async function PUT(
 
     // Marcar como recebida
     const tramitacaoAtualizada = await prisma.tramitacao.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         dataRecebimento: new Date(),
         updatedAt: new Date()
@@ -82,7 +83,7 @@ export async function PUT(
         usuarioId: user.id,
         acao: 'UPDATE',
         entidade: 'Tramitacao',
-        entidadeId: params.id,
+        entidadeId: id,
         dadosNovos: {
           acao: 'MARCADA_COMO_RECEBIDA',
           dataRecebimento: new Date(),

@@ -63,6 +63,7 @@ export default function EditarAtaForm({ sessaoId, ataAtual }: EditarAtaFormProps
           variant="outline"
           size="sm"
           onClick={() => setIsEditing(true)}
+          className="cursor-pointer"
         >
           <Edit className="mr-2 h-4 w-4" />
           {ataAtual ? 'Editar Ata' : 'Adicionar Ata'}
@@ -85,6 +86,7 @@ export default function EditarAtaForm({ sessaoId, ataAtual }: EditarAtaFormProps
           onClick={handleSave}
           disabled={isLoading}
           size="sm"
+          className="cursor-pointer"
         >
           {isLoading ? (
             <>
@@ -103,6 +105,7 @@ export default function EditarAtaForm({ sessaoId, ataAtual }: EditarAtaFormProps
           onClick={handleCancel}
           disabled={isLoading}
           size="sm"
+          className="cursor-pointer"
         >
           <X className="mr-2 h-4 w-4" />
           Cancelar

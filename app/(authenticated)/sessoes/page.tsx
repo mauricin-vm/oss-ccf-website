@@ -1,10 +1,12 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
-import { prisma } from '@/lib/db'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
   Plus, 
   Search, 
@@ -14,83 +16,118 @@ import {
   CheckCircle,
   Calendar,
   FileText,
-  Filter
+  Filter,
+  X
 } from 'lucide-react'
 import Link from 'next/link'
 import { SessionUser } from '@/types'
-import { SessaoJulgamento, Pauta, ProcessoPauta, Processo, Contribuinte, Decisao, Conselheiro } from '@prisma/client'
 
-type SessaoWithRelations = SessaoJulgamento & {
-  pauta: Pauta & {
-    processos: (ProcessoPauta & {
-      processo: Processo & {
-        contribuinte: Contribuinte
+interface Sessao {
+  id: string
+  dataInicio: string
+  dataFim?: string
+  ata?: string
+  pauta: {
+    id: string
+    numero: string
+    processos: Array<{
+      processo: {
+        id: string
+        numero: string
+        contribuinte: {
+          nome: string
+        }
       }
-    })[]
+    }>
   }
-  decisoes: (Decisao & {
-    processo: Processo & {
-      contribuinte: Contribuinte
-    }
-  })[]
-  conselheiros: Pick<Conselheiro, 'id' | 'nome' | 'email' | 'cargo'>[]
-}
-
-async function getSessoes() {
-  return prisma.sessaoJulgamento.findMany({
-    include: {
-      pauta: {
-        include: {
-          processos: {
-            include: {
-              processo: {
-                include: {
-                  contribuinte: true
-                }
-              }
-            }
-          }
-        }
-      },
-      decisoes: {
-        include: {
-          processo: {
-            include: {
-              contribuinte: true
-            }
-          }
-        }
-      },
-      conselheiros: {
-        select: {
-          id: true,
-          nome: true,
-          email: true,
-          cargo: true
-        }
+  decisoes: Array<{
+    id: string
+    tipo: 'deferido' | 'indeferido' | 'parcial'
+    processo: {
+      id: string
+      numero: string
+      contribuinte: {
+        nome: string
       }
-    },
-    orderBy: {
-      dataInicio: 'desc'
     }
-  })
+  }>
+  conselheiros: Array<{
+    id: string
+    nome: string
+    email: string
+    cargo: string
+  }>
 }
 
-export default async function SessoesPage() {
-  const session = await getServerSession(authOptions)
+export default function SessoesPage() {
+  const { data: session } = useSession()
   const user = session?.user as SessionUser
   
-  const sessoes = await getSessoes()
+  const [sessoes, setSessoes] = useState<Sessao[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [showFilters, setShowFilters] = useState(false)
 
-  const canCreate = user.role === 'ADMIN' || user.role === 'FUNCIONARIO'
+  // Carregamento inicial - buscar todas as sessões
+  useEffect(() => {
+    loadAllSessoes()
+  }, [])
 
-  // Estatísticas
-  const totalSessoes = sessoes.length
-  const sessoesAbertas = sessoes.filter(s => !s.dataFim).length
-  const sessoesFechadas = sessoes.filter(s => s.dataFim).length
-  const totalDecisoes = sessoes.reduce((total, s) => total + s.decisoes.length, 0)
+  const loadAllSessoes = async () => {
+    try {
+      setLoading(true)
+      
+      const response = await fetch('/api/sessoes?limit=1000', {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error('Erro ao carregar sessões')
+      }
+      
+      const data = await response.json()
+      setSessoes(data.sessoes || [])
+    } catch (error) {
+      console.error('Erro ao carregar sessões:', error)
+      setSessoes([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const getStatusSessao = (sessao: SessaoWithRelations) => {
+  // Filtragem local (client-side)
+  const filteredSessoes = sessoes.filter((sessao) => {
+    // Filtro por texto de busca
+    const searchMatch = !searchTerm || 
+      sessao.pauta.numero.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sessao.conselheiros.some(c => c.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      sessao.pauta.processos.some(p => 
+        p.processo.numero.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.processo.contribuinte.nome.toLowerCase().includes(searchTerm.toLowerCase())
+      ) ||
+      (sessao.ata && sessao.ata.toLowerCase().includes(searchTerm.toLowerCase()))
+
+    // Filtro por status
+    const statusMatch = statusFilter === 'all' || 
+      (statusFilter === 'abertas' && !sessao.dataFim) ||
+      (statusFilter === 'fechadas' && sessao.dataFim)
+
+    return searchMatch && statusMatch
+  })
+
+  const canCreate = user?.role === 'ADMIN' || user?.role === 'FUNCIONARIO'
+
+  // Estatísticas baseadas nas sessões filtradas
+  const totalSessoes = filteredSessoes.length
+  const sessoesAbertas = filteredSessoes.filter(s => !s.dataFim).length
+  const sessoesFechadas = filteredSessoes.filter(s => s.dataFim).length
+  const totalDecisoes = filteredSessoes.reduce((total, s) => total + s.decisoes.length, 0)
+
+  const getStatusSessao = (sessao: Sessao) => {
     if (sessao.dataFim) {
       return { 
         label: 'Finalizada', 
@@ -106,7 +143,7 @@ export default async function SessoesPage() {
     }
   }
 
-  const getDuracaoSessao = (dataInicio: Date, dataFim?: Date) => {
+  const getDuracaoSessao = (dataInicio: string, dataFim?: string) => {
     const inicio = new Date(dataInicio)
     const fim = dataFim ? new Date(dataFim) : new Date()
     
@@ -121,7 +158,7 @@ export default async function SessoesPage() {
     }
   }
 
-  const getProgressoJulgamento = (sessao: SessaoWithRelations) => {
+  const getProgressoJulgamento = (sessao: Sessao) => {
     const totalProcessos = sessao.pauta.processos.length
     const processosJulgados = sessao.decisoes.length
     const percentual = totalProcessos > 0 ? Math.round((processosJulgados / totalProcessos) * 100) : 0
@@ -132,6 +169,10 @@ export default async function SessoesPage() {
       pendentes: totalProcessos - processosJulgados,
       percentual
     }
+  }
+
+  if (loading) {
+    return <div className="flex justify-center p-8">Carregando...</div>
   }
 
   return (
@@ -160,19 +201,60 @@ export default async function SessoesPage() {
           <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Buscar por pauta ou conselheiro..."
-                  className="pl-10"
-                />
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Buscar por pauta, conselheiro, contribuinte..."
+                    className="pl-10"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
               </div>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="cursor-pointer"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
             </div>
-            <Button variant="outline" size="icon" className="cursor-pointer">
-              <Filter className="h-4 w-4" />
-            </Button>
+            
+            {showFilters && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Status</label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos os status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os status</SelectItem>
+                      <SelectItem value="abertas">Em Andamento</SelectItem>
+                      <SelectItem value="fechadas">Finalizadas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex items-end">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setSearchTerm('')
+                      setStatusFilter('all')
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Limpar Filtros
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -230,15 +312,15 @@ export default async function SessoesPage() {
 
       {/* Lista de Sessões */}
       <div className="space-y-4">
-        {sessoes.length === 0 ? (
+        {filteredSessoes.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Gavel className="h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Nenhuma sessão encontrada
+                {sessoes.length === 0 ? 'Nenhuma sessão encontrada' : 'Nenhuma sessão corresponde aos filtros'}
               </h3>
               <p className="text-gray-600 mb-4">
-                Comece criando sua primeira sessão de julgamento.
+                {sessoes.length === 0 ? 'Comece criando sua primeira sessão de julgamento.' : 'Tente ajustar os filtros ou criar uma nova sessão.'}
               </p>
               {canCreate && (
                 <Link href="/sessoes/nova">
@@ -251,7 +333,7 @@ export default async function SessoesPage() {
             </CardContent>
           </Card>
         ) : (
-          sessoes.map((sessao) => {
+          filteredSessoes.map((sessao) => {
             const status = getStatusSessao(sessao)
             const StatusIcon = status.icon
             const progresso = getProgressoJulgamento(sessao)
@@ -427,13 +509,13 @@ export default async function SessoesPage() {
               <Clock className="h-5 w-5" />
               Sessões em Andamento
             </CardTitle>
-            <CardDescription>
+            <p className="text-gray-600 text-sm">
               Sessões que precisam de atenção
-            </CardDescription>
+            </p>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {sessoes
+              {filteredSessoes
                 .filter(s => !s.dataFim)
                 .slice(0, 3)
                 .map((sessao) => {

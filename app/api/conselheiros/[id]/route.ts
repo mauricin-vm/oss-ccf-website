@@ -17,9 +17,10 @@ const conselheiroDtoSchema = z.object({
 // GET - Buscar conselheiro por ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -31,7 +32,7 @@ export async function GET(
     }
 
     const conselheiro = await prisma.conselheiro.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!conselheiro) {
@@ -48,9 +49,10 @@ export async function GET(
 // PUT - Atualizar conselheiro
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -66,7 +68,7 @@ export async function PUT(
 
     // Verificar se o conselheiro existe
     const conselheiro = await prisma.conselheiro.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!conselheiro) {
@@ -80,7 +82,7 @@ export async function PUT(
     }
 
     const updatedConselheiro = await prisma.conselheiro.update({
-      where: { id: params.id },
+      where: { id },
       data: dataToUpdate
     })
 
@@ -99,9 +101,10 @@ export async function PUT(
 // DELETE - Deletar conselheiro
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -114,7 +117,7 @@ export async function DELETE(
 
     // Verificar se o conselheiro existe
     const conselheiro = await prisma.conselheiro.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!conselheiro) {
@@ -122,7 +125,7 @@ export async function DELETE(
     }
 
     await prisma.conselheiro.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json({ message: 'Conselheiro deletado com sucesso' })

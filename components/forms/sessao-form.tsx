@@ -13,7 +13,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Loader2, AlertCircle, Calendar, Users, FileText, Search } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Loader2, AlertCircle, Calendar, Users, Search, User } from 'lucide-react'
+import { formatLocalDate } from '@/lib/utils/date'
 
 interface SessaoFormProps {
   onSuccess?: () => void
@@ -57,18 +59,19 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
   const [conselheiros, setConselheiros] = useState<Conselheiro[]>([])
   const [selectedPauta, setSelectedPauta] = useState<Pauta | null>(null)
   const [selectedConselheiros, setSelectedConselheiros] = useState<string[]>([])
+  const [selectedPresidente, setSelectedPresidente] = useState<string>('')
   const [searchPauta, setSearchPauta] = useState('')
 
   const {
     register,
     handleSubmit,
     setValue,
-    watch,
     formState: { errors }
   } = useForm<SessaoInput>({
     resolver: zodResolver(sessaoSchema),
     defaultValues: {
       dataInicio: new Date(),
+      presidenteId: '',
       conselheiros: []
     }
   })
@@ -147,6 +150,11 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
     setValue('conselheiros', selectedConselheiros)
   }, [selectedConselheiros, setValue])
 
+  // Atualizar campo de presidente quando seleção muda
+  useEffect(() => {
+    setValue('presidenteId', selectedPresidente || undefined)
+  }, [selectedPresidente, setValue])
+
   const onSubmit = async (data: SessaoInput) => {
     setIsLoading(true)
     setError(null)
@@ -191,6 +199,24 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
     } else {
       setSelectedConselheiros(prev => prev.filter(id => id !== userId))
     }
+  }
+
+  const handlePresidenteChange = (presidenteId: string) => {
+    const realPresidenteId = presidenteId === 'none' ? '' : presidenteId
+    
+    // Primeiro, remover qualquer presidente anterior dos participantes selecionados
+    let newSelectedConselheiros = [...selectedConselheiros]
+    if (selectedPresidente && newSelectedConselheiros.includes(selectedPresidente)) {
+      newSelectedConselheiros = newSelectedConselheiros.filter(id => id !== selectedPresidente)
+    }
+    
+    // Se um novo presidente foi selecionado e está nos participantes, removê-lo
+    if (realPresidenteId && newSelectedConselheiros.includes(realPresidenteId)) {
+      newSelectedConselheiros = newSelectedConselheiros.filter(id => id !== realPresidenteId)
+    }
+    
+    setSelectedPresidente(realPresidenteId)
+    setSelectedConselheiros(newSelectedConselheiros)
   }
 
   const pautasFiltradas = pautas.filter(pauta =>
@@ -240,7 +266,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
                         <div>
                           <p className="font-medium">{pauta.numero}</p>
                           <p className="text-sm text-gray-600">
-                            {new Date(pauta.dataPauta).toLocaleDateString('pt-BR')} - {pauta.processos.length} processo{pauta.processos.length !== 1 ? 's' : ''}
+                            {formatLocalDate(pauta.dataPauta)} - {pauta.processos.length} processo{pauta.processos.length !== 1 ? 's' : ''}
                           </p>
                         </div>
                         <Badge className="bg-blue-100 text-blue-800">
@@ -264,7 +290,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
                 <div>
                   <h4 className="font-medium text-blue-900">{selectedPauta.numero}</h4>
                   <p className="text-sm text-blue-700">
-                    {new Date(selectedPauta.dataPauta).toLocaleDateString('pt-BR')} - {selectedPauta.processos.length} processo{selectedPauta.processos.length !== 1 ? 's' : ''}
+                    {formatLocalDate(selectedPauta.dataPauta)} - {selectedPauta.processos.length} processo{selectedPauta.processos.length !== 1 ? 's' : ''}
                   </p>
                 </div>
                 <Button
@@ -321,38 +347,63 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="dataInicio">Data e Hora de Início</Label>
-              <div className="relative w-1/2">
-                <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="dataInicio"
-                  type="datetime-local"
-                  {...register('dataInicio', {
-                    setValueAs: (value) => value ? new Date(value) : undefined
-                  })}
-                  className="pl-10 w-full"
-                  disabled={isLoading}
-                  defaultValue={new Date().toISOString().slice(0, 16)}
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="dataInicio">Data e Hora de Início</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="dataInicio"
+                    type="datetime-local"
+                    {...register('dataInicio', {
+                      setValueAs: (value) => value ? new Date(value) : undefined
+                    })}
+                    className="pl-10 w-full"
+                    disabled={isLoading}
+                    defaultValue={new Date().toISOString().slice(0, 16)}
+                  />
+                </div>
+                {errors.dataInicio && (
+                  <p className="text-sm text-red-500">{errors.dataInicio.message}</p>
+                )}
               </div>
-              {errors.dataInicio && (
-                <p className="text-sm text-red-500">{errors.dataInicio.message}</p>
-              )}
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="ata">Ata Inicial</Label>
-              <Textarea
-                id="ata"
-                placeholder="Informações iniciais sobre a sessão..."
-                rows={3}
-                {...register('ata')}
-                disabled={isLoading}
-              />
-              <p className="text-xs text-gray-500">
-                A ata pode ser preenchida ou atualizada durante a sessão
-              </p>
+              <div className="space-y-2">
+                <Label>Presidente da Sessão</Label>
+                <Select
+                  value={selectedPresidente || 'none'}
+                  onValueChange={handlePresidenteChange}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger className="w-full">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-gray-400" />
+                      <SelectValue placeholder="Selecionar presidente (opcional)" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum presidente</SelectItem>
+                    {conselheiros.map((conselheiro) => (
+                      <SelectItem key={conselheiro.id} value={conselheiro.id}>
+                        <div className="flex flex-col">
+                          <span>{conselheiro.nome}</span>
+                          {conselheiro.cargo && (
+                            <span className="text-xs text-gray-500">{conselheiro.cargo}</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedPresidente && (
+                  <p className="text-xs text-blue-600">
+                    Presidente não aparecerá na lista de participantes
+                  </p>
+                )}
+                {errors.presidenteId && (
+                  <p className="text-sm text-red-500">{errors.presidenteId.message}</p>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -369,7 +420,9 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {conselheiros.map((conselheiro) => (
+              {conselheiros
+                .filter(conselheiro => conselheiro.id !== selectedPresidente)
+                .map((conselheiro) => (
                 <div key={conselheiro.id} className="flex items-center space-x-3 p-3 border rounded-lg">
                   <Checkbox
                     id={`conselheiro-${conselheiro.id}`}

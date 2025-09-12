@@ -27,11 +27,13 @@ import {
   DollarSign,
   Trash2,
   Plus,
-  Search,
   Check
 } from 'lucide-react'
 import Link from 'next/link'
-import { SessionUser } from '@/types'
+import { SessionUser, PautaWithRelations, ProcessoWithRelations } from '@/types'
+import { User as PrismaUser } from '@prisma/client'
+import PautaActions from '@/components/pauta/pauta-actions'
+import { formatLocalDate } from '@/lib/utils/date'
 
 export default function PautaDetalhesPage({
   params
@@ -40,16 +42,16 @@ export default function PautaDetalhesPage({
 }) {
   const { data: session } = useSession()
   const router = useRouter()
-  const [pauta, setPauta] = useState<any>(null)
+  const [pauta, setPauta] = useState<PautaWithRelations | null>(null)
   const [loading, setLoading] = useState(true)
   const [id, setId] = useState<string>('')
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isAddProcessModalOpen, setIsAddProcessModalOpen] = useState(false)
-  const [availableProcesses, setAvailableProcesses] = useState<any[]>([])
+  const [availableProcesses, setAvailableProcesses] = useState<ProcessoWithRelations[]>([])
   const [searchProcess, setSearchProcess] = useState('')
-  const [selectedProcess, setSelectedProcess] = useState<any>(null)
+  const [selectedProcess, setSelectedProcess] = useState<ProcessoWithRelations | null>(null)
   const [conselheiro, setConselheiro] = useState('')
-  const [conselheiros, setConselheiros] = useState<any[]>([])
+  const [conselheiros, setConselheiros] = useState<PrismaUser[]>([])
 
   useEffect(() => {
     params.then(p => setId(p.id))
@@ -79,24 +81,6 @@ export default function PautaDetalhesPage({
     fetchPauta()
   }, [id])
 
-  const handleDeletePauta = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch(`/api/pautas/${id}`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Erro ao excluir pauta')
-      }
-
-      router.push('/pautas')
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro inesperado')
-      setLoading(false)
-    }
-  }
 
   const handleEditSuccess = () => {
     // Recarregar dados da pauta após edição
@@ -150,8 +134,8 @@ export default function PautaDetalhesPage({
       if (response.ok) {
         const data = await response.json()
         // Filtrar processos que já não estão na pauta
-        const processosNaPauta = pauta.processos.map((p: any) => p.processo.id)
-        const processosDisponiveis = data.processos.filter((p: any) => !processosNaPauta.includes(p.id))
+        const processosNaPauta = pauta.processos.map((p) => p.processo.id)
+        const processosDisponiveis = data.processos.filter((p: ProcessoWithRelations) => !processosNaPauta.includes(p.id))
         setAvailableProcesses(processosDisponiveis)
       }
     } catch (error) {
@@ -242,7 +226,7 @@ export default function PautaDetalhesPage({
       if (response.ok) {
         const data = await response.json()
         // Filtrar apenas conselheiros ativos
-        setConselheiros(data.filter((c: any) => c.ativo))
+        setConselheiros(data.filter((c: PrismaUser) => c.ativo))
       }
     } catch (error) {
       console.error('Erro ao carregar conselheiros:', error)
@@ -308,7 +292,7 @@ export default function PautaDetalhesPage({
           <div>
             <h1 className="text-3xl font-bold">{pauta.numero}</h1>
             <p className="text-gray-600">
-              {new Date(pauta.dataPauta).toLocaleDateString('pt-BR')} - {dataStatus.label}
+              {formatLocalDate(pauta.dataPauta)} - {dataStatus.label}
             </p>
           </div>
         </div>
@@ -332,30 +316,11 @@ export default function PautaDetalhesPage({
             </Link>
           )}
 
-          {canEdit && pauta.status === 'aberta' && (
-            <>
-              <Button
-                variant="outline"
-                className="cursor-pointer"
-                onClick={() => setIsEditModalOpen(true)}
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                Editar
-              </Button>
-              <Button
-                variant="destructive"
-                className="cursor-pointer"
-                onClick={() => {
-                  if (confirm('Tem certeza que deseja excluir esta pauta? Esta ação não pode ser desfeita e os processos retornarão ao status anterior.')) {
-                    handleDeletePauta()
-                  }
-                }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir
-              </Button>
-            </>
-          )}
+          <PautaActions 
+            pauta={pauta}
+            userRole={user.role}
+            onEdit={() => setIsEditModalOpen(true)}
+          />
         </div>
       </div>
 
@@ -438,7 +403,7 @@ export default function PautaDetalhesPage({
                     disabled={loading}
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    Adicionar Processo
+                    Adicionar
                   </Button>
                 )}
               </div>
@@ -516,8 +481,7 @@ export default function PautaDetalhesPage({
                               className="cursor-pointer"
                               disabled={loading}
                             >
-                              <Trash2 className="mr-1 h-3 w-3" />
-                              Remover
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         )}
@@ -668,7 +632,7 @@ export default function PautaDetalhesPage({
             <CardContent>
               <div className="space-y-4">
                 {pauta.historicos && pauta.historicos.length > 0 ? (
-                  pauta.historicos.map((historico: any, index: number) => {
+                  pauta.historicos.map((historico: { id: string; tipo: string; titulo: string; descricao: string; createdAt: string; usuario: { name: string } }, index: number) => {
                     const isLast = index === pauta.historicos.length - 1
 
                     // Definir ícone e cor baseado no tipo

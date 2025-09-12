@@ -7,7 +7,7 @@ import { SessionUser } from '@/types'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -16,10 +16,12 @@ export async function GET(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
+    const { id } = await params
+
     const pagamentos = await prisma.pagamentoAcordo.findMany({
       where: { 
         parcela: { 
-          acordoId: params.id 
+          acordoId: id 
         } 
       },
       include: {
@@ -40,7 +42,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -79,10 +81,11 @@ export async function POST(
     }
 
     const data = validationResult.data
+    const { id } = await params
 
     // Verificar se o acordo existe e está ativo
     const acordo = await prisma.acordo.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         processo: {
           include: {
@@ -189,7 +192,7 @@ export async function POST(
     // Verificar se todas as parcelas foram pagas para marcar acordo como cumprido
     const todasParcelasPagas = await prisma.parcelaAcordo.findMany({
       where: { 
-        acordoId: params.id,
+        acordoId: id,
         status: 'pendente'
       }
     })
@@ -204,7 +207,7 @@ export async function POST(
     if (parcelasRestantes.length === 0) {
       // Todas as parcelas foram pagas, marcar acordo como cumprido
       await prisma.acordo.update({
-        where: { id: params.id },
+        where: { id },
         data: { 
           status: 'cumprido'
         }
@@ -225,7 +228,7 @@ export async function POST(
         entidade: 'PagamentoAcordo',
         entidadeId: pagamento.id,
         dadosNovos: {
-          acordoId: params.id,
+          acordoId: id,
           processoNumero: acordo.processo.numero,
           contribuinte: acordo.processo.contribuinte.nome,
           parcelaNumerо: parcela.numero,

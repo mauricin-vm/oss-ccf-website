@@ -21,12 +21,13 @@ import {
   X
 } from 'lucide-react'
 import Link from 'next/link'
-import { SessionUser } from '@/types'
+import { SessionUser, PautaWithRelations } from '@/types'
+import { formatLocalDate } from '@/lib/utils/date'
 
 export default function PautasPage() {
   const { data: session } = useSession()
-  const [pautas, setPautas] = useState<any[]>([])
-  const [filteredPautas, setFilteredPautas] = useState<any[]>([])
+  const [pautas, setPautas] = useState<PautaWithRelations[]>([])
+  const [filteredPautas, setFilteredPautas] = useState<PautaWithRelations[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('all')
@@ -273,7 +274,7 @@ export default function PautasPage() {
                 <Filter className="h-4 w-4 text-blue-600" />
                 <span className="text-sm font-medium text-blue-900">
                   Filtros ativos: 
-                  {searchTerm && <Badge variant="secondary" className="ml-2">Busca: "{searchTerm}"</Badge>}
+                  {searchTerm && <Badge variant="secondary" className="ml-2">Busca: &ldquo;{searchTerm}&rdquo;</Badge>}
                   {statusFilter && statusFilter !== 'all' && <Badge variant="secondary" className="ml-2">Status: {statusFilter === 'aberta' ? 'Aberta' : statusFilter === 'em_julgamento' ? 'Em Julgamento' : 'Fechada'}</Badge>}
                   {anoFilter && anoFilter !== 'all' && <Badge variant="secondary" className="ml-2">Ano: {anoFilter}</Badge>}
                 </span>
@@ -353,7 +354,7 @@ export default function PautasPage() {
               </h3>
               <p className="text-gray-600 mb-4">
                 {searchTerm 
-                  ? `Nenhuma pauta corresponde à busca "${searchTerm}".`
+                  ? `Nenhuma pauta corresponde à busca &ldquo;${searchTerm}&rdquo;.`
                   : 'Comece criando sua primeira pauta de julgamento.'
                 }
               </p>
@@ -388,7 +389,7 @@ export default function PautasPage() {
                           {status.label}
                         </Badge>
                         <Badge variant="outline" className={dataStatus.color}>
-                          {new Date(pauta.dataPauta).toLocaleDateString('pt-BR')} - {dataStatus.label}
+                          {formatLocalDate(pauta.dataPauta)} - {dataStatus.label}
                         </Badge>
                       </div>
 
@@ -520,7 +521,7 @@ export default function PautasPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium">
-                          {new Date(pauta.dataPauta).toLocaleDateString('pt-BR')}
+                          {formatLocalDate(pauta.dataPauta)}
                         </p>
                         <p className={`text-xs ${dataStatus.color}`}>
                           {dataStatus.label}

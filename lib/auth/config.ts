@@ -90,11 +90,11 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: 'jwt',
-    maxAge: 7 * 24 * 60 * 60, // 7 dias
-    updateAge: 60 * 60 // Atualiza a sessão a cada hora
+    maxAge: 30 * 24 * 60 * 60, // 30 dias
+    updateAge: 24 * 60 * 60 // Atualiza a sessão apenas após 24 horas de inatividade
   },
   jwt: {
-    maxAge: 7 * 24 * 60 * 60 // JWT expira em 7 dias
+    maxAge: 30 * 24 * 60 * 60 // JWT expira em 30 dias
   },
   cookies: {
     sessionToken: {

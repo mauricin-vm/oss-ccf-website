@@ -178,18 +178,13 @@ export async function POST(
   }
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
-    const { id: pautaId } = await params
 
     // Buscar processos disponíveis (EM_ANALISE e não estão em nenhuma pauta)
     const processosDisponiveis = await prisma.processo.findMany({

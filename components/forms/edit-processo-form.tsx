@@ -48,7 +48,7 @@ export default function EditProcessoForm({ processo }: EditProcessoFormProps) {
     setValue,
     formState: { errors }
   } = useForm<ProcessoInput>({
-    resolver: zodResolver(processoSchema) as any,
+    resolver: zodResolver(processoSchema),
     defaultValues: {
       numero: processo.numero,
       tipo: processo.tipo,
@@ -109,7 +109,7 @@ export default function EditProcessoForm({ processo }: EditProcessoFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />

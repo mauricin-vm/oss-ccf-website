@@ -21,6 +21,7 @@ export const sessaoSchema = z.object({
   dataInicio: z.date({
     required_error: 'Data de início é obrigatória'
   }),
+  presidenteId: z.string().optional(),
   conselheiros: z.array(z.string()).min(1, 'Pelo menos um conselheiro deve participar'),
   ata: z.string().optional()
 })

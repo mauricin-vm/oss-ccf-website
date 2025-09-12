@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
       
       if (contribuinte) {
         // Atualizar dados do contribuinte existente
-        const dadosAtualizacao: any = { 
+        const dadosAtualizacao = { 
           nome: contribuinteData.nome,
           email: contribuinteData.email || null,
           telefone: contribuinteData.telefone || null,
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
     // Se não encontrou contribuinte existente, criar novo
     if (!contribuinte) {
       // Criar dados do contribuinte tratando campos vazios
-      const dadosContribuinte: any = {
+      const dadosContribuinte = {
         nome: contribuinteData.nome,
         email: contribuinteData.email && contribuinteData.email.trim() !== '' ? contribuinteData.email : null,
         telefone: contribuinteData.telefone && contribuinteData.telefone.trim() !== '' ? contribuinteData.telefone : null,

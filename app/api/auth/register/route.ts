@@ -5,8 +5,9 @@ import { z } from 'zod'
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres')
+  email: z.string().email({ message: 'Email inválido' }),
+  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+  accessCode: z.string().min(1, 'Código de acesso é obrigatório')
 })
 
 export async function POST(request: NextRequest) {
@@ -18,13 +19,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           error: 'Dados inválidos',
-          details: validationResult.error.errors
+          details: validationResult.error.issues
         },
         { status: 400 }
       )
     }
 
-    const { name, email, password } = validationResult.data
+    const { name, email, password, accessCode } = validationResult.data
+
+    // Verificar código de acesso
+    if (accessCode !== 'Ccf.3490') {
+      return NextResponse.json(
+        { error: 'Código de acesso inválido' },
+        { status: 401 }
+      )
+    }
 
     // Verificar se o email já existe
     const existingUser = await prisma.user.findUnique({

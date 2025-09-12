@@ -6,9 +6,10 @@ import { SessionUser, TramitacaoUpdateData } from '@/types'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     
     if (!session) {
@@ -16,7 +17,7 @@ export async function GET(
     }
 
     const tramitacao = await prisma.tramitacao.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         processo: {
           include: {
@@ -53,9 +54,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     
     if (!session) {
@@ -76,7 +78,7 @@ export async function PUT(
     
     // Buscar tramitação atual para auditoria
     const tramitacaoAtual = await prisma.tramitacao.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: { processo: true }
     })
 
@@ -94,7 +96,7 @@ export async function PUT(
     }
 
     const tramitacaoAtualizada = await prisma.tramitacao.update({
-      where: { id: params.id },
+      where: { id: id },
       data: updateData,
       include: {
         processo: {
@@ -119,7 +121,7 @@ export async function PUT(
         usuarioId: user.id,
         acao: 'UPDATE',
         entidade: 'Tramitacao',
-        entidadeId: params.id,
+        entidadeId: id,
         dadosAnteriores: {
           setorOrigem: tramitacaoAtual.setorOrigem,
           setorDestino: tramitacaoAtual.setorDestino,

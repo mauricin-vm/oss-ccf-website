@@ -254,7 +254,12 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                   id="dataPauta"
                   type="date"
                   {...register('dataPauta', {
-                    setValueAs: (value) => value ? new Date(value) : undefined
+                    setValueAs: (value) => {
+                      if (!value) return undefined
+                      // Criar data no timezone local para evitar problemas de UTC
+                      const [year, month, day] = value.split('-')
+                      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+                    }
                   })}
                   className="pl-10"
                   disabled={isLoading}
