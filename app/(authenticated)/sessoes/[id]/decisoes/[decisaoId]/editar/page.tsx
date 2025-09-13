@@ -47,7 +47,15 @@ export default async function EditarDecisaoPage({ params }: EditarDecisaoPagePro
               }
             }
           },
-          conselheiros: true
+          conselheiros: true,
+          presidente: {
+            select: {
+              id: true,
+              nome: true,
+              email: true,
+              cargo: true
+            }
+          }
         }
       },
       processo: {
@@ -128,6 +136,7 @@ export default async function EditarDecisaoPage({ params }: EditarDecisaoPagePro
               }
             } : null}
             conselheiros={decisao.sessao.conselheiros}
+            presidente={decisao.sessao.presidente}
           />
         </CardContent>
       </Card>

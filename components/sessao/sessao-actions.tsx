@@ -48,8 +48,13 @@ export default function SessaoActions({ sessao }: SessaoActionsProps) {
   const isActive = !sessao.dataFim
   const totalProcessos = sessao.pauta.processos.length
   const processosJulgados = sessao.decisoes.length
-  const canFinalize = processosJulgados === totalProcessos
+  const canFinalize = totalProcessos > 0 && processosJulgados === totalProcessos && isActive
   const canDelete = sessao.decisoes.length === 0 && isActive
+
+  // Se não há nenhuma ação disponível, não mostrar o botão
+  if (!canFinalize && !canDelete) {
+    return null
+  }
 
   const handleFinalizar = async () => {
     setIsLoading(true)

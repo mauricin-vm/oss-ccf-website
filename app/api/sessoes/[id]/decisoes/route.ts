@@ -56,7 +56,7 @@ const votoSchema = z.object({
   nomeVotante: z.string().min(1, 'Nome do votante é obrigatório'),
   conselheiroId: z.string().optional(),
   textoVoto: z.string().optional(),
-  posicaoVoto: z.enum(['DEFERIDO', 'INDEFERIDO', 'PARCIAL']).optional(),
+  posicaoVoto: z.enum(['DEFERIDO', 'INDEFERIDO', 'PARCIAL', 'ABSTENCAO', 'AUSENTE', 'IMPEDIDO']).optional(),
   acompanhaVoto: z.string().optional(),
   ordemApresentacao: z.number().optional(),
   isPresidente: z.boolean().optional()
@@ -290,7 +290,7 @@ export async function POST(
         }
       })
 
-      // Criar votos se fornecidos
+      // Criar votos se fornecidos (todos os votos para preservar informações de auditoria)
       if (data.votos && data.votos.length > 0) {
         await tx.voto.createMany({
           data: data.votos.map(voto => ({
@@ -299,7 +299,7 @@ export async function POST(
             tipoVoto: voto.tipoVoto,
             nomeVotante: voto.nomeVotante,
             textoVoto: voto.textoVoto || null,
-            posicaoVoto: voto.posicaoVoto || null,
+            posicaoVoto: voto.posicaoVoto as 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL' | 'ABSTENCAO' | 'AUSENTE' | 'IMPEDIDO' || null,
             acompanhaVoto: voto.acompanhaVoto || null,
             ordemApresentacao: voto.ordemApresentacao || null,
             isPresidente: voto.isPresidente || false

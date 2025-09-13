@@ -471,16 +471,16 @@ export async function DELETE(
             ataTexto: null,
             motivoSuspensao: null,
             prazoVista: null,
-            prazoDialigencia: null,
+            prazoDiligencia: null,
             observacoesSessao: null
           }
         })
       }
 
-      // Resetar status do processo para EM_SESSAO
+      // Resetar status do processo para EM_PAUTA
       await tx.processo.update({
         where: { id: decisaoExistente.processoId },
-        data: { status: 'EM_SESSAO' as any }
+        data: { status: 'EM_PAUTA' as any }
       })
 
       // Remover histórico relacionado a esta decisão
@@ -492,17 +492,6 @@ export async function DELETE(
             gte: decisaoExistente.createdAt,
             lte: new Date(decisaoExistente.createdAt.getTime() + 5000) // 5 segundos de margem
           }
-        }
-      })
-
-      // Adicionar histórico de remoção da decisão
-      await tx.historicoProcesso.create({
-        data: {
-          processoId: decisaoExistente.processoId,
-          usuarioId: user.id,
-          titulo: 'Decisão Removida',
-          descricao: `Decisão de ${decisaoExistente.tipoResultado.toLowerCase()} foi removida da sessão de julgamento`,
-          tipo: 'DECISAO'
         }
       })
     })

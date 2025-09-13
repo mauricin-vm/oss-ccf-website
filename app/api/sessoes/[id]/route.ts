@@ -62,6 +62,14 @@ export async function GET(
             email: true,
             cargo: true
           }
+        },
+        presidente: {
+          select: {
+            id: true,
+            nome: true,
+            email: true,
+            cargo: true
+          }
         }
       }
     })

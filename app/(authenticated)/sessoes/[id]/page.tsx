@@ -268,7 +268,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
     if (!decisao) return null
 
     const details = []
-    
+
     switch (decisao.tipoResultado) {
       case 'SUSPENSO':
         if (decisao.motivoSuspensao) {
@@ -307,6 +307,16 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
     }
 
     return details
+  }
+
+  const formatarListaNomes = (nomes: string[]): string => {
+    if (nomes.length === 0) return ''
+    if (nomes.length === 1) return nomes[0]
+    if (nomes.length === 2) return `${nomes[0]} e ${nomes[1]}`
+
+    const todosExcetoUltimo = nomes.slice(0, -1).join(', ')
+    const ultimo = nomes[nomes.length - 1]
+    return `${todosExcetoUltimo} e ${ultimo}`
   }
 
   const status = getStatusSessao()
@@ -581,38 +591,133 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
 
                         {decisao.votos && decisao.votos.length > 0 && (
                           <div className="mt-3 pt-2 border-t">
-                            <h6 className="text-xs font-medium text-gray-600 mb-2">Votos registrados:</h6>
-                            <div className="space-y-1">
-                              {decisao.votos.map((voto: any, index: number) => (
-                                <div key={index} className="text-xs text-gray-600 flex items-center gap-2">
-                                  <span className="font-medium">{voto.nomeVotante}</span>
-                                  <span className="text-gray-400">·</span>
-                                  <span>{voto.tipoVoto}</span>
-                                  {voto.posicaoVoto && (
-                                    <>
-                                      <span className="text-gray-400">·</span>
-                                      <span className={
-                                        voto.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
-                                        voto.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
-                                        'text-yellow-600'
-                                      }>
-                                        {voto.posicaoVoto}
-                                      </span>
-                                    </>
-                                  )}
-                                  {voto.acompanhaVoto && (
-                                    <>
-                                      <span className="text-gray-400">·</span>
-                                      <span>Acompanha {voto.acompanhaVoto}</span>
-                                    </>
-                                  )}
-                                  {voto.isPresidente && (
-                                    <span className="text-blue-600 font-medium">(Presidente)</span>
+                            <h6 className="text-xs font-medium text-gray-600 mb-3">Votos registrados:</h6>
+
+                            {/* Layout organizado - mesmo da página de nova decisão */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {/* Relatores/Revisores */}
+                              {decisao.votos.filter((voto: any) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto)).length > 0 && (
+                                <Card className="p-3">
+                                  <div className="font-medium text-gray-800 mb-2 text-sm">Relatores/Revisores</div>
+                                  <div className="space-y-1">
+                                    {decisao.votos
+                                      .filter((voto: any) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto))
+                                      .map((voto: any, index: number) => (
+                                        <div key={index} className="flex items-center justify-between text-xs">
+                                          <div className="flex items-center gap-2">
+                                            <Badge variant={voto.tipoVoto === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
+                                              {voto.tipoVoto === 'RELATOR' ? 'Relator' : 'Revisor'}
+                                            </Badge>
+                                            <span className="truncate font-medium">{voto.nomeVotante}</span>
+                                          </div>
+                                          <span className={`font-medium text-xs ${
+                                            voto.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
+                                            voto.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
+                                            voto.posicaoVoto === 'PARCIAL' ? 'text-yellow-600' :
+                                            'text-blue-600'
+                                          }`}>
+                                            {voto.acompanhaVoto
+                                              ? `Acomp. ${voto.acompanhaVoto?.split(' ')[0]}`
+                                              : voto.posicaoVoto}
+                                          </span>
+                                        </div>
+                                      ))}
+                                  </div>
+                                </Card>
+                              )}
+
+                              {/* Conselheiros */}
+                              <Card className="p-3">
+                                <div className="font-medium text-gray-800 mb-3 text-sm">Conselheiros</div>
+                                <div className="max-h-24 overflow-y-auto space-y-1">
+                                  {/* Votos válidos agrupados */}
+                                  {['DEFERIDO', 'INDEFERIDO', 'PARCIAL'].map(posicao => {
+                                    const conselheirosComEssePosicao = decisao.votos
+                                      .filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                      .map((voto: any) => voto.nomeVotante)
+
+                                    if (conselheirosComEssePosicao.length === 0) return null
+
+                                    return (
+                                      <div key={posicao} className="text-xs">
+                                        <span className={`font-medium ${
+                                          posicao === 'DEFERIDO' ? 'text-green-600' :
+                                          posicao === 'INDEFERIDO' ? 'text-red-600' :
+                                          'text-yellow-600'
+                                        }`}>
+                                          {posicao}:
+                                        </span>
+                                        <span className="ml-1 text-gray-700">
+                                          {formatarListaNomes(conselheirosComEssePosicao)}
+                                        </span>
+                                      </div>
+                                    )
+                                  })}
+
+                                  {/* Abstenções agrupadas */}
+                                  {decisao.votos.filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(voto.posicaoVoto)).length > 0 && (
+                                    <div className="border-t pt-1 mt-1">
+                                      {['AUSENTE', 'IMPEDIDO', 'ABSTENCAO'].map(posicao => {
+                                        const conselheirosComEssePosicao = decisao.votos
+                                          .filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                          .map((voto: any) => voto.nomeVotante)
+
+                                        if (conselheirosComEssePosicao.length === 0) return null
+
+                                        return (
+                                          <div key={posicao} className="text-xs">
+                                            <span className="font-medium text-gray-600">
+                                              {posicao === 'ABSTENCAO' ? 'ABSTENÇÃO' :
+                                               posicao === 'AUSENTE' ? 'AUSENTE' : 'IMPEDIDO'}:
+                                            </span>
+                                            <span className="ml-1 text-gray-600">
+                                              {formatarListaNomes(conselheirosComEssePosicao)}
+                                            </span>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
                                   )}
                                 </div>
-                              ))}
+                              </Card>
                             </div>
                           </div>
+                        )}
+
+                        {/* Voto do Presidente se houve empate */}
+                        {sessao.presidente && decisao.votos.find((voto: any) =>
+                          voto.conselheiroId === sessao.presidente?.id ||
+                          voto.nomeVotante === sessao.presidente?.nome
+                        ) && (
+                          <Card className="p-3 mt-4 border-yellow-300 bg-yellow-50">
+                            <div className="font-medium text-gray-800 mb-2 text-sm flex items-center gap-2">
+                              ⚖️ Voto de Desempate - Presidente
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700">
+                                  Presidente
+                                </Badge>
+                                <span className="truncate font-medium">{sessao.presidente.nome}</span>
+                              </div>
+                              <span className={`font-medium text-xs ${
+                                decisao.votos.find((voto: any) =>
+                                  voto.conselheiroId === sessao.presidente?.id ||
+                                  voto.nomeVotante === sessao.presidente?.nome
+                                )?.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
+                                decisao.votos.find((voto: any) =>
+                                  voto.conselheiroId === sessao.presidente?.id ||
+                                  voto.nomeVotante === sessao.presidente?.nome
+                                )?.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
+                                'text-yellow-600'
+                              }`}>
+                                {decisao.votos.find((voto: any) =>
+                                  voto.conselheiroId === sessao.presidente?.id ||
+                                  voto.nomeVotante === sessao.presidente?.nome
+                                )?.posicaoVoto}
+                              </span>
+                            </div>
+                          </Card>
                         )}
 
                         <p className="text-xs text-gray-500 mt-2">

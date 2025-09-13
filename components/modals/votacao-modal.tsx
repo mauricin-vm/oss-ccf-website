@@ -8,11 +8,13 @@ import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { ChevronRight, ChevronLeft, Users, Gavel, CheckCircle, AlertCircle } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ChevronRight, ChevronLeft, Users, Gavel, CheckCircle, AlertCircle, Plus, X } from 'lucide-react'
 
 interface ProcessoPauta {
   ordem: number
   relator?: string
+  revisores?: string[]
   processo: {
     id: string
     numero: string
@@ -40,6 +42,7 @@ interface VotoConselheiro {
   conselheiroId: string
   nome: string
   posicao: 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL' | 'ABSTENCAO' | 'AUSENTE' | 'IMPEDIDO'
+  isPresidente?: boolean
 }
 
 interface ResultadoVotacao {
@@ -63,6 +66,7 @@ interface VotacaoModalProps {
   processo: ProcessoPauta
   conselheiros: Conselheiro[]
   relatoresRevisores?: { nome: string; tipo: 'RELATOR' | 'REVISOR' }[]
+  presidente?: { id: string; nome: string; email?: string; cargo?: string } | null
 }
 
 export default function VotacaoModal({
@@ -71,35 +75,123 @@ export default function VotacaoModal({
   onConfirm,
   processo,
   conselheiros,
-  relatoresRevisores = []
+  relatoresRevisores = [],
+  presidente = null
 }: VotacaoModalProps) {
   const [etapaAtual, setEtapaAtual] = useState(1)
   const [votosRelatores, setVotosRelatores] = useState<VotoRelator[]>([])
   const [votosConselheiros, setVotosConselheiros] = useState<VotoConselheiro[]>([])
+  const [revisoresAdicionais, setRevisoresAdicionais] = useState<string[]>([])
+  const [showAdicionarRevisor, setShowAdicionarRevisor] = useState(false)
+  const [votoPresidente, setVotoPresidente] = useState<'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL' | null>(null)
+  const [temEmpate, setTemEmpate] = useState(false)
 
   // Preparar lista de relatores/revisores
   const relatoresData = relatoresRevisores.length > 0
     ? relatoresRevisores
-    : processo.relator
-      ? [{ nome: processo.relator, tipo: 'RELATOR' as const }]
-      : []
+    : [
+        ...(processo.relator ? [{ nome: processo.relator, tipo: 'RELATOR' as const }] : []),
+        ...(processo.revisores || []).map(revisor => ({ nome: revisor, tipo: 'REVISOR' as const })),
+        ...revisoresAdicionais.map(revisor => ({ nome: revisor, tipo: 'REVISOR' as const }))
+      ]
 
   useEffect(() => {
     if (isOpen) {
       // Reset dos dados quando o modal é aberto
       setEtapaAtual(1)
-      setVotosRelatores(relatoresData.map(r => ({
-        nome: r.nome,
-        tipo: r.tipo,
-        posicao: 'DEFERIDO' as const
-      })))
-      setVotosConselheiros(conselheiros.map(c => ({
+      setRevisoresAdicionais([])
+      setShowAdicionarRevisor(false)
+      setVotosRelatores([]) // Limpar para que o próximo useEffect possa popular
+      setVotoPresidente(null)
+      setTemEmpate(false)
+
+      // Filtrar conselheiros excluindo relatores e revisores
+      const conselheirosParaVotar = conselheiros.filter(conselheiro => {
+        // Excluir o relator atual
+        if (conselheiro.nome === processo.relator) return false
+        // Excluir revisores originais do processo
+        if (processo.revisores && processo.revisores.includes(conselheiro.nome)) return false
+        return true
+      })
+
+      setVotosConselheiros(conselheirosParaVotar.map(c => ({
         conselheiroId: c.id,
         nome: c.nome,
         posicao: 'DEFERIDO' as const
       })))
     }
-  }, [isOpen, relatoresData, conselheiros])
+  }, [isOpen, conselheiros, processo.relator, processo.revisores])
+
+  // Preparar lista inicial de relatores/revisores apenas uma vez quando o modal abre
+  useEffect(() => {
+    if (isOpen && votosRelatores.length === 0) {
+      const relatoresIniciais = relatoresRevisores.length > 0
+        ? relatoresRevisores
+        : [
+            ...(processo.relator ? [{ nome: processo.relator, tipo: 'RELATOR' as const }] : []),
+            ...(processo.revisores || []).map(revisor => ({ nome: revisor, tipo: 'REVISOR' as const }))
+          ]
+
+      setVotosRelatores(relatoresIniciais.map(r => ({
+        nome: r.nome,
+        tipo: r.tipo,
+        posicao: 'DEFERIDO' as const
+      })))
+    }
+  }, [isOpen, processo.relator, processo.revisores, relatoresRevisores, votosRelatores.length])
+
+  // Recalcular empate sempre que os votos mudam
+  useEffect(() => {
+    if (etapaAtual === 2 && votosConselheiros.length > 0) {
+      calcularResultado() // Isso atualiza o estado de empate
+    }
+  }, [votosConselheiros, votosRelatores, etapaAtual])
+
+  const adicionarRevisor = (nomeConselheiro: string) => {
+    if (!revisoresAdicionais.includes(nomeConselheiro)) {
+      const novosRevisores = [...revisoresAdicionais, nomeConselheiro]
+      setRevisoresAdicionais(novosRevisores)
+
+      // Adicionar voto para o novo revisor imediatamente
+      const novoVotoRevisor: VotoRelator = {
+        nome: nomeConselheiro,
+        tipo: 'REVISOR',
+        posicao: 'DEFERIDO'
+      }
+      setVotosRelatores([...votosRelatores, novoVotoRevisor])
+
+      // Remover o conselheiro da lista de votação (já que agora é revisor)
+      setVotosConselheiros(votosConselheiros.filter(voto => voto.nome !== nomeConselheiro))
+    }
+  }
+
+  const removerRevisor = (nomeConselheiro: string) => {
+    setRevisoresAdicionais(revisoresAdicionais.filter(nome => nome !== nomeConselheiro))
+    // Remover também o voto correspondente
+    const novosVotosRelatores = votosRelatores.filter(voto => voto.nome !== nomeConselheiro)
+    setVotosRelatores(novosVotosRelatores)
+
+    // Se não há mais revisores, resetar votos "ACOMPANHA" para "DEFERIDO"
+    const temRevisores = novosVotosRelatores.some(v => v.tipo === 'REVISOR')
+    if (!temRevisores) {
+      setVotosRelatores(novosVotosRelatores.map(voto =>
+        voto.posicao === 'ACOMPANHA'
+          ? { ...voto, posicao: 'DEFERIDO', acompanhaVoto: undefined }
+          : voto
+      ))
+    }
+
+    // Adicionar o conselheiro de volta à lista de votação (já que não é mais revisor)
+    const conselheiro = conselheiros.find(c => c.nome === nomeConselheiro)
+    if (conselheiro && !votosConselheiros.find(v => v.nome === nomeConselheiro)) {
+      const novoVotoConselheiro: VotoConselheiro = {
+        conselheiroId: conselheiro.id,
+        nome: conselheiro.nome,
+        posicao: 'DEFERIDO'
+      }
+      setVotosConselheiros([...votosConselheiros, novoVotoConselheiro])
+    }
+  }
 
   const atualizarVotoRelator = (index: number, posicao: string, acompanhaVoto?: string) => {
     const novosVotos = [...votosRelatores]
@@ -160,6 +252,27 @@ export default function VotacaoModal({
       }
     })
 
+    // Verificar se há empate entre as opções válidas
+    const votosValidos = [
+      { tipo: 'DEFERIDO', count: deferidos },
+      { tipo: 'INDEFERIDO', count: indeferidos },
+      { tipo: 'PARCIAL', count: parciais }
+    ].filter(v => v.count > 0).sort((a, b) => b.count - a.count)
+
+    const empate = votosValidos.length >= 2 && votosValidos[0].count === votosValidos[1].count
+
+    // Incluir voto do presidente se há empate e presidente definiu voto
+    if (empate && votoPresidente && presidente) {
+      if (votoPresidente === 'DEFERIDO') deferidos++
+      else if (votoPresidente === 'INDEFERIDO') indeferidos++
+      else if (votoPresidente === 'PARCIAL') parciais++
+    }
+
+    // Atualizar estado de empate
+    if (empate !== temEmpate) {
+      setTemEmpate(empate)
+    }
+
     // Determinar decisão final (maioria simples dos votos válidos)
     const totalVotos = deferidos + indeferidos + parciais
     let decisaoFinal: 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL' = 'DEFERIDO'
@@ -182,112 +295,206 @@ export default function VotacaoModal({
     }
     if (etapaAtual === 2) {
       // Todos os conselheiros devem ter votado
-      return votosConselheiros.every(voto => voto.posicao)
+      const todosVotaram = votosConselheiros.every(voto => voto.posicao)
+      // Se há empate e presidente existe, deve ter votado também
+      if (todosVotaram && temEmpate && presidente) {
+        return votoPresidente !== null
+      }
+      return todosVotaram
     }
     return true
   }
 
   const handleConfirmar = () => {
     const resultado = calcularResultado()
+
+    // Incluir voto do presidente se houve empate
+    let conselheirosComPresidente = [...votosConselheiros]
+    if (temEmpate && votoPresidente && presidente) {
+      conselheirosComPresidente.push({
+        conselheiroId: presidente.id,
+        nome: presidente.nome,
+        posicao: votoPresidente,
+        isPresidente: true
+      })
+    }
+
     const resultadoCompleto: ResultadoVotacao = {
       relatores: votosRelatores,
-      conselheiros: votosConselheiros,
+      conselheiros: conselheirosComPresidente,
       resultado
     }
     onConfirm(resultadoCompleto)
     onClose()
   }
 
-  const renderEtapa1 = () => (
-    <div className="space-y-4">
-      <div className="text-center">
-        <p className="text-gray-600">
-          Defina como cada relator e revisor votou neste processo
-        </p>
-      </div>
+  const renderEtapa1 = () => {
+    // Obter conselheiros disponíveis para ser revisor (excluir relator e revisores já adicionados)
+    const conselheirosDisponiveis = conselheiros.filter(conselheiro => {
+      // Excluir o relator atual
+      if (conselheiro.nome === processo.relator) return false
+      // Excluir revisores originais do processo
+      if (processo.revisores && processo.revisores.includes(conselheiro.nome)) return false
+      // Excluir revisores já adicionados dinamicamente
+      if (revisoresAdicionais.includes(conselheiro.nome)) return false
+      return true
+    })
 
-      <div className="space-y-3">
-        {votosRelatores.map((voto, index) => (
-          <Card key={index} className="p-4">
-            <div className="flex items-center gap-6">
-              {/* Nome e Tipo */}
-              <div className="flex items-center gap-2 min-w-[200px]">
-                <Badge variant={voto.tipo === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
-                  {voto.tipo === 'RELATOR' ? 'Relator' : 'Revisor'}
-                </Badge>
-                <span className="font-medium">{voto.nome}</span>
-              </div>
+    return (
+      <div className="space-y-4">
+        <div className="text-center">
+          <p className="text-gray-600">
+            Defina como cada relator e revisor votou neste processo
+          </p>
+        </div>
 
-              {/* Opções de Voto */}
-              <div className="flex-1">
-                <RadioGroup
-                  value={voto.posicao}
-                  onValueChange={(value) => atualizarVotoRelator(index, value)}
-                  className="flex items-center gap-6"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="DEFERIDO" id={`relator-${index}-deferido`} />
-                    <Label htmlFor={`relator-${index}-deferido`} className="text-green-700 font-medium">
-                      Deferimento
-                    </Label>
+        <div className="space-y-3">
+          {votosRelatores.map((voto, index) => (
+            <div key={index}>
+              <Card className="p-4">
+                <div className="flex items-center gap-6">
+                  {/* Nome e Tipo */}
+                  <div className="flex items-center gap-2 min-w-[200px]">
+                    <Badge variant={voto.tipo === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
+                      {voto.tipo === 'RELATOR' ? 'Relator' : 'Revisor'}
+                    </Badge>
+                    <span className="font-medium">{voto.nome}</span>
+                    {/* Botão para remover revisor adicional */}
+                    {revisoresAdicionais.includes(voto.nome) && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="p-1 h-6 w-6"
+                        onClick={() => removerRevisor(voto.nome)}
+                        title="Remover revisor"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="INDEFERIDO" id={`relator-${index}-indeferido`} />
-                    <Label htmlFor={`relator-${index}-indeferido`} className="text-red-700 font-medium">
-                      Indeferimento
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="PARCIAL" id={`relator-${index}-parcial`} />
-                    <Label htmlFor={`relator-${index}-parcial`} className="text-yellow-700 font-medium">
-                      Parcial
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="ACOMPANHA" id={`relator-${index}-acompanha`} />
-                    <Label htmlFor={`relator-${index}-acompanha`} className="text-blue-700 font-medium">
-                      Acompanha outro
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            </div>
 
-            {/* Opção de acompanhar */}
-            {voto.posicao === 'ACOMPANHA' && (
-              <div className="mt-3 pl-6 border-l-2 border-blue-200">
-                <Label className="text-sm text-gray-600 mb-2 block">Acompanha o voto de:</Label>
-                <RadioGroup
-                  value={voto.acompanhaVoto || ''}
-                  onValueChange={(value) => atualizarVotoRelator(index, 'ACOMPANHA', value)}
-                  className="flex items-center gap-4"
-                >
-                  {votosRelatores
-                    .filter((_, i) => i !== index)
-                    .map((outroVoto, i) => (
-                      <div key={i} className="flex items-center space-x-2">
-                        <RadioGroupItem value={outroVoto.nome} id={`acompanha-${index}-${i}`} />
-                        <Label htmlFor={`acompanha-${index}-${i}`} className="text-sm">
-                          {outroVoto.nome}
+                  {/* Opções de Voto */}
+                  <div className="flex-1">
+                    <RadioGroup
+                      value={voto.posicao}
+                      onValueChange={(value) => atualizarVotoRelator(index, value)}
+                      className="flex items-center gap-6"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="DEFERIDO" id={`relator-${index}-deferido`} />
+                        <Label htmlFor={`relator-${index}-deferido`} className="text-green-700 font-medium">
+                          Deferimento
                         </Label>
                       </div>
-                    ))}
-                </RadioGroup>
-              </div>
-            )}
-          </Card>
-        ))}
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="INDEFERIDO" id={`relator-${index}-indeferido`} />
+                        <Label htmlFor={`relator-${index}-indeferido`} className="text-red-700 font-medium">
+                          Indeferimento
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="PARCIAL" id={`relator-${index}-parcial`} />
+                        <Label htmlFor={`relator-${index}-parcial`} className="text-yellow-700 font-medium">
+                          Parcial
+                        </Label>
+                      </div>
+                      {/* Só mostra opção "Acompanha outro" se houver pelo menos um revisor */}
+                      {votosRelatores.filter(v => v.tipo === 'REVISOR').length > 0 && (
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="ACOMPANHA" id={`relator-${index}-acompanha`} />
+                          <Label htmlFor={`relator-${index}-acompanha`} className="text-blue-700 font-medium">
+                            Acompanha outro
+                          </Label>
+                        </div>
+                      )}
+                    </RadioGroup>
+                  </div>
+                </div>
 
-        {relatoresData.length === 0 && (
-          <div className="text-center py-6">
-            <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-gray-600">Nenhum relator ou revisor definido para este processo</p>
-            <p className="text-sm text-gray-500 mt-1">Pule para a próxima etapa</p>
-          </div>
-        )}
+                {/* Opção de acompanhar */}
+                {voto.posicao === 'ACOMPANHA' && (
+                  <div className="mt-3 pl-6 border-l-2 border-blue-200">
+                    <Label className="text-sm text-gray-600 mb-2 block">Acompanha o voto de:</Label>
+                    <RadioGroup
+                      value={voto.acompanhaVoto || ''}
+                      onValueChange={(value) => atualizarVotoRelator(index, 'ACOMPANHA', value)}
+                      className="flex items-center gap-4"
+                    >
+                      {votosRelatores
+                        .filter((_, i) => i !== index)
+                        .map((outroVoto, i) => (
+                          <div key={i} className="flex items-center space-x-2">
+                            <RadioGroupItem value={outroVoto.nome} id={`acompanha-${index}-${i}`} />
+                            <Label htmlFor={`acompanha-${index}-${i}`} className="text-sm">
+                              {outroVoto.nome}
+                            </Label>
+                          </div>
+                        ))}
+                    </RadioGroup>
+                  </div>
+                )}
+              </Card>
+            </div>
+          ))}
+
+          {/* Botão compacto para adicionar revisor */}
+          {conselheirosDisponiveis.length > 0 && !showAdicionarRevisor && (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => setShowAdicionarRevisor(true)}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium cursor-pointer"
+              >
+                Adicionar Revisor
+              </button>
+            </div>
+          )}
+
+          {/* Lista de conselheiros disponíveis quando clica em adicionar */}
+          {showAdicionarRevisor && conselheirosDisponiveis.length > 0 && (
+            <Card className="border-dashed border-2 border-blue-300 bg-blue-50 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium text-blue-700">Selecionar Revisor</div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="p-1 h-5 w-5"
+                  onClick={() => setShowAdicionarRevisor(false)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+              <div className="space-y-1">
+                {conselheirosDisponiveis.map((conselheiro) => (
+                  <button
+                    key={conselheiro.id}
+                    type="button"
+                    onClick={() => {
+                      adicionarRevisor(conselheiro.nome)
+                      setShowAdicionarRevisor(false)
+                    }}
+                    className="w-full text-left px-2 py-1 text-xs hover:bg-blue-100 rounded border border-transparent hover:border-blue-200 transition-colors"
+                  >
+                    {conselheiro.nome}
+                  </button>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {relatoresData.length === 0 && (
+            <div className="text-center py-6">
+              <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-gray-600">Nenhum relator ou revisor definido para este processo</p>
+              <p className="text-sm text-gray-500 mt-1">Adicione revisores ou pule para a próxima etapa</p>
+            </div>
+          )}
       </div>
     </div>
-  )
+    )
+  }
 
   const renderEtapa2 = () => {
     // Obter opções de voto baseadas nos votos dos relatores
@@ -486,6 +693,60 @@ export default function VotacaoModal({
             </div>
           ))}
         </div>
+
+        {/* Seção do voto do presidente em caso de empate */}
+        {temEmpate && presidente && (
+          <Card className="border-2 border-yellow-300 bg-yellow-50 p-4">
+            <div className="text-center mb-4">
+              <div className="text-lg font-semibold text-yellow-800 mb-2">
+                ⚖️ Empate Detectado
+              </div>
+              <p className="text-yellow-700 text-sm">
+                Como presidente da sessão, <strong>{presidente.nome}</strong> deve definir o voto de desempate:
+              </p>
+            </div>
+
+            <div className="flex justify-center">
+              <RadioGroup
+                value={votoPresidente || ''}
+                onValueChange={(value) => setVotoPresidente(value as any)}
+                className="flex items-center gap-6"
+              >
+                {colunasComRelatores.map(({ posicao }) => (
+                  <div key={posicao} className="flex items-center space-x-2">
+                    <RadioGroupItem
+                      value={posicao}
+                      id={`presidente-${posicao}`}
+                      className={
+                        posicao === 'DEFERIDO' ? 'border-green-600 text-green-600' :
+                        posicao === 'INDEFERIDO' ? 'border-red-600 text-red-600' :
+                        'border-yellow-600 text-yellow-600'
+                      }
+                    />
+                    <Label
+                      htmlFor={`presidente-${posicao}`}
+                      className={`font-medium ${
+                        posicao === 'DEFERIDO' ? 'text-green-700' :
+                        posicao === 'INDEFERIDO' ? 'text-red-700' :
+                        'text-yellow-700'
+                      }`}
+                    >
+                      {posicao}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+
+            {!votoPresidente && (
+              <div className="text-center mt-3">
+                <p className="text-yellow-600 text-sm">
+                  ⚠️ O voto do presidente é obrigatório para resolver o empate
+                </p>
+              </div>
+            )}
+          </Card>
+        )}
       </div>
     )
   }
@@ -611,6 +872,36 @@ export default function VotacaoModal({
             </div>
           </Card>
         </div>
+
+        {/* Voto do Presidente (se houve empate) */}
+        {votoPresidente && presidente && (
+          <Card className="border-2 border-yellow-300 bg-yellow-50 p-3">
+            <div className="text-center">
+              <div className="font-medium text-yellow-800 mb-2 text-sm flex items-center justify-center gap-2">
+                ⚖️ Voto de Desempate - Presidente da Sessão
+              </div>
+              <div className="flex items-center justify-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700">
+                    Presidente
+                  </Badge>
+                  <span className="font-medium text-sm">{presidente.nome}</span>
+                </div>
+                <span className="text-lg">→</span>
+                <span className={`font-bold text-sm px-3 py-1 rounded-full ${
+                  votoPresidente === 'DEFERIDO' ? 'bg-green-100 text-green-700' :
+                  votoPresidente === 'INDEFERIDO' ? 'bg-red-100 text-red-700' :
+                  'bg-yellow-100 text-yellow-700'
+                }`}>
+                  {votoPresidente}
+                </span>
+              </div>
+              <div className="text-xs text-yellow-600 mt-2 italic">
+                Voto utilizado para resolver o empate na votação
+              </div>
+            </div>
+          </Card>
+        )}
       </div>
     )
   }
@@ -661,6 +952,7 @@ export default function VotacaoModal({
           <Button
             variant="outline"
             onClick={() => etapaAtual > 1 ? setEtapaAtual(etapaAtual - 1) : onClose()}
+            className="cursor-pointer"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             {etapaAtual > 1 ? 'Anterior' : 'Cancelar'}
@@ -671,12 +963,13 @@ export default function VotacaoModal({
               <Button
                 onClick={() => setEtapaAtual(etapaAtual + 1)}
                 disabled={!podeAvancar()}
+                className="cursor-pointer"
               >
                 Próximo
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             ) : (
-              <Button onClick={handleConfirmar} className="bg-green-600 hover:bg-green-700">
+              <Button onClick={handleConfirmar} className="bg-green-600 hover:bg-green-700 cursor-pointer">
                 <CheckCircle className="h-4 w-4 mr-1" />
                 Confirmar Votação
               </Button>

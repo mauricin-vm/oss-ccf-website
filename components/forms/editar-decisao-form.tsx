@@ -121,14 +121,16 @@ interface EditarDecisaoFormProps {
   }
   processo: ProcessoPauta | null
   conselheiros: Conselheiro[]
+  presidente?: { id: string; nome: string; email?: string; cargo?: string } | null
 }
 
-export default function EditarDecisaoForm({ 
+export default function EditarDecisaoForm({
   decisaoId,
-  sessaoId, 
+  sessaoId,
   decisaoAtual,
   processo,
-  conselheiros
+  conselheiros,
+  presidente = null
 }: EditarDecisaoFormProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -200,10 +202,29 @@ export default function EditarDecisaoForm({
           decisaoFinal = 'PARCIAL'
         }
 
+        // Criar estrutura de relatores com propriedades corretas
+        const relatores = votosConvertidos
+          .filter(v => v.tipoVoto === 'RELATOR' || v.tipoVoto === 'REVISOR')
+          .map(voto => ({
+            nome: voto.nomeVotante,
+            tipo: voto.tipoVoto,
+            posicao: voto.acompanhaVoto ? 'ACOMPANHA' : voto.posicaoVoto,
+            acompanhaVoto: voto.acompanhaVoto
+          }))
+
+        // Criar estrutura de conselheiros com propriedades corretas
+        const conselheiros = votosConvertidos
+          .filter(v => v.tipoVoto === 'CONSELHEIRO')
+          .map(voto => ({
+            nome: voto.nomeVotante,
+            conselheiroId: voto.conselheiroId,
+            posicao: voto.posicaoVoto || 'DEFERIDO'
+          }))
+
         setVotacaoResultado({
           resultado: { decisaoFinal, deferidos, indeferidos, parciais },
-          relatores: votosConvertidos.filter(v => v.tipoVoto === 'RELATOR' || v.tipoVoto === 'REVISOR'),
-          conselheiros: votosConvertidos.filter(v => v.tipoVoto === 'CONSELHEIRO')
+          relatores,
+          conselheiros
         })
       }
     }
@@ -274,7 +295,8 @@ export default function EditarDecisaoForm({
           nomeVotante: conselheiro.nome,
           conselheiroId: conselheiro.conselheiroId,
           posicaoVoto: conselheiro.posicao,
-          ordemApresentacao: resultado.relatores.length + index + 1
+          ordemApresentacao: resultado.relatores.length + index + 1,
+          isPresidente: conselheiro.isPresidente || false
         })
       }
     })
@@ -693,6 +715,40 @@ export default function EditarDecisaoForm({
                       </div>
                     </Card>
                   </div>
+
+                  {/* Voto do Presidente (se houve empate e presidente votou) */}
+                  {(() => {
+                    // Verifica se existe um voto do presidente (conselheiro com mesmo nome/id do presidente)
+                    const votoPresidente = presidente && votacaoResultado.conselheiros?.find((conselheiro: any) =>
+                      conselheiro.conselheiroId === presidente.id ||
+                      conselheiro.nome === presidente.nome
+                    )
+
+                    if (!votoPresidente || !presidente) return null
+
+                    return (
+                      <Card className="p-3 mt-4 border-yellow-300 bg-yellow-50">
+                        <div className="font-medium text-gray-800 mb-2 text-sm flex items-center gap-2">
+                          ⚖️ Voto de Desempate - Presidente
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700">
+                              Presidente
+                            </Badge>
+                            <span className="truncate font-medium">{presidente.nome}</span>
+                          </div>
+                          <span className={`font-medium text-xs ${
+                            votoPresidente.posicao === 'DEFERIDO' ? 'text-green-600' :
+                            votoPresidente.posicao === 'INDEFERIDO' ? 'text-red-600' :
+                            'text-yellow-600'
+                          }`}>
+                            {votoPresidente.posicao}
+                          </span>
+                        </div>
+                      </Card>
+                    )
+                  })()}
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
@@ -793,6 +849,7 @@ export default function EditarDecisaoForm({
           processo={processo}
           conselheiros={conselheiros}
           relatoresRevisores={processo.relator ? [{ nome: processo.relator, tipo: 'RELATOR' as const }] : []}
+          presidente={presidente}
         />
       )}
     </form>

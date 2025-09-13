@@ -46,6 +46,15 @@ enum TipoDecisao {
   PARCIAL
 }
 
+enum PosicaoVoto {
+  DEFERIDO
+  INDEFERIDO
+  PARCIAL
+  ABSTENCAO
+  AUSENTE
+  IMPEDIDO
+}
+
 enum TipoVoto {
   RELATOR
   REVISOR
@@ -487,7 +496,7 @@ model Voto {
   tipoVoto          TipoVoto
   nomeVotante       String          // Nome do relator/revisor/conselheiro
   textoVoto         String?         @db.Text
-  posicaoVoto       TipoDecisao?    // Para relatores/revisores
+  posicaoVoto       PosicaoVoto?    // Posição do voto (inclui abstenção, ausência, impedimento)
   acompanhaVoto     String?         // Para conselheiros: "relator", "revisor_1", etc.
   
   ordemApresentacao Int?            // Ordem de apresentação dos votos

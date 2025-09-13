@@ -116,6 +116,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
   const [votos, setVotos] = useState<VotoInput[]>([])
   const [showVotacaoModal, setShowVotacaoModal] = useState(false)
   const [votacaoResultado, setVotacaoResultado] = useState<any>(null)
+  const [presidente, setPresidente] = useState<{ id: string; nome: string; email?: string; cargo?: string } | null>(null)
 
   const {
     register,
@@ -152,6 +153,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
 
           setProcessos(processosNaoJulgados)
           setConselheiros(sessao.conselheiros || [])
+          setPresidente(sessao.presidente || null)
 
           const processoIdFromUrl = searchParams.get('processo')
           if (processoIdFromUrl) {
@@ -271,7 +273,8 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
           nomeVotante: conselheiro.nome,
           conselheiroId: conselheiro.conselheiroId,
           posicaoVoto: conselheiro.posicao,
-          ordemApresentacao: resultado.relatores.length + index + 1
+          ordemApresentacao: resultado.relatores.length + index + 1,
+          isPresidente: conselheiro.isPresidente || false
         })
       }
     })
@@ -752,6 +755,40 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                           </div>
                         </Card>
                       </div>
+
+                      {/* Voto do Presidente (se houve empate e presidente votou) */}
+                      {(() => {
+                        // Verifica se existe um voto do presidente (conselheiro com mesmo nome/id do presidente)
+                        const votoPresidente = presidente && votacaoResultado.conselheiros.find((conselheiro: any) =>
+                          conselheiro.conselheiroId === presidente.id ||
+                          conselheiro.nome === presidente.nome
+                        )
+
+                        if (!votoPresidente || !presidente) return null
+
+                        return (
+                          <Card className="p-3 mt-4 border-yellow-300 bg-yellow-50">
+                            <div className="font-medium text-gray-800 mb-2 text-sm flex items-center gap-2">
+                              ⚖️ Voto de Desempate - Presidente
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700">
+                                  Presidente
+                                </Badge>
+                                <span className="truncate font-medium">{presidente.nome}</span>
+                              </div>
+                              <span className={`font-medium text-xs ${
+                                votoPresidente.posicao === 'DEFERIDO' ? 'text-green-600' :
+                                votoPresidente.posicao === 'INDEFERIDO' ? 'text-red-600' :
+                                'text-yellow-600'
+                              }`}>
+                                {votoPresidente.posicao}
+                              </span>
+                            </div>
+                          </Card>
+                        )
+                      })()}
                     </div>
                   ) : (
                     <div className="text-center py-8 text-gray-500">
@@ -856,6 +893,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
           processo={selectedProcesso}
           conselheiros={conselheiros}
           relatoresRevisores={selectedProcesso.relator ? [{ nome: selectedProcesso.relator, tipo: 'RELATOR' as const }] : []}
+          presidente={presidente}
         />
       )}
     </form>

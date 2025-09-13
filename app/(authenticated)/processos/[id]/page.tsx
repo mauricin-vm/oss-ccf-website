@@ -8,11 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  ArrowLeft, 
-  Edit, 
-  FileText, 
-  Calendar, 
+import {
+  ArrowLeft,
+  Edit,
+  FileText,
+  Calendar,
   DollarSign,
   MapPin,
   Phone,
@@ -25,7 +25,11 @@ import {
   ArrowRight,
   History,
   User,
-  Search
+  Search,
+  Pause,
+  Eye,
+  FilePlus,
+  Gavel
 } from 'lucide-react'
 import Link from 'next/link'
 import { SessionUser, ProcessoWithRelations } from '@/types'
@@ -559,12 +563,21 @@ export default function ProcessoDetalhesPage({ params }: Props) {
               <div className="space-y-4">
                 {/* Históricos customizados */}
                 {processo.historicos.map((historico) => {
+                  // Função para obter ícone específico baseado no título da decisão
+                  const getDecisaoIcon = (titulo: string) => {
+                    if (titulo.includes('Suspenso')) return Pause
+                    if (titulo.includes('Vista')) return Eye
+                    if (titulo.includes('Diligência')) return FilePlus
+                    if (titulo.includes('Julgado')) return Gavel
+                    return XCircle // ícone padrão para decisões
+                  }
+
                   const tipoIcon = {
                     'EVENTO': CheckCircle,
                     'OBSERVACAO': AlertCircle,
                     'ALTERACAO': Edit,
                     'COMUNICACAO': Mail,
-                    'DECISAO': XCircle,
+                    'DECISAO': historico.tipo === 'DECISAO' ? getDecisaoIcon(historico.titulo) : XCircle,
                     'SISTEMA': CheckCircle,
                     'PAUTA': Calendar,
                     'REPAUTAMENTO': Calendar
@@ -583,15 +596,28 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                   
                   const Icon = tipoIcon
                   
+                  // Função para obter cor específica baseada no título da decisão
+                  const getDecisaoCor = (titulo: string) => {
+                    if (titulo.includes('Suspenso')) return { bg: 'bg-yellow-100', text: 'text-yellow-600' }
+                    if (titulo.includes('Vista')) return { bg: 'bg-blue-100', text: 'text-blue-600' }
+                    if (titulo.includes('Diligência')) return { bg: 'bg-orange-100', text: 'text-orange-600' }
+                    if (titulo.includes('Julgado')) return { bg: 'bg-green-100', text: 'text-green-600' }
+                    return { bg: 'bg-gray-100', text: 'text-gray-600' }
+                  }
+
                   return (
                     <div key={historico.id} className="flex gap-4 pb-4 border-b last:border-b-0">
                       <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                         historico.tipo === 'SISTEMA' ? 'bg-green-100' :
-                        historico.tipo === 'PAUTA' || historico.tipo === 'REPAUTAMENTO' ? 'bg-purple-100' : 'bg-blue-100'
+                        historico.tipo === 'PAUTA' || historico.tipo === 'REPAUTAMENTO' ? 'bg-purple-100' :
+                        historico.tipo === 'DECISAO' ? getDecisaoCor(historico.titulo).bg :
+                        'bg-blue-100'
                       }`}>
                         <Icon className={`h-4 w-4 ${
                           historico.tipo === 'SISTEMA' ? 'text-green-600' :
-                          historico.tipo === 'PAUTA' || historico.tipo === 'REPAUTAMENTO' ? 'text-purple-600' : 'text-blue-600'
+                          historico.tipo === 'PAUTA' || historico.tipo === 'REPAUTAMENTO' ? 'text-purple-600' :
+                          historico.tipo === 'DECISAO' ? getDecisaoCor(historico.titulo).text :
+                          'text-blue-600'
                         }`} />
                       </div>
                       <div className="flex-1">

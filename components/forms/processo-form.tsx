@@ -122,7 +122,7 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
                 onValueChange={(value) => setValue('tipo', value, { shouldValidate: true })}
                 disabled={isLoading}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent>

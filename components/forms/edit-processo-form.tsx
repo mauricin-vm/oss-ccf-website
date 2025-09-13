@@ -147,7 +147,7 @@ export default function EditProcessoForm({ processo }: EditProcessoFormProps) {
                 disabled={isLoading}
                 defaultValue={processo.tipo}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent>
