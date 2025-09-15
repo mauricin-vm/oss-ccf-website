@@ -613,7 +613,7 @@ export default function PautaDetalhesPage({
                             </div>
                             <div className="flex items-center space-x-2">
                               <DollarSign className="h-4 w-4 text-muted-foreground" />
-                              <span>{processo.valorOriginal.toLocaleString('pt-BR')}</span>
+                              <span>{new Date(processo.dataAbertura).toLocaleDateString('pt-BR')}</span>
                             </div>
                           </div>
 
@@ -1070,7 +1070,7 @@ export default function PautaDetalhesPage({
                           <p className="text-sm text-gray-600">{processo.contribuinte.nome}</p>
                           <p className="text-xs text-gray-500 mb-1">
                             {tipoProcessoMap[processo.tipo as keyof typeof tipoProcessoMap]} -
-                            R$ {processo.valorOriginal.toLocaleString('pt-BR')}
+{new Date(processo.dataAbertura).toLocaleDateString('pt-BR')}
                           </p>
                           
                           {/* Informações da última pauta - EXATAMENTE igual ao pauta-form */}
@@ -1117,7 +1117,7 @@ export default function PautaDetalhesPage({
                   <p className="text-sm text-gray-600">{selectedProcess.contribuinte.nome}</p>
                   <p className="text-xs text-gray-500">
                     {tipoProcessoMap[selectedProcess.tipo as keyof typeof tipoProcessoMap]} -
-                    R$ {selectedProcess.valorOriginal.toLocaleString('pt-BR')}
+{new Date(selectedProcess.dataAbertura).toLocaleDateString('pt-BR')}
                   </p>
                   
                   {/* Informações da última pauta - igual ao pauta-form */}

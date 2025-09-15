@@ -68,6 +68,13 @@ enum StatusPagamento {
   CANCELADO
 }
 
+enum StatusAcordoDetalhe {
+  PENDENTE
+  APROVADO
+  EXECUTADO
+  CANCELADO
+}
+
 // Models
 model User {
   id             String          @id @default(cuid())
@@ -112,8 +119,6 @@ model Processo {
   numero            String          @unique
   tipo              TipoProcesso
   status            StatusProcesso  @default(RECEPCIONADO)
-  valorOriginal     Decimal         @db.Decimal(15, 2)
-  valorNegociado    Decimal?        @db.Decimal(15, 2)
   dataAbertura      DateTime        @default(now())
   dataFinalizacao   DateTime?
   observacoes       String?         @db.Text
@@ -132,7 +137,9 @@ model Processo {
   acordo            Acordo?
   imoveis           ProcessoImovel[]
   creditos          ProcessoCredito[]
+  inscricoes        ProcessoInscricao[] @relation("ProcessoInscricoes")
   historicos        HistoricoProcesso[]
+  transacao         TransacaoExcepcional?
   
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -156,6 +163,7 @@ model Imovel {
   proprietario      Contribuinte    @relation(fields: [proprietarioId], references: [id])
   
   processos         ProcessoImovel[]
+  acordoDetalhes    AcordoDetalhes[]
   
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -188,6 +196,7 @@ model Credito {
   descricao         String?         @db.Text
   
   processos         ProcessoCredito[]
+  acordoDetalhes    AcordoDetalhes[]
   
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -371,6 +380,7 @@ model Acordo {
   observacoes       String?         @db.Text
   
   parcelas          Parcela[]
+  detalhes          AcordoDetalhes[]
   
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -414,6 +424,54 @@ model PagamentoParcela {
   
   @@index([parcelaId])
   @@index([dataPagamento])
+}
+
+model AcordoDetalhes {
+  id                String          @id @default(cuid())
+  
+  acordoId          String
+  acordo            Acordo          @relation(fields: [acordoId], references: [id], onDelete: Cascade)
+  
+  tipo              String          // 'dacao', 'compensacao', 'transacao'
+  descricao         String
+  valorOriginal     Decimal         @db.Decimal(15, 2)
+  valorNegociado    Decimal         @db.Decimal(15, 2)
+  status            StatusAcordoDetalhe @default(PENDENTE)
+  dataExecucao      DateTime?
+  observacoes       String?         @db.Text
+  
+  // Referencias específicas
+  imovelId          String?
+  imovel            Imovel?         @relation(fields: [imovelId], references: [id])
+  
+  creditoId         String?  
+  credito           Credito?        @relation(fields: [creditoId], references: [id])
+  
+  inscricoes        AcordoInscricao[]
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@index([acordoId])
+  @@index([tipo])
+  @@index([status])
+}
+
+model AcordoInscricao {
+  id                String          @id @default(cuid())
+  
+  acordoDetalheId   String
+  acordoDetalhe     AcordoDetalhes  @relation(fields: [acordoDetalheId], references: [id], onDelete: Cascade)
+  
+  numeroInscricao   String
+  tipoInscricao     String          // 'imobiliaria', 'economica'
+  valorDebito       Decimal         @db.Decimal(15, 2)
+  valorAbatido      Decimal         @db.Decimal(15, 2)
+  percentualAbatido Decimal         @db.Decimal(5, 2)
+  situacao          String          // 'pendente', 'abatido', 'quitado'
+  
+  @@index([acordoDetalheId])
+  @@index([numeroInscricao])
 }
 
 model Setor {
@@ -528,4 +586,93 @@ model LogAuditoria {
   
   @@index([usuarioId])
   @@index([entidade, entidadeId])
+}
+
+// Tabelas para Compensação
+model ProcessoInscricao {
+  id                String          @id @default(cuid())
+  
+  processoId        String
+  processo          Processo        @relation("ProcessoInscricoes", fields: [processoId], references: [id], onDelete: Cascade)
+  
+  numeroInscricao   String
+  tipoInscricao     String          // 'imobiliaria', 'economica'
+  
+  debitos           ProcessoDebito[]
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@index([processoId])
+  @@index([numeroInscricao])
+}
+
+model ProcessoDebito {
+  id                String          @id @default(cuid())
+  
+  inscricaoId       String
+  inscricao         ProcessoInscricao @relation(fields: [inscricaoId], references: [id], onDelete: Cascade)
+  
+  descricao         String
+  valor             Decimal         @db.Decimal(15, 2)
+  dataVencimento    DateTime
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@index([inscricaoId])
+}
+
+// Tabelas para Transação Excepcional
+model TransacaoExcepcional {
+  id                    String              @id @default(cuid())
+
+  // Relação com processo
+  processoId            String              @unique
+  processo              Processo            @relation(fields: [processoId], references: [id], onDelete: Cascade)
+
+  // Valores calculados
+  valorTotalInscricoes  Decimal             @db.Decimal(15, 2)
+  valorTotalProposto    Decimal             @db.Decimal(15, 2)
+  valorDesconto         Decimal             @db.Decimal(15, 2)
+  percentualDesconto    Decimal             @db.Decimal(5, 2)
+
+  // Proposta de pagamento
+  proposta              PropostaTransacao?
+
+  // Auditoria
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([processoId])
+}
+
+model PropostaTransacao {
+  id                    String              @id @default(cuid())
+
+  // Relação com transação
+  transacaoId           String              @unique
+  transacao             TransacaoExcepcional @relation(fields: [transacaoId], references: [id], onDelete: Cascade)
+
+  // Dados da proposta
+  valorTotalProposto    Decimal             @db.Decimal(15, 2)
+  metodoPagamento       MetodoPagamento
+  valorEntrada          Decimal             @db.Decimal(15, 2) @default(0)
+  quantidadeParcelas    Int?
+  valorParcela          Decimal?            @db.Decimal(15, 2)
+
+  // Observações
+  observacoes           String?             @db.Text
+
+  // Auditoria
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([transacaoId])
+}
+
+// Enum para método de pagamento
+enum MetodoPagamento {
+  A_VISTA
+  PARCELADO
 }

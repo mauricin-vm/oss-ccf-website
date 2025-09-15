@@ -370,7 +370,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                         <p className="text-sm text-gray-600">{processo.contribuinte.nome}</p>
                         <p className="text-xs text-gray-500 mb-1">
                           {tipoProcessoMap[processo.tipo as keyof typeof tipoProcessoMap]} -
-                          R$ {processo.valorOriginal.toLocaleString('pt-BR')}
+                          {new Date(processo.dataAbertura).toLocaleDateString('pt-BR')}
                         </p>
                         {(() => {
                           const ultimaPauta = getUltimaPautaInfo(processo)
@@ -451,7 +451,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                                   <p className="text-sm text-gray-600">{item.processo.contribuinte.nome}</p>
                                   <p className="text-xs text-gray-500 mb-1">
                                     {tipoProcessoMap[item.processo.tipo as keyof typeof tipoProcessoMap]} -
-                                    R$ {item.processo.valorOriginal.toLocaleString('pt-BR')}
+                                    {new Date(item.processo.dataAbertura).toLocaleDateString('pt-BR')}
                                   </p>
                                   {(() => {
                                     const ultimaPauta = getUltimaPautaInfo(item.processo)

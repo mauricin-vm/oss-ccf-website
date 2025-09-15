@@ -29,7 +29,11 @@ import {
   Pause,
   Eye,
   FilePlus,
-  Gavel
+  Gavel,
+  Calculator,
+  Home,
+  CreditCard,
+  Settings
 } from 'lucide-react'
 import Link from 'next/link'
 import { SessionUser, ProcessoWithRelations } from '@/types'
@@ -37,6 +41,7 @@ import ProcessoDocumentos from '@/components/processo/processo-documentos'
 import AdicionarHistoricoModal from '@/components/modals/adicionar-historico-modal'
 import AlterarStatusModal from '@/components/modals/alterar-status-modal'
 import ProcessoActions from '@/components/processo/processo-actions'
+import ValoresProcessoModal from '@/components/modals/valores-processo-modal'
 
 
 
@@ -52,7 +57,8 @@ export default function ProcessoDetalhesPage({ params }: Props) {
   const [loading, setLoading] = useState(true)
   const [showHistoricoModal, setShowHistoricoModal] = useState(false)
   const [showStatusModal, setShowStatusModal] = useState(false)
-  
+  const [showValoresModal, setShowValoresModal] = useState(false)
+
   useEffect(() => {
     const resolveParams = async () => {
       const resolved = await params
@@ -61,9 +67,10 @@ export default function ProcessoDetalhesPage({ params }: Props) {
     resolveParams()
   }, [params])
 
+
   const loadProcesso = useCallback(async () => {
     if (!resolvedParams) return
-    
+
     try {
       setLoading(true)
       const response = await fetch(`/api/processos/${resolvedParams.id}`)
@@ -86,11 +93,12 @@ export default function ProcessoDetalhesPage({ params }: Props) {
       // router.push('/login')
       return
     }
-    
+
     if (resolvedParams) {
       loadProcesso()
     }
   }, [session, resolvedParams, router, loadProcesso])
+
 
   const handleMarcarRecebida = async (tramitacaoId: string) => {
     try {
@@ -178,13 +186,13 @@ export default function ProcessoDetalhesPage({ params }: Props) {
           <Badge
             className={
               tipoDecisao === 'DEFERIDO' ? 'bg-green-100 text-green-800' :
-              tipoDecisao === 'INDEFERIDO' ? 'bg-red-100 text-red-800' :
-              'bg-yellow-100 text-yellow-800'
+                tipoDecisao === 'INDEFERIDO' ? 'bg-red-100 text-red-800' :
+                  'bg-yellow-100 text-yellow-800'
             }
           >
             {tipoDecisao === 'DEFERIDO' ? 'Deferido' :
-             tipoDecisao === 'INDEFERIDO' ? 'Indeferido' :
-             'Parcial'}
+              tipoDecisao === 'INDEFERIDO' ? 'Indeferido' :
+                'Parcial'}
           </Badge>
         )
       default:
@@ -249,7 +257,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
       </div>
 
       {/* Status e Informações Principais */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -293,20 +301,6 @@ export default function ProcessoDetalhesPage({ params }: Props) {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Valor Original</p>
-                <p className="text-lg font-bold">
-                  {processo.valorOriginal ? Number(processo.valorOriginal).toLocaleString('pt-BR') : '0,00'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-purple-600" />
               <div>
                 <p className="text-sm font-medium text-gray-600">Data Abertura</p>
@@ -335,6 +329,9 @@ export default function ProcessoDetalhesPage({ params }: Props) {
             <Card>
               <CardHeader>
                 <CardTitle>Informações Gerais</CardTitle>
+                <CardDescription>
+                  Dados básicos e informações principais do processo
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -347,16 +344,6 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     <p className="font-medium">{tipoProcessoMap[processo.tipo].label}</p>
                   </div>
                   <div>
-                    <Label>Valor Original</Label>
-                    <p className="font-medium">R$ {processo.valorOriginal ? Number(processo.valorOriginal).toLocaleString('pt-BR') : '0,00'}</p>
-                  </div>
-                  {processo.valorNegociado && (
-                    <div>
-                      <Label>Valor Negociado</Label>
-                      <p className="font-medium">R$ {Number(processo.valorNegociado).toLocaleString('pt-BR')}</p>
-                    </div>
-                  )}
-                  <div>
                     <Label>Data de Abertura</Label>
                     <p className="font-medium">{new Date(processo.dataAbertura).toLocaleDateString('pt-BR')}</p>
                   </div>
@@ -365,7 +352,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     <p className="font-medium">{processo.createdBy.name}</p>
                   </div>
                 </div>
-                
+
                 {processo.observacoes && (
                   <div>
                     <Label>Observações</Label>
@@ -378,6 +365,9 @@ export default function ProcessoDetalhesPage({ params }: Props) {
             <Card>
               <CardHeader>
                 <CardTitle>Dados do Contribuinte</CardTitle>
+                <CardDescription>
+                  Informações da pessoa física ou jurídica relacionada ao processo
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -425,6 +415,241 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                 )}
               </CardContent>
             </Card>
+
+            {/* Card de Valores Específicos */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      Valores do Processo
+                    </CardTitle>
+                    <CardDescription>
+                      Valores a serem analisados no processo
+                    </CardDescription>
+                  </div>
+                  {canEdit && (
+                    <Button
+                      onClick={() => setShowValoresModal(true)}
+                      className="cursor-pointer"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Configurar Valores
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!processo.valoresEspecificos || (
+                  (processo.tipo === 'COMPENSACAO' && (processo.valoresEspecificos.creditos?.length === 0 && processo.valoresEspecificos.inscricoes?.length === 0)) ||
+                  (processo.tipo === 'DACAO_PAGAMENTO' && (processo.valoresEspecificos.imoveis?.length === 0 && processo.valoresEspecificos.inscricoes?.length === 0)) ||
+                  (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && (!processo.valoresEspecificos.transacao || processo.valoresEspecificos.inscricoes?.length === 0))
+                ) ? (
+                  <div className="text-center py-8">
+                    <Calculator className="mx-auto h-12 w-12 text-gray-400" />
+                    <p className="mt-2 text-gray-500">
+                      Nenhum valor configurado ainda
+                    </p>
+                    {canEdit && (
+                      <p className="text-sm text-gray-400 mt-1">
+                        Clique em &ldquo;Configurar Valores&rdquo; para definir os valores específicos
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Resumo dos valores */}
+                    {processo.tipo === 'COMPENSACAO' && processo.valoresEspecificos.creditos && processo.valoresEspecificos.inscricoes && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                          <div className="flex items-center gap-2 mb-1">
+                            <DollarSign className="h-4 w-4 text-green-600" />
+                            <span className="text-sm font-medium text-green-800">Créditos</span>
+                          </div>
+                          <p className="text-lg font-bold text-green-700">
+                            R$ {processo.valoresEspecificos.creditos.reduce((total: number, credito: any) => total + credito.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-green-600">
+                            {processo.valoresEspecificos.creditos.length} {processo.valoresEspecificos.creditos.length === 1 ? 'crédito' : 'créditos'}
+                          </p>
+                        </div>
+
+                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="flex items-center gap-2 mb-1">
+                            <FileText className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-800">A Compensar</span>
+                          </div>
+                          <p className="text-lg font-bold text-blue-700">
+                            R$ {processo.valoresEspecificos.inscricoes.reduce((total: number, inscricao: any) =>
+                              total + (inscricao.debitos?.reduce((subtotal: number, debito: any) => subtotal + debito.valor, 0) || 0), 0
+                            ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-blue-600">
+                            {processo.valoresEspecificos.inscricoes.length} {processo.valoresEspecificos.inscricoes.length === 1 ? 'inscrição' : 'inscrições'}
+                          </p>
+                        </div>
+
+                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Calculator className="h-4 w-4 text-gray-600" />
+                            <span className="text-sm font-medium text-gray-800">Saldo</span>
+                          </div>
+                          {(() => {
+                            const totalCreditos = processo.valoresEspecificos.creditos.reduce((total: number, credito: any) => total + credito.valor, 0)
+                            const totalDebitos = processo.valoresEspecificos.inscricoes.reduce((total: number, inscricao: any) =>
+                              total + (inscricao.debitos?.reduce((subtotal: number, debito: any) => subtotal + debito.valor, 0) || 0), 0
+                            )
+                            const saldo = totalCreditos - totalDebitos
+                            return (
+                              <>
+                                <p className={`text-lg font-bold ${saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  R$ {saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </p>
+                                <p className="text-xs text-gray-600">
+                                  {saldo >= 0 ? 'Superávit' : 'Déficit'}
+                                </p>
+                              </>
+                            )
+                          })()}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Para Dação em Pagamento, mostrar resumo similar à compensação */}
+                    {processo.tipo === 'DACAO_PAGAMENTO' && processo.valoresEspecificos.imoveis && processo.valoresEspecificos.inscricoes && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Home className="h-4 w-4 text-green-600" />
+                            <span className="text-sm font-medium text-green-800">Imóveis</span>
+                          </div>
+                          <p className="text-lg font-bold text-green-700">
+                            R$ {(() => {
+                              const total = processo.valoresEspecificos.imoveis.reduce((total: number, imovel: any) => {
+                                const valor = Number(imovel.imovel?.valorAvaliado || imovel.valorAvaliacao || 0);
+                                console.log('Imovel debug:', { imovel, valor, valorAvaliado: imovel.imovel?.valorAvaliado, valorAvaliacao: imovel.valorAvaliacao });
+                                return total + valor;
+                              }, 0);
+                              console.log('Total imóveis:', total);
+                              return total.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                            })()}
+                          </p>
+                          <p className="text-xs text-green-600">
+                            {processo.valoresEspecificos.imoveis.length} {processo.valoresEspecificos.imoveis.length === 1 ? 'imóvel' : 'imóveis'}
+                          </p>
+                        </div>
+
+                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="flex items-center gap-2 mb-1">
+                            <FileText className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-800">A Compensar</span>
+                          </div>
+                          <p className="text-lg font-bold text-blue-700">
+                            R$ {processo.valoresEspecificos.inscricoes.reduce((total: number, inscricao: any) =>
+                              total + (inscricao.debitos?.reduce((subtotal: number, debito: any) => subtotal + debito.valor, 0) || 0), 0
+                            ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-blue-600">
+                            {processo.valoresEspecificos.inscricoes.length} {processo.valoresEspecificos.inscricoes.length === 1 ? 'inscrição' : 'inscrições'}
+                          </p>
+                        </div>
+
+                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Calculator className="h-4 w-4 text-gray-600" />
+                            <span className="text-sm font-medium text-gray-800">Saldo</span>
+                          </div>
+                          {(() => {
+                            const totalImoveis = processo.valoresEspecificos.imoveis.reduce((total: number, imovel: any) => total + imovel.valorAvaliacao, 0)
+                            const totalDebitos = processo.valoresEspecificos.inscricoes.reduce((total: number, inscricao: any) =>
+                              total + (inscricao.debitos?.reduce((subtotal: number, debito: any) => subtotal + debito.valor, 0) || 0), 0
+                            )
+                            const saldo = totalImoveis - totalDebitos
+                            return (
+                              <>
+                                <p className={`text-lg font-bold ${saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  R$ {saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </p>
+                                <p className="text-xs text-gray-600">
+                                  {saldo >= 0 ? 'Superávit' : 'Déficit'}
+                                </p>
+                              </>
+                            )
+                          })()}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Para Transação Excepcional, mostrar resumo específico */}
+                    {processo.tipo === 'TRANSACAO_EXCEPCIONAL' && processo.valoresEspecificos.transacao && processo.valoresEspecificos.inscricoes && (
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                          <div className="flex items-center gap-2 mb-1">
+                            <FileText className="h-4 w-4 text-green-600" />
+                            <span className="text-sm font-medium text-green-800">Total a Negociar</span>
+                          </div>
+                          <p className="text-lg font-bold text-green-700">
+                            R$ {processo.valoresEspecificos.transacao.valorTotalInscricoes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-green-600">
+                            {processo.valoresEspecificos.inscricoes.length} {processo.valoresEspecificos.inscricoes.length === 1 ? 'inscrição' : 'inscrições'}
+                          </p>
+                        </div>
+
+                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="flex items-center gap-2 mb-1">
+                            <DollarSign className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-800">Valor Proposto</span>
+                          </div>
+                          <p className="text-lg font-bold text-blue-700">
+                            R$ {processo.valoresEspecificos.transacao.valorTotalProposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-blue-600">
+                            {processo.valoresEspecificos.transacao.proposta?.metodoPagamento === 'a_vista' ? 'À vista' : `${processo.valoresEspecificos.transacao.proposta?.quantidadeParcelas || 1}x parcelas`}
+                          </p>
+                        </div>
+
+                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Calculator className="h-4 w-4 text-gray-600" />
+                            <span className="text-sm font-medium text-gray-800">Desconto</span>
+                          </div>
+                          <p className="text-lg font-bold text-gray-700">
+                            R$ {processo.valoresEspecificos.transacao.valorDesconto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {processo.valoresEspecificos.transacao.percentualDesconto.toFixed(1)}% de desconto
+                          </p>
+                        </div>
+
+                        <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Settings className="h-4 w-4 text-purple-600" />
+                            <span className="text-sm font-medium text-purple-800">Status</span>
+                          </div>
+                          <p className="text-sm font-medium text-green-600">
+                            Negociável
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Para outros tipos de processo, mostrar resumo genérico */}
+                    {!['COMPENSACAO', 'DACAO_PAGAMENTO', 'TRANSACAO_EXCEPCIONAL'].includes(processo.tipo) && (
+                      <div className="text-center py-4">
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          <Calculator className="h-5 w-5 text-gray-400" />
+                          <span className="text-gray-500">Valores configurados</span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Clique em "Configurar Valores" para visualizar ou editar
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
@@ -438,9 +663,12 @@ export default function ProcessoDetalhesPage({ params }: Props) {
             </CardHeader>
             <CardContent>
               {processo.tramitacoes.length === 0 ? (
-                <p className="text-center text-gray-500 py-4">
-                  Nenhuma tramitação registrada
-                </p>
+                <div className="text-center py-8">
+                  <ArrowRight className="mx-auto h-12 w-12 text-gray-400" />
+                  <p className="mt-2 text-gray-500">
+                    Nenhuma tramitação registrada
+                  </p>
+                </div>
               ) : (
                 <div className="space-y-4">
                   {processo.tramitacoes.map((tramitacao, index) => (
@@ -471,9 +699,9 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                               )}
                             </div>
                             {!tramitacao.dataRecebimento && canEdit && (
-                              <Button 
-                                size="sm" 
-                                variant="default" 
+                              <Button
+                                size="sm"
+                                variant="default"
                                 className="cursor-pointer ml-2"
                                 onClick={() => handleMarcarRecebida(tramitacao.id)}
                               >
@@ -482,7 +710,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                             )}
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-2 mb-2">
                           {tramitacao.dataRecebimento ? (
                             <Badge className="bg-green-100 text-green-800 text-xs">Recebida</Badge>
@@ -492,11 +720,11 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                             <Badge className="bg-yellow-100 text-yellow-800 text-xs">Pendente</Badge>
                           )}
                         </div>
-                        
+
                         {tramitacao.observacoes && (
                           <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">{tramitacao.observacoes}</p>
                         )}
-                        
+
                         <div className="flex justify-between text-xs text-gray-500">
                           <span>Por: {tramitacao.usuario.name}</span>
                           {tramitacao.prazoResposta && (
@@ -525,12 +753,9 @@ export default function ProcessoDetalhesPage({ params }: Props) {
             <CardContent>
               {!processo.decisoes || processo.decisoes.length === 0 ? (
                 <div className="text-center py-8">
-                  <Gavel className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  <Gavel className="mx-auto h-12 w-12 text-gray-400" />
+                  <p className="mt-2 text-gray-500">
                     Nenhum julgamento registrado
-                  </h3>
-                  <p className="text-gray-600">
-                    Este processo ainda não foi julgado em nenhuma sessão.
                   </p>
                 </div>
               ) : (
@@ -540,192 +765,188 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                       return new Date(a.dataDecisao).getTime() - new Date(b.dataDecisao).getTime()
                     })
                     .map((decisao, index) => {
-                    const processoPauta = processo.pautas.find(p => p.pauta.id === decisao.sessao?.pauta?.id)
-                    const cardBackground = getCardBackground(decisao)
+                      const processoPauta = processo.pautas.find(p => p.pauta.id === decisao.sessao?.pauta?.id)
+                      const cardBackground = getCardBackground(decisao)
 
-                    return (
-                      <div
-                        key={decisao.id}
-                        className={`border rounded-lg p-4 ${cardBackground}`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                              decisao.tipoResultado === 'JULGADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {index + 1}
-                            </span>
-                            <div>
-                              <Link
-                                href={`/sessoes/${decisao.sessao?.id}`}
-                                className="font-medium hover:text-blue-600"
-                              >
-                                Sessão de {decisao.sessao?.pauta ? new Date(decisao.sessao.pauta.dataPauta).toLocaleDateString('pt-BR') : new Date(decisao.dataDecisao).toLocaleDateString('pt-BR')}
-                              </Link>
-                              <p className="text-sm text-gray-600">
-                                Pauta: {decisao.sessao?.pauta?.numero || 'N/A'}
-                              </p>
-                              {processoPauta?.relator && (
-                                <p className="text-sm text-blue-600">Relator: {processoPauta.relator}</p>
-                              )}
-                              {processoPauta?.revisores && processoPauta.revisores.length > 0 && (
-                                <p className="text-sm text-blue-600">
-                                  Revisor{processoPauta.revisores.length > 1 ? 'es' : ''}: {processoPauta.revisores.join(', ')}
+                      return (
+                        <div
+                          key={decisao.id}
+                          className={`border rounded-lg p-4 ${cardBackground}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${decisao.tipoResultado === 'JULGADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                {index + 1}
+                              </span>
+                              <div>
+                                <Link
+                                  href={`/sessoes/${decisao.sessao?.id}`}
+                                  className="font-medium hover:text-blue-600"
+                                >
+                                  Sessão de {decisao.sessao?.pauta ? new Date(decisao.sessao.pauta.dataPauta).toLocaleDateString('pt-BR') : new Date(decisao.dataDecisao).toLocaleDateString('pt-BR')}
+                                </Link>
+                                <p className="text-sm text-gray-600">
+                                  Pauta: {decisao.sessao?.pauta?.numero || 'N/A'}
                                 </p>
-                              )}
+                                {processoPauta?.relator && (
+                                  <p className="text-sm text-blue-600">Relator: {processoPauta.relator}</p>
+                                )}
+                                {processoPauta?.revisores && processoPauta.revisores.length > 0 && (
+                                  <p className="text-sm text-blue-600">
+                                    Revisor{processoPauta.revisores.length > 1 ? 'es' : ''}: {processoPauta.revisores.join(', ')}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right space-y-2">
+                              <div className="space-y-2">
+                                {getResultadoBadge(decisao)}
+                              </div>
                             </div>
                           </div>
-                          <div className="text-right space-y-2">
-                            <div className="space-y-2">
-                              {getResultadoBadge(decisao)}
-                            </div>
-                          </div>
-                        </div>
 
-                        <div className="mt-3 space-y-2">
-                          <div className="p-3 bg-white rounded border">
-                            <h5 className="text-sm font-medium mb-2">Ata:</h5>
-                            <p className="text-sm text-gray-700">{processoPauta?.ataTexto || 'Texto da ata não informado'}</p>
+                          <div className="mt-3 space-y-2">
+                            <div className="p-3 bg-white rounded border">
+                              <h5 className="text-sm font-medium mb-2">Ata:</h5>
+                              <p className="text-sm text-gray-700">{processoPauta?.ataTexto || 'Texto da ata não informado'}</p>
 
-                            {decisao.votos && decisao.votos.length > 0 && (
-                              <div className="mt-3 pt-2 border-t">
-                                <h6 className="text-xs font-medium text-gray-600 mb-3">Votos registrados:</h6>
+                              {decisao.votos && decisao.votos.length > 0 && (
+                                <div className="mt-3 pt-2 border-t">
+                                  <h6 className="text-xs font-medium text-gray-600 mb-3">Votos registrados:</h6>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  {/* Relatores/Revisores */}
-                                  {decisao.votos.filter((voto: any) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto)).length > 0 && (
-                                    <Card className="p-3">
-                                      <div className="font-medium text-gray-800 mb-2 text-sm">Relatores/Revisores</div>
-                                      <div className="space-y-1">
-                                        {decisao.votos
-                                          .filter((voto: any) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto))
-                                          .map((voto: any, index: number) => (
-                                            <div key={index} className="flex items-center justify-between text-xs">
-                                              <div className="flex items-center gap-2">
-                                                <Badge variant={voto.tipoVoto === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
-                                                  {voto.tipoVoto === 'RELATOR' ? 'Relator' : 'Revisor'}
-                                                </Badge>
-                                                <span className="truncate font-medium">{voto.nomeVotante}</span>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Relatores/Revisores */}
+                                    {decisao.votos.filter((voto: any) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto)).length > 0 && (
+                                      <Card className="p-3">
+                                        <div className="font-medium text-gray-800 mb-2 text-sm">Relatores/Revisores</div>
+                                        <div className="space-y-1">
+                                          {decisao.votos
+                                            .filter((voto: any) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto))
+                                            .map((voto: any, index: number) => (
+                                              <div key={index} className="flex items-center justify-between text-xs">
+                                                <div className="flex items-center gap-2">
+                                                  <Badge variant={voto.tipoVoto === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
+                                                    {voto.tipoVoto === 'RELATOR' ? 'Relator' : 'Revisor'}
+                                                  </Badge>
+                                                  <span className="truncate font-medium">{voto.nomeVotante}</span>
+                                                </div>
+                                                <span className={`font-medium text-xs ${voto.acompanhaVoto ? 'text-blue-600' :
+                                                  voto.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
+                                                    voto.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
+                                                      voto.posicaoVoto === 'PARCIAL' ? 'text-yellow-600' :
+                                                        'text-blue-600'
+                                                  }`}>
+                                                  {voto.acompanhaVoto
+                                                    ? `Acomp. ${voto.acompanhaVoto?.split(' ')[0]}`
+                                                    : voto.posicaoVoto}
+                                                </span>
                                               </div>
-                                              <span className={`font-medium text-xs ${
-                                                voto.acompanhaVoto ? 'text-blue-600' :
-                                                voto.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
-                                                voto.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
-                                                voto.posicaoVoto === 'PARCIAL' ? 'text-yellow-600' :
-                                                'text-blue-600'
-                                              }`}>
-                                                {voto.acompanhaVoto
-                                                  ? `Acomp. ${voto.acompanhaVoto?.split(' ')[0]}`
-                                                  : voto.posicaoVoto}
+                                            ))}
+                                        </div>
+                                      </Card>
+                                    )}
+
+                                    {/* Conselheiros */}
+                                    <Card className="p-3">
+                                      <div className="font-medium text-gray-800 mb-3 text-sm">Conselheiros</div>
+                                      <div className="max-h-24 overflow-y-auto space-y-1">
+                                        {/* Votos válidos agrupados */}
+                                        {['DEFERIDO', 'INDEFERIDO', 'PARCIAL'].map(posicao => {
+                                          const conselheirosComEssePosicao = decisao.votos
+                                            .filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                            .map((voto: any) => voto.nomeVotante)
+
+                                          if (conselheirosComEssePosicao.length === 0) return null
+
+                                          return (
+                                            <div key={posicao} className="text-xs">
+                                              <span className={`font-medium ${posicao === 'DEFERIDO' ? 'text-green-600' :
+                                                posicao === 'INDEFERIDO' ? 'text-red-600' :
+                                                  'text-yellow-600'
+                                                }`}>
+                                                {posicao}:
+                                              </span>
+                                              <span className="ml-1 text-gray-700">
+                                                {formatarListaNomes(conselheirosComEssePosicao)}
                                               </span>
                                             </div>
-                                          ))}
+                                          )
+                                        })}
+
+                                        {/* Abstenções agrupadas */}
+                                        {decisao.votos.filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(voto.posicaoVoto)).length > 0 && (
+                                          <div className="border-t pt-1 mt-1">
+                                            {['AUSENTE', 'IMPEDIDO', 'ABSTENCAO'].map(posicao => {
+                                              const conselheirosComEssePosicao = decisao.votos
+                                                .filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                                .map((voto: any) => voto.nomeVotante)
+
+                                              if (conselheirosComEssePosicao.length === 0) return null
+
+                                              return (
+                                                <div key={posicao} className="text-xs">
+                                                  <span className="font-medium text-gray-600">
+                                                    {posicao === 'ABSTENCAO' ? 'ABSTENÇÃO' :
+                                                      posicao === 'AUSENTE' ? 'AUSENTE' : 'IMPEDIDO'}:
+                                                  </span>
+                                                  <span className="ml-1 text-gray-600">
+                                                    {formatarListaNomes(conselheirosComEssePosicao)}
+                                                  </span>
+                                                </div>
+                                              )
+                                            })}
+                                          </div>
+                                        )}
                                       </div>
                                     </Card>
-                                  )}
+                                  </div>
+                                </div>
+                              )}
 
-                                  {/* Conselheiros */}
-                                  <Card className="p-3">
-                                    <div className="font-medium text-gray-800 mb-3 text-sm">Conselheiros</div>
-                                    <div className="max-h-24 overflow-y-auto space-y-1">
-                                      {/* Votos válidos agrupados */}
-                                      {['DEFERIDO', 'INDEFERIDO', 'PARCIAL'].map(posicao => {
-                                        const conselheirosComEssePosicao = decisao.votos
-                                          .filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
-                                          .map((voto: any) => voto.nomeVotante)
-
-                                        if (conselheirosComEssePosicao.length === 0) return null
-
-                                        return (
-                                          <div key={posicao} className="text-xs">
-                                            <span className={`font-medium ${
-                                              posicao === 'DEFERIDO' ? 'text-green-600' :
-                                              posicao === 'INDEFERIDO' ? 'text-red-600' :
-                                              'text-yellow-600'
-                                            }`}>
-                                              {posicao}:
-                                            </span>
-                                            <span className="ml-1 text-gray-700">
-                                              {formatarListaNomes(conselheirosComEssePosicao)}
-                                            </span>
-                                          </div>
-                                        )
-                                      })}
-
-                                      {/* Abstenções agrupadas */}
-                                      {decisao.votos.filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(voto.posicaoVoto)).length > 0 && (
-                                        <div className="border-t pt-1 mt-1">
-                                          {['AUSENTE', 'IMPEDIDO', 'ABSTENCAO'].map(posicao => {
-                                            const conselheirosComEssePosicao = decisao.votos
-                                              .filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
-                                              .map((voto: any) => voto.nomeVotante)
-
-                                            if (conselheirosComEssePosicao.length === 0) return null
-
-                                            return (
-                                              <div key={posicao} className="text-xs">
-                                                <span className="font-medium text-gray-600">
-                                                  {posicao === 'ABSTENCAO' ? 'ABSTENÇÃO' :
-                                                   posicao === 'AUSENTE' ? 'AUSENTE' : 'IMPEDIDO'}:
-                                                </span>
-                                                <span className="ml-1 text-gray-600">
-                                                  {formatarListaNomes(conselheirosComEssePosicao)}
-                                                </span>
-                                              </div>
-                                            )
-                                          })}
-                                        </div>
-                                      )}
+                              {/* Voto do Presidente se houve empate */}
+                              {decisao.sessao?.presidente && decisao.votos.find((voto: any) =>
+                                voto.conselheiroId === decisao.sessao?.presidente?.id ||
+                                voto.nomeVotante === decisao.sessao?.presidente?.nome
+                              ) && (
+                                  <Card className="p-3 mt-4 border-yellow-300 bg-yellow-50">
+                                    <div className="font-medium text-gray-800 mb-2 text-sm flex items-center gap-2">
+                                      ⚖️ Voto de Desempate - Presidente
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs">
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700">
+                                          Presidente
+                                        </Badge>
+                                        <span className="truncate font-medium">{decisao.sessao.presidente.nome}</span>
+                                      </div>
+                                      <span className={`font-medium text-xs ${decisao.votos.find((voto: any) =>
+                                        voto.conselheiroId === decisao.sessao?.presidente?.id ||
+                                        voto.nomeVotante === decisao.sessao?.presidente?.nome
+                                      )?.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
+                                        decisao.votos.find((voto: any) =>
+                                          voto.conselheiroId === decisao.sessao?.presidente?.id ||
+                                          voto.nomeVotante === decisao.sessao?.presidente?.nome
+                                        )?.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
+                                          'text-yellow-600'
+                                        }`}>
+                                        {decisao.votos.find((voto: any) =>
+                                          voto.conselheiroId === decisao.sessao?.presidente?.id ||
+                                          voto.nomeVotante === decisao.sessao?.presidente?.nome
+                                        )?.posicaoVoto}
+                                      </span>
                                     </div>
                                   </Card>
-                                </div>
-                              </div>
-                            )}
+                                )}
 
-                            {/* Voto do Presidente se houve empate */}
-                            {decisao.sessao?.presidente && decisao.votos.find((voto: any) =>
-                              voto.conselheiroId === decisao.sessao?.presidente?.id ||
-                              voto.nomeVotante === decisao.sessao?.presidente?.nome
-                            ) && (
-                              <Card className="p-3 mt-4 border-yellow-300 bg-yellow-50">
-                                <div className="font-medium text-gray-800 mb-2 text-sm flex items-center gap-2">
-                                  ⚖️ Voto de Desempate - Presidente
-                                </div>
-                                <div className="flex items-center justify-between text-xs">
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700">
-                                      Presidente
-                                    </Badge>
-                                    <span className="truncate font-medium">{decisao.sessao.presidente.nome}</span>
-                                  </div>
-                                  <span className={`font-medium text-xs ${
-                                    decisao.votos.find((voto: any) =>
-                                      voto.conselheiroId === decisao.sessao?.presidente?.id ||
-                                      voto.nomeVotante === decisao.sessao?.presidente?.nome
-                                    )?.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
-                                    decisao.votos.find((voto: any) =>
-                                      voto.conselheiroId === decisao.sessao?.presidente?.id ||
-                                      voto.nomeVotante === decisao.sessao?.presidente?.nome
-                                    )?.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
-                                    'text-yellow-600'
-                                  }`}>
-                                    {decisao.votos.find((voto: any) =>
-                                      voto.conselheiroId === decisao.sessao?.presidente?.id ||
-                                      voto.nomeVotante === decisao.sessao?.presidente?.nome
-                                    )?.posicaoVoto}
-                                  </span>
-                                </div>
-                              </Card>
-                            )}
-
-                            <p className="text-xs text-gray-500 mt-2">
-                              Registrada em {new Date(decisao.dataDecisao).toLocaleString('pt-BR')}
-                            </p>
+                              <p className="text-xs text-gray-500 mt-2">
+                                Registrada em {new Date(decisao.dataDecisao).toLocaleString('pt-BR')}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
                 </div>
               )}
             </CardContent>
@@ -733,7 +954,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
         </TabsContent>
 
         <TabsContent value="documentos">
-          <ProcessoDocumentos 
+          <ProcessoDocumentos
             processo={{
               id: processo.id,
               numero: processo.numero,
@@ -745,8 +966,8 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                 tamanho: doc.tamanho,
                 createdAt: doc.createdAt
               }))
-            }} 
-            canEdit={canEdit} 
+            }}
+            canEdit={canEdit}
           />
         </TabsContent>
 
@@ -760,9 +981,129 @@ export default function ProcessoDetalhesPage({ params }: Props) {
             </CardHeader>
             <CardContent>
               {!processo.acordo ? (
-                <p className="text-center text-gray-500 py-4">
-                  Nenhum acordo firmado ainda
-                </p>
+                (() => {
+                  // Verificar se há decisão que define acordo
+                  const decisaoComAcordo = processo.decisoes?.find(d => d.definirAcordo === true)
+
+                  if (decisaoComAcordo) {
+                    return (
+                      <div className="space-y-6">
+                        {/* Proposta da Sessão */}
+                        <Card className="border-green-200 bg-green-50">
+                          <CardHeader>
+                            <CardTitle className="text-green-800 text-lg">
+                              Proposta Aprovada em Sessão
+                            </CardTitle>
+                            <CardDescription className="text-green-700">
+                              Esta proposta foi aprovada na sessão de {new Date(decisaoComAcordo.dataDecisao).toLocaleDateString('pt-BR')}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                              <div className="p-3 bg-white rounded-lg border">
+                                <div className="text-sm text-gray-600 mb-1">Tipo de Acordo</div>
+                                <p className="font-medium">
+                                  {decisaoComAcordo.tipoAcordo === 'aceita_proposta' ? 'Aceita Proposta do Contribuinte' :
+                                   decisaoComAcordo.tipoAcordo === 'contra_proposta' ? 'Contra-proposta do CCF' :
+                                   'Sem Acordo'}
+                                </p>
+                              </div>
+
+                              {processo.valoresEspecificos && (
+                                <>
+                                  {processo.tipo === 'TRANSACAO_EXCEPCIONAL' && processo.valoresEspecificos.transacao && (
+                                    <>
+                                      <div className="p-3 bg-white rounded-lg border">
+                                        <div className="text-sm text-gray-600 mb-1">Valor Original</div>
+                                        <p className="font-medium text-lg">
+                                          R$ {processo.valoresEspecificos.transacao.valorTotalInscricoes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </p>
+                                      </div>
+                                      <div className="p-3 bg-white rounded-lg border">
+                                        <div className="text-sm text-gray-600 mb-1">Valor Proposto</div>
+                                        <p className="font-medium text-lg text-green-600">
+                                          R$ {processo.valoresEspecificos.transacao.valorTotalProposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </p>
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {processo.tipo === 'COMPENSACAO' && processo.valoresEspecificos.creditos && processo.valoresEspecificos.inscricoes && (
+                                    <>
+                                      <div className="p-3 bg-white rounded-lg border">
+                                        <div className="text-sm text-gray-600 mb-1">Total Créditos</div>
+                                        <p className="font-medium text-lg">
+                                          R$ {processo.valoresEspecificos.creditos.reduce((total, credito) => total + credito.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </p>
+                                      </div>
+                                      <div className="p-3 bg-white rounded-lg border">
+                                        <div className="text-sm text-gray-600 mb-1">Total a Compensar</div>
+                                        <p className="font-medium text-lg text-green-600">
+                                          R$ {processo.valoresEspecificos.inscricoes.reduce((total, inscricao) =>
+                                            total + (inscricao.debitos?.reduce((subtotal, debito) => subtotal + debito.valor, 0) || 0), 0
+                                          ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </p>
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {processo.tipo === 'DACAO_PAGAMENTO' && processo.valoresEspecificos.imoveis && processo.valoresEspecificos.inscricoes && (
+                                    <>
+                                      <div className="p-3 bg-white rounded-lg border">
+                                        <div className="text-sm text-gray-600 mb-1">Total Imóveis</div>
+                                        <p className="font-medium text-lg">
+                                          R$ {processo.valoresEspecificos.imoveis.reduce((total, imovel) => total + (imovel.valorAvaliacao || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </p>
+                                      </div>
+                                      <div className="p-3 bg-white rounded-lg border">
+                                        <div className="text-sm text-gray-600 mb-1">Total a Compensar</div>
+                                        <p className="font-medium text-lg text-green-600">
+                                          R$ {processo.valoresEspecificos.inscricoes.reduce((total, inscricao) =>
+                                            total + (inscricao.debitos?.reduce((subtotal, debito) => subtotal + debito.valor, 0) || 0), 0
+                                          ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </p>
+                                      </div>
+                                    </>
+                                  )}
+                                </>
+                              )}
+                            </div>
+
+                            {canEdit && (
+                              <div className="flex justify-center">
+                                <Link href={`/acordos/novo?processo=${processo.id}`}>
+                                  <Button className="cursor-pointer">
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Criar Acordo Baseado na Proposta
+                                  </Button>
+                                </Link>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div className="text-center py-8">
+                      <FileText className="mx-auto h-12 w-12 text-gray-400" />
+                      <p className="mt-2 text-gray-500">
+                        Nenhum acordo firmado ainda
+                      </p>
+                      {canEdit && processo.status === 'JULGADO' && (
+                        <div className="mt-4">
+                          <Link href={`/acordos/novo?processo=${processo.id}`}>
+                            <Button variant="outline" className="cursor-pointer">
+                              <Plus className="mr-2 h-4 w-4" />
+                              Criar Acordo
+                            </Button>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()
               ) : (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -824,7 +1165,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                   </CardDescription>
                 </div>
                 {canEdit && (
-                  <Button 
+                  <Button
                     onClick={() => setShowHistoricoModal(true)}
                     className="cursor-pointer"
                   >
@@ -857,7 +1198,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     'PAUTA': Calendar,
                     'REPAUTAMENTO': Calendar
                   }[historico.tipo] || History
-                  
+
                   const tipoLabel = {
                     'EVENTO': 'Evento',
                     'OBSERVACAO': 'Observação',
@@ -868,9 +1209,9 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     'PAUTA': 'Pauta',
                     'REPAUTAMENTO': 'Repautamento'
                   }[historico.tipo] || historico.tipo
-                  
+
                   const Icon = tipoIcon
-                  
+
                   // Função para obter cor específica baseada no título da decisão
                   const getDecisaoCor = (titulo: string) => {
                     if (titulo.includes('Suspenso')) return { bg: 'bg-yellow-100', text: 'text-yellow-600' }
@@ -882,18 +1223,16 @@ export default function ProcessoDetalhesPage({ params }: Props) {
 
                   return (
                     <div key={historico.id} className="flex gap-4 pb-4 border-b last:border-b-0">
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                        historico.tipo === 'SISTEMA' ? 'bg-green-100' :
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${historico.tipo === 'SISTEMA' ? 'bg-green-100' :
                         historico.tipo === 'PAUTA' || historico.tipo === 'REPAUTAMENTO' ? 'bg-purple-100' :
-                        historico.tipo === 'DECISAO' ? getDecisaoCor(historico.titulo).bg :
-                        'bg-blue-100'
-                      }`}>
-                        <Icon className={`h-4 w-4 ${
-                          historico.tipo === 'SISTEMA' ? 'text-green-600' :
+                          historico.tipo === 'DECISAO' ? getDecisaoCor(historico.titulo).bg :
+                            'bg-blue-100'
+                        }`}>
+                        <Icon className={`h-4 w-4 ${historico.tipo === 'SISTEMA' ? 'text-green-600' :
                           historico.tipo === 'PAUTA' || historico.tipo === 'REPAUTAMENTO' ? 'text-purple-600' :
-                          historico.tipo === 'DECISAO' ? getDecisaoCor(historico.titulo).text :
-                          'text-blue-600'
-                        }`} />
+                            historico.tipo === 'DECISAO' ? getDecisaoCor(historico.titulo).text :
+                              'text-blue-600'
+                          }`} />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
@@ -943,7 +1282,9 @@ export default function ProcessoDetalhesPage({ params }: Props) {
           processoId={resolvedParams.id}
           open={showHistoricoModal}
           onOpenChange={setShowHistoricoModal}
-          onSuccess={loadProcesso}
+          onSuccess={() => {
+            loadProcesso()
+          }}
         />
       )}
 
@@ -954,7 +1295,24 @@ export default function ProcessoDetalhesPage({ params }: Props) {
           statusAtual={processo.status}
           open={showStatusModal}
           onOpenChange={setShowStatusModal}
-          onSuccess={loadProcesso}
+          onSuccess={() => {
+            loadProcesso()
+          }}
+        />
+      )}
+
+      {/* Modal de Valores do Processo */}
+      {canEdit && resolvedParams && processo && (
+        <ValoresProcessoModal
+          open={showValoresModal}
+          onOpenChange={setShowValoresModal}
+          processo={{
+            id: resolvedParams.id,
+            tipo: processo.tipo
+          }}
+          onSuccess={() => {
+            loadProcesso()
+          }}
         />
       )}
     </div>

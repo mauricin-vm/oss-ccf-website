@@ -85,12 +85,8 @@ export async function GET(request: NextRequest) {
     ])
 
 
-    // Converter valores Decimal para number antes de retornar
-    const processosSerializados = processos.map(processo => ({
-      ...processo,
-      valorOriginal: processo.valorOriginal ? Number(processo.valorOriginal) : null,
-      valorNegociado: processo.valorNegociado ? Number(processo.valorNegociado) : null
-    }))
+    // Os processos agora não possuem mais campos de valor, removidos para usar valores específicos
+    const processosSerializados = processos
 
     return NextResponse.json({
       processos: processosSerializados,
@@ -231,8 +227,6 @@ export async function POST(request: NextRequest) {
     console.log('User ID:', user.id)
     console.log('Dados do processo:', {
       ...processoData,
-      valorOriginal: processoData.valorOriginal || 0,
-      valorNegociado: processoData.valorNegociado || null,
       contribuinteId: contribuinte.id,
       createdById: user.id
     })
@@ -258,8 +252,6 @@ export async function POST(request: NextRequest) {
       processo = await prisma.processo.create({
         data: {
           ...processoData,
-          valorOriginal: processoData.valorOriginal || 0,
-          valorNegociado: processoData.valorNegociado || null,
           contribuinteId: contribuinte.id,
           createdById: user.id
         },

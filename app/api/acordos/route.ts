@@ -163,10 +163,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Gerar número do termo automaticamente
+    const ano = new Date().getFullYear()
+    const ultimoAcordo = await prisma.acordo.findFirst({
+      where: {
+        numeroTermo: {
+          contains: `/${ano}`
+        }
+      },
+      orderBy: { numeroTermo: 'desc' }
+    })
+
+    let proximoNumero = 1
+    if (ultimoAcordo) {
+      const ultimoNumero = parseInt(ultimoAcordo.numeroTermo.split('/')[0])
+      proximoNumero = ultimoNumero + 1
+    }
+
+    const numeroTermo = `${proximoNumero.toString().padStart(4, '0')}/${ano}`
+
     // Criar o acordo
     const acordo = await prisma.acordo.create({
       data: {
         processoId: data.processoId,
+        numeroTermo,
         valorTotal: data.valorTotal,
         valorDesconto: data.valorDesconto || 0,
         percentualDesconto: data.percentualDesconto || 0,

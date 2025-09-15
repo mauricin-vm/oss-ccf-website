@@ -91,6 +91,16 @@ export async function GET(
           include: {
             credito: true
           }
+        },
+        inscricoes: {
+          include: {
+            debitos: true
+          }
+        },
+        transacao: {
+          include: {
+            proposta: true
+          }
         }
       }
     })
@@ -140,12 +150,71 @@ export async function GET(
       historicos = []
     }
 
+    // Os valores específicos já estão nas relações creditos e imoveis do processo
+    let valoresEspecificos = null
+    if (['COMPENSACAO', 'DACAO_PAGAMENTO', 'TRANSACAO_EXCEPCIONAL'].includes(processo.tipo)) {
+      if (processo.tipo === 'COMPENSACAO') {
+        // Para compensação, usar creditos e buscar inscrições separadamente se necessário
+        valoresEspecificos = {
+          creditos: processo.creditos?.map(c => ({
+            ...c,
+            valor: Number(c.credito?.valor || 0)
+          })) || [],
+          inscricoes: processo.inscricoes?.map(i => ({
+            ...i,
+            debitos: i.debitos?.map(d => ({
+              ...d,
+              valor: Number(d.valor || 0)
+            })) || []
+          })) || []
+        }
+      } else if (processo.tipo === 'DACAO_PAGAMENTO') {
+        // Para dação em pagamento, mesma lógica da compensação: imóveis a ofertar + inscrições a compensar
+        valoresEspecificos = {
+          imoveis: processo.imoveis?.map(i => ({
+            ...i,
+            valorAvaliacao: Number(i.imovel?.valorAvaliado || 0)
+          })) || [],
+          inscricoes: processo.inscricoes?.map(i => ({
+            ...i,
+            debitos: i.debitos?.map(d => ({
+              ...d,
+              valor: Number(d.valor || 0)
+            })) || []
+          })) || []
+        }
+      } else if (processo.tipo === 'TRANSACAO_EXCEPCIONAL') {
+        // Para transação excepcional, buscar dados das novas tabelas
+        valoresEspecificos = {
+          inscricoes: processo.inscricoes?.map(i => ({
+            ...i,
+            debitos: i.debitos?.map(d => ({
+              ...d,
+              valor: Number(d.valor || 0)
+            })) || []
+          })) || [],
+          transacao: processo.transacao ? {
+            valorTotalInscricoes: Number(processo.transacao.valorTotalInscricoes),
+            valorTotalProposto: Number(processo.transacao.valorTotalProposto),
+            valorDesconto: Number(processo.transacao.valorDesconto),
+            percentualDesconto: Number(processo.transacao.percentualDesconto),
+            proposta: processo.transacao.proposta ? {
+              valorTotalProposto: Number(processo.transacao.proposta.valorTotalProposto),
+              metodoPagamento: processo.transacao.proposta.metodoPagamento.toLowerCase(),
+              valorEntrada: Number(processo.transacao.proposta.valorEntrada),
+              quantidadeParcelas: processo.transacao.proposta.quantidadeParcelas,
+              valorParcela: Number(processo.transacao.proposta.valorParcela || 0)
+            } : null
+          } : null
+        }
+      }
+    }
+
     // Converter campos Decimal para números antes de enviar para o cliente
     const processData = {
       ...processo,
-      valorOriginal: processo.valorOriginal ? Number(processo.valorOriginal) : null,
-      valorNegociado: processo.valorNegociado ? Number(processo.valorNegociado) : null,
       historicos,
+      valoresEspecificos,
       acordo: processo.acordo ? {
         ...processo.acordo,
         valorTotal: Number(processo.acordo.valorTotal),
@@ -253,8 +322,6 @@ export async function PUT(
       where: { id },
       data: {
         ...processoData,
-        valorOriginal: processoData.valorOriginal || 0,
-        valorNegociado: processoData.valorNegociado || null,
         updatedAt: new Date()
       },
       include: {
@@ -281,26 +348,20 @@ export async function PUT(
           numero: processoAtual.numero,
           tipo: processoAtual.tipo,
           status: processoAtual.status,
-          valorOriginal: processoAtual.valorOriginal,
-          valorNegociado: processoAtual.valorNegociado,
           observacoes: processoAtual.observacoes
         },
         dadosNovos: {
           numero: processoAtualizado.numero,
           tipo: processoAtualizado.tipo,
           status: processoAtualizado.status,
-          valorOriginal: processoAtualizado.valorOriginal,
-          valorNegociado: processoAtualizado.valorNegociado,
           observacoes: processoAtualizado.observacoes
         }
       }
     })
 
-    // Converter valores Decimal para number antes de retornar
+    // Retornar processo atualizado
     const processoAtualizadoSerializado = {
-      ...processoAtualizado,
-      valorOriginal: processoAtualizado.valorOriginal ? Number(processoAtualizado.valorOriginal) : null,
-      valorNegociado: processoAtualizado.valorNegociado ? Number(processoAtualizado.valorNegociado) : null
+      ...processoAtualizado
     }
 
     return NextResponse.json(processoAtualizadoSerializado)

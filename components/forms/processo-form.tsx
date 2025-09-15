@@ -32,9 +32,7 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
   } = useForm<ProcessoInput>({
     resolver: zodResolver(processoSchema),
     defaultValues: {
-      tipo: '',
-      valorOriginal: undefined,
-      valorNegociado: undefined
+      tipo: ''
     }
   })
 
@@ -137,37 +135,6 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="valorOriginal">Valor Original (R$) <span className="text-gray-500 text-sm"></span></Label>
-              <Input
-                id="valorOriginal"
-                type="number"
-                step="0.01"
-                placeholder="150000.00"
-                {...register('valorOriginal')}
-                disabled={isLoading}
-              />
-              {errors.valorOriginal && (
-                <p className="text-sm text-red-500">{errors.valorOriginal.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="valorNegociado">Valor Negociado (R$) <span className="text-gray-500 text-sm"></span></Label>
-              <Input
-                id="valorNegociado"
-                type="number"
-                step="0.01"
-                placeholder="120000.00"
-                {...register('valorNegociado')}
-                disabled={isLoading}
-              />
-              {errors.valorNegociado && (
-                <p className="text-sm text-red-500">{errors.valorNegociado.message}</p>
-              )}
-            </div>
-          </div>
 
           <div className="space-y-2">
             <Label htmlFor="observacoes">Observações</Label>

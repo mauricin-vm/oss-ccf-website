@@ -25,7 +25,6 @@ interface Processo {
   numero: string
   tipo: 'COMPENSACAO' | 'DACAO_PAGAMENTO' | 'TRANSACAO_EXCEPCIONAL'
   status: string
-  valorOriginal: number
   dataAbertura: string
   observacoes?: string
   contribuinte: {
@@ -77,7 +76,6 @@ export default function ProcessosPage() {
         numero: string;
         tipo: 'COMPENSACAO' | 'DACAO_PAGAMENTO' | 'TRANSACAO_EXCEPCIONAL';
         status: string;
-        valorOriginal: number;
         createdAt: string;
         observacoes?: string;
         contribuinte: { nome: string };
@@ -87,7 +85,6 @@ export default function ProcessosPage() {
         numero: processo.numero,
         tipo: processo.tipo,
         status: processo.status,
-        valorOriginal: Number(processo.valorOriginal),
         dataAbertura: processo.createdAt,
         observacoes: processo.observacoes,
         contribuinte: { nome: processo.contribuinte.nome },
@@ -348,14 +345,10 @@ export default function ProcessosPage() {
                       </Badge>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4" />
                         <span>{processo.contribuinte.nome}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        <span>{processo.valorOriginal.toLocaleString('pt-BR')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />

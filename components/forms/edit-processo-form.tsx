@@ -20,8 +20,6 @@ interface EditProcessoFormProps {
     id: string
     numero: string
     tipo: string
-    valorOriginal: number
-    valorNegociado?: number | null
     observacoes?: string | null
     contribuinte: {
       id: string
@@ -52,8 +50,6 @@ export default function EditProcessoForm({ processo }: EditProcessoFormProps) {
     defaultValues: {
       numero: processo.numero,
       tipo: processo.tipo,
-      valorOriginal: processo.valorOriginal ? Number(processo.valorOriginal) : undefined,
-      valorNegociado: processo.valorNegociado ? Number(processo.valorNegociado) : undefined,
       observacoes: processo.observacoes || '',
       contribuinte: {
         cpfCnpj: processo.contribuinte.cpfCnpj || '',
@@ -162,37 +158,6 @@ export default function EditProcessoForm({ processo }: EditProcessoFormProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="valorOriginal">Valor Original (R$)</Label>
-              <Input
-                id="valorOriginal"
-                type="number"
-                step="0.01"
-                placeholder="150000.00"
-                {...register('valorOriginal')}
-                disabled={isLoading}
-              />
-              {errors.valorOriginal && (
-                <p className="text-sm text-red-500">{errors.valorOriginal.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="valorNegociado">Valor Negociado (R$)</Label>
-              <Input
-                id="valorNegociado"
-                type="number"
-                step="0.01"
-                placeholder="120000.00"
-                {...register('valorNegociado')}
-                disabled={isLoading}
-              />
-              {errors.valorNegociado && (
-                <p className="text-sm text-red-500">{errors.valorNegociado.message}</p>
-              )}
-            </div>
-          </div>
 
           <div className="space-y-2">
             <Label htmlFor="observacoes">Observações</Label>

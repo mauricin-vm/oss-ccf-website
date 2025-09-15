@@ -36,6 +36,12 @@ interface Processo {
     tipo: string
     descricao: string
   }>
+  valoresEspecificos?: {
+    configurado: boolean
+    valorOriginal: number
+    valorFinal: number
+    detalhes?: any
+  }
 }
 
 export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
@@ -95,13 +101,53 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
         if (response.ok) {
           const processo = await response.json()
           if (['DEFERIDO', 'DEFERIDO_PARCIAL'].includes(processo.status)) {
-            setSelectedProcesso(processo)
+            
+            // Usar valores específicos se já estão no processo (vindos da API principal)
+            let valorOriginal = processo.valor || 0
+            let valorFinal = processo.valor || 0
+
+            if (processo.valoresEspecificos) {
+              if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && processo.valoresEspecificos.transacao) {
+                valorOriginal = processo.valoresEspecificos.transacao.valorTotalInscricoes
+                valorFinal = processo.valoresEspecificos.transacao.valorTotalProposto
+              } else if (processo.tipo === 'COMPENSACAO' && processo.valoresEspecificos.creditos && processo.valoresEspecificos.inscricoes) {
+                const totalCreditos = processo.valoresEspecificos.creditos.reduce((total, credito) => total + credito.valor, 0)
+                const totalDebitos = processo.valoresEspecificos.inscricoes.reduce((total, inscricao) =>
+                  total + (inscricao.debitos?.reduce((subtotal, debito) => subtotal + debito.valor, 0) || 0), 0
+                )
+                valorOriginal = Math.max(totalCreditos, totalDebitos)
+                valorFinal = Math.min(totalCreditos, totalDebitos) // O que será pago é o menor valor (compensação)
+              } else if (processo.tipo === 'DACAO_PAGAMENTO' && processo.valoresEspecificos.imoveis && processo.valoresEspecificos.inscricoes) {
+                const totalImoveis = processo.valoresEspecificos.imoveis.reduce((total, imovel) => total + (imovel.valorAvaliacao || 0), 0)
+                const totalDebitos = processo.valoresEspecificos.inscricoes.reduce((total, inscricao) =>
+                  total + (inscricao.debitos?.reduce((subtotal, debito) => subtotal + debito.valor, 0) || 0), 0
+                )
+                valorOriginal = totalDebitos
+                valorFinal = Math.min(totalImoveis, totalDebitos) // O que será quitado com dação
+              }
+            }
+
+            const processoComValores = {
+              ...processo,
+              valoresEspecificos: {
+                configurado: !!processo.valoresEspecificos,
+                valorOriginal,
+                valorFinal,
+                detalhes: processo.valoresEspecificos
+              }
+            }
+
+            setSelectedProcesso(processoComValores)
             setValue('processoId', processo.id)
-            setValue('valorTotal', processo.valor)
+            
+            // Usar valor dos valores específicos se disponível
+            const valorParaUsar = processoComValores.valoresEspecificos.valorFinal
+            setValue('valorTotal', valorParaUsar)
+            setValue('valorFinal', valorParaUsar)
             setValorCalculado({
-              original: processo.valor,
-              desconto: 0,
-              final: processo.valor
+              original: processoComValores.valoresEspecificos.valorOriginal,
+              desconto: processoComValores.valoresEspecificos.valorOriginal - valorParaUsar,
+              final: valorParaUsar
             })
           }
         }
@@ -185,9 +231,9 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
 
   const getTipoProcessoLabel = (tipo: string) => {
     switch (tipo) {
-      case 'compensacao': return 'Compensação'
-      case 'dacao': return 'Dação em Pagamento'
-      case 'transacao': return 'Transação Excepcional'
+      case 'COMPENSACAO': return 'Compensação'
+      case 'DACAO_PAGAMENTO': return 'Dação em Pagamento'
+      case 'TRANSACAO_EXCEPCIONAL': return 'Transação Excepcional'
       default: return tipo
     }
   }
@@ -356,6 +402,45 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Valores Específicos Configurados */}
+              {selectedProcesso.valoresEspecificos && (
+                <div className="mt-4 p-3 rounded border bg-gradient-to-r from-green-50 to-blue-50">
+                  <h5 className="text-sm font-medium text-green-900 mb-2 flex items-center gap-2">
+                    <Calculator className="h-4 w-4" />
+                    Valores Configurados para o Tipo de Processo
+                  </h5>
+                  
+                  {selectedProcesso.valoresEspecificos.configurado ? (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">Valor Original:</span>
+                          <p className="font-medium">
+                            R$ {selectedProcesso.valoresEspecificos.valorOriginal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Valor para Acordo:</span>
+                          <p className="font-bold text-green-700">
+                            R$ {selectedProcesso.valoresEspecificos.valorFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="text-xs text-green-700 bg-green-100 p-2 rounded">
+                        ✅ Os valores específicos para este tipo de processo ({getTipoProcessoLabel(selectedProcesso.tipo)}) 
+                        já foram configurados. O acordo será baseado nos valores configurados.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-amber-700 bg-amber-100 p-2 rounded">
+                      ⚠️ Os valores específicos para este tipo de processo ({getTipoProcessoLabel(selectedProcesso.tipo)}) 
+                      ainda não foram configurados. Será usado o valor original do processo.
+                    </div>
+                  )}
                 </div>
               )}
             </div>

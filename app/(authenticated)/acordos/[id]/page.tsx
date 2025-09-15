@@ -14,7 +14,9 @@ import {
   User,
   Building,
   Calculator,
-  CreditCard
+  CreditCard,
+  Home,
+  Settings
 } from 'lucide-react'
 import Link from 'next/link'
 import { SessionUser } from '@/types'
@@ -487,6 +489,116 @@ export default async function AcordoPage({ params }: AcordoPageProps) {
         </div>
       )}
 
+      {/* Informações Específicas por Tipo de Processo */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Detalhes Específicos do Acordo</CardTitle>
+          <CardDescription>
+            Informações baseadas no tipo de processo
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {acordo.processo.tipo === 'DACAO_PAGAMENTO' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Home className="h-5 w-5 text-purple-600" />
+                <h4 className="font-medium text-lg">Dação em Pagamento</h4>
+              </div>
+              <p className="text-gray-600 text-sm mb-4">
+                Este acordo envolve a dação de imóveis para abatimento de débitos tributários.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-purple-50 rounded-lg">
+                <div>
+                  <h5 className="font-medium text-purple-900 mb-2">Resumo da Dação:</h5>
+                  <ul className="text-sm space-y-1 text-purple-700">
+                    <li>• Imóveis oferecidos em dação</li>
+                    <li>• Inscrições imobiliárias e econômicas abatidas</li>
+                    <li>• Transferência de propriedade necessária</li>
+                  </ul>
+                </div>
+                <div>
+                  <h5 className="font-medium text-purple-900 mb-2">Status de Cumprimento:</h5>
+                  <Badge className="bg-yellow-100 text-yellow-800">
+                    Aguardando Transferência
+                  </Badge>
+                  <p className="text-xs text-purple-600 mt-1">
+                    Verificar documentação de transferência dos imóveis
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {acordo.processo.tipo === 'COMPENSACAO' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <CreditCard className="h-5 w-5 text-blue-600" />
+                <h4 className="font-medium text-lg">Compensação</h4>
+              </div>
+              <p className="text-gray-600 text-sm mb-4">
+                Este acordo envolve a compensação de créditos tributários ou precatórios.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg">
+                <div>
+                  <h5 className="font-medium text-blue-900 mb-2">Resumo da Compensação:</h5>
+                  <ul className="text-sm space-y-1 text-blue-700">
+                    <li>• Créditos/precatórios oferecidos</li>
+                    <li>• Inscrições compensadas</li>
+                    <li>• Validação de créditos necessária</li>
+                  </ul>
+                </div>
+                <div>
+                  <h5 className="font-medium text-blue-900 mb-2">Status de Cumprimento:</h5>
+                  <Badge className="bg-yellow-100 text-yellow-800">
+                    Aguardando Compensação
+                  </Badge>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Verificar validação dos créditos oferecidos
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {acordo.processo.tipo === 'TRANSACAO_EXCEPCIONAL' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Settings className="h-5 w-5 text-orange-600" />
+                <h4 className="font-medium text-lg">Transação Excepcional</h4>
+              </div>
+              <p className="text-gray-600 text-sm mb-4">
+                Este acordo possui condições especiais de pagamento negociadas.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-orange-50 rounded-lg">
+                <div>
+                  <h5 className="font-medium text-orange-900 mb-2">Condições Especiais:</h5>
+                  <ul className="text-sm space-y-1 text-orange-700">
+                    <li>• Descontos aplicados</li>
+                    <li>• Parcelamento diferenciado</li>
+                    <li>• Prazos estendidos</li>
+                  </ul>
+                </div>
+                <div>
+                  <h5 className="font-medium text-orange-900 mb-2">Status de Cumprimento:</h5>
+                  <Badge className={
+                    progresso.percentual === 100 ? "bg-green-100 text-green-800" :
+                    progresso.percentual > 0 ? "bg-blue-100 text-blue-800" :
+                    "bg-yellow-100 text-yellow-800"
+                  }>
+                    {progresso.percentual === 100 ? 'Cumprido' :
+                     progresso.percentual > 0 ? 'Em Andamento' :
+                     'Pendente'}
+                  </Badge>
+                  <p className="text-xs text-orange-600 mt-1">
+                    Acompanhar cumprimento das condições especiais
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Informações do Processo */}
       <Card>
         <CardHeader>
@@ -502,8 +614,8 @@ export default async function AcordoPage({ params }: AcordoPageProps) {
               <div>
                 <span className="text-gray-600">Tipo:</span>
                 <p className="font-medium">
-                  {acordo.processo.tipo === 'compensacao' ? 'Compensação' :
-                   acordo.processo.tipo === 'dacao' ? 'Dação em Pagamento' :
+                  {acordo.processo.tipo === 'COMPENSACAO' ? 'Compensação' :
+                   acordo.processo.tipo === 'DACAO_PAGAMENTO' ? 'Dação em Pagamento' :
                    'Transação Excepcional'}
                 </p>
               </div>

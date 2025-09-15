@@ -218,10 +218,10 @@ export default async function DashboardPage() {
                 <div className="space-y-1">
                   <p className="font-medium">{processo.numero}</p>
                   <p className="text-sm text-gray-600">
-                    {processo.contribuinte.nome} - {tipoProcessoMap[processo.tipo]}
+                    {processo.contribuinte.nome}
                   </p>
                   <p className="text-sm text-gray-500">
-                    Valor: R$ {processo.valorOriginal.toLocaleString('pt-BR')}
+                    {tipoProcessoMap[processo.tipo]} • {new Date(processo.dataAbertura).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

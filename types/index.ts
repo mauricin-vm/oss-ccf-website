@@ -7,6 +7,44 @@ export type ProcessoWithRelations = Processo & {
   tramitacoes?: Tramitacao[]
   acordo?: Acordo & {
     parcelas: Parcela[]
+    detalhes?: any[]
+  }
+  imoveis?: any[]
+  creditos?: any[]
+  valoresEspecificos?: {
+    id: string
+    creditos?: Array<{
+      id: string
+      valor: number
+      credito: any
+    }>
+    inscricoes?: Array<{
+      id: string
+      inscricao: any
+      debitos?: Array<{
+        id: string
+        valor: number
+        debito: any
+      }>
+    }>
+    imoveis?: Array<{
+      id: string
+      valorAvaliacao: number
+      imovel: {
+        id: string
+        endereco: string
+        valorAvaliacao?: number
+        [key: string]: any
+      }
+    }>
+    debitos?: Array<{
+      id: string
+      valor: number
+      debito: any
+    }>
+    valorOriginal?: number
+    valorNegociado?: number
+    valorEntrada?: number | null
   }
 }
 
