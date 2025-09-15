@@ -58,6 +58,23 @@ export async function GET(request: NextRequest) {
             include: {
               parcelas: true
             }
+          },
+          pautas: {
+            include: {
+              pauta: {
+                select: {
+                  id: true,
+                  numero: true,
+                  dataPauta: true,
+                  status: true
+                }
+              }
+            },
+            orderBy: {
+              pauta: {
+                dataPauta: 'desc'
+              }
+            }
           }
         },
         orderBy: { createdAt: 'desc' },
@@ -267,10 +284,15 @@ export async function POST(request: NextRequest) {
 
     // Criar histórico inicial do processo
     try {
-      await prisma.$queryRaw`
-        INSERT INTO "HistoricoProcesso" ("id", "processoId", "usuarioId", "titulo", "descricao", "tipo", "createdAt")
-        VALUES (gen_random_uuid(), ${processo.id}, ${user.id}, 'Processo Criado', ${`Processo ${processo.numero} foi criado no sistema`}, 'SISTEMA', ${processo.createdAt})
-      `
+      await prisma.historicoProcesso.create({
+        data: {
+          processoId: processo.id,
+          usuarioId: user.id,
+          titulo: 'Processo Criado',
+          descricao: `Processo ${processo.numero} foi criado no sistema`,
+          tipo: 'SISTEMA'
+        }
+      })
       console.log('Histórico inicial criado para o processo:', processo.id)
     } catch (error) {
       console.error('Erro ao criar histórico inicial:', error)

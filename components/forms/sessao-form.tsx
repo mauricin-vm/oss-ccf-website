@@ -30,6 +30,8 @@ interface Pauta {
   processos: Array<{
     ordem: number
     relator: string
+    distribuidoPara: string
+    revisores: string[]
     processo: {
       id: string
       numero: string
@@ -330,8 +332,26 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
                         <div className="flex-1">
                           <p className="font-medium">{processoPauta.processo.numero}</p>
                           <p className="text-xs text-gray-600">{processoPauta.processo.contribuinte.nome}</p>
+                          
+                          {/* Relator técnico (sempre) */}
                           {processoPauta.relator && (
-                            <p className="text-xs text-blue-600">Relator: {processoPauta.relator}</p>
+                            <p className="text-xs text-purple-600">
+                              Relator: {processoPauta.relator}
+                            </p>
+                          )}
+                          
+                          {/* Revisores */}
+                          {processoPauta.revisores && processoPauta.revisores.length > 0 && (
+                            <p className="text-xs text-blue-600">
+                              {processoPauta.revisores.length === 1 ? 'Revisor' : 'Revisores'}: {processoPauta.revisores.join(', ')}
+                            </p>
+                          )}
+                          
+                          {/* Distribuição (se diferente do relator) */}
+                          {processoPauta.distribuidoPara && processoPauta.distribuidoPara !== processoPauta.relator && (
+                            <p className="text-xs text-green-600">
+                              Distribuído para: {processoPauta.distribuidoPara}
+                            </p>
                           )}
                         </div>
                       </div>

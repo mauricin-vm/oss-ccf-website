@@ -308,6 +308,66 @@ export async function POST(
       }
 
       // Atualizar ProcessoPauta com informações específicas da sessão
+      const updateData: any = {
+        statusSessao: data.tipoResultado,
+        ataTexto: data.ataTexto || null,
+        motivoSuspensao: data.motivoSuspensao || null,
+        prazoVista: data.prazoVista ? new Date(data.prazoVista) : null,
+        prazoDiligencia: data.prazoDiligencia ? parseInt(data.prazoDiligencia) : null,
+        observacoesSessao: data.observacoes
+      }
+
+      // Atualizar revisores baseado no tipo de resultado
+      if (data.tipoResultado === 'PEDIDO_VISTA' && data.conselheiroPedidoVista) {
+        // Para pedido de vista, adicionar o conselheiro aos revisores
+        const processoPautaAtual = await tx.processoPauta.findFirst({
+          where: {
+            processoId: data.processoId,
+            pauta: {
+              sessao: {
+                id: id
+              }
+            }
+          }
+        })
+
+        if (processoPautaAtual) {
+          const revisoresAtuais = processoPautaAtual.revisores || []
+          // Adicionar o novo revisor se não estiver já na lista
+          if (!revisoresAtuais.includes(data.conselheiroPedidoVista)) {
+            updateData.revisores = [...revisoresAtuais, data.conselheiroPedidoVista]
+          }
+        }
+      } else if (data.votos && data.votos.length > 0) {
+        // Para qualquer resultado com votos, extrair revisores dos votos registrados
+        const revisoresDoVoto = data.votos
+          .filter((voto: any) => voto.tipoVoto === 'REVISOR')
+          .map((voto: any) => voto.nomeVotante)
+        
+        if (revisoresDoVoto.length > 0) {
+          // Buscar o registro atual para manter revisores existentes
+          const processoPautaAtual = await tx.processoPauta.findFirst({
+            where: {
+              processoId: data.processoId,
+              pauta: {
+                sessao: {
+                  id: id
+                }
+              }
+            }
+          })
+
+          if (processoPautaAtual) {
+            const revisoresAtuais = processoPautaAtual.revisores || []
+            // Combinar revisores existentes com os novos (sem duplicatas)
+            const todosRevisores = [...new Set([...revisoresAtuais, ...revisoresDoVoto])]
+            updateData.revisores = todosRevisores
+          } else {
+            updateData.revisores = revisoresDoVoto
+          }
+        }
+      }
+
       await tx.processoPauta.updateMany({
         where: {
           processoId: data.processoId,
@@ -317,14 +377,7 @@ export async function POST(
             }
           }
         },
-        data: {
-          statusSessao: data.tipoResultado,
-          ataTexto: data.ataTexto || null,
-          motivoSuspensao: data.motivoSuspensao || null,
-          prazoVista: data.prazoVista ? new Date(data.prazoVista) : null,
-          prazoDiligencia: data.prazoDiligencia ? parseInt(data.prazoDiligencia) : null,
-          observacoesSessao: data.observacoes
-        }
+        data: updateData
       })
 
       // Atualizar status do processo baseado no resultado

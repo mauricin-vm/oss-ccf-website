@@ -377,6 +377,14 @@ export default function EditarDecisaoForm({
                     R$ {(processo.processo.valorOriginal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
+                {processo.relator && (
+                  <p className="text-xs text-blue-600 mt-1">Relator: {processo.relator}</p>
+                )}
+                {processo.revisores && processo.revisores.length > 0 && (
+                  <p className="text-xs text-blue-600">
+                    Revisor{processo.revisores.length > 1 ? 'es' : ''}: {processo.revisores.join(', ')}
+                  </p>
+                )}
               </div>
             </div>
           </div>

@@ -77,8 +77,14 @@ export async function GET(
           orderBy: { createdAt: 'desc' }
         })
         
-        // Mantém relator, adiciona quem pediu vista como revisor
-        sugestao = ultimaDistribuicao.relator
+        // Por padrão, sugere o último revisor (quem pediu vista)
+        if (ultimaVista && ultimaVista.conselheiroPedidoVista) {
+          sugestao = ultimaVista.conselheiroPedidoVista
+        } else if (ultimaDistribuicao.revisores && ultimaDistribuicao.revisores.length > 0) {
+          sugestao = ultimaDistribuicao.revisores[ultimaDistribuicao.revisores.length - 1]
+        } else {
+          sugestao = ultimaDistribuicao.relator
+        }
         break
         
       default:
@@ -157,7 +163,7 @@ export async function GET(
         case 'PEDIDO_DILIGENCIA':
           return 'Sugerido último membro para cumprimento da diligência'
         case 'PEDIDO_VISTA':
-          return 'Mantido relator original, adicionado quem pediu vista como revisor'
+          return 'Sugerido último revisor (quem pediu vista). Relator original será mantido.'
         default:
           return 'Sugerido relator anterior'
       }

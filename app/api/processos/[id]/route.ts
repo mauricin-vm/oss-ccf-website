@@ -53,9 +53,27 @@ export async function GET(
         },
         decisoes: {
           include: {
-            sessao: true
+            sessao: {
+              include: {
+                pauta: true,
+                presidente: {
+                  select: {
+                    id: true,
+                    nome: true,
+                    email: true,
+                    cargo: true
+                  }
+                }
+              }
+            },
+            votos: {
+              include: {
+                conselheiro: true
+              },
+              orderBy: { ordemApresentacao: 'asc' }
+            }
           },
-          orderBy: { dataDecisao: 'desc' }
+          orderBy: { dataDecisao: 'asc' }
         },
         acordo: {
           include: {

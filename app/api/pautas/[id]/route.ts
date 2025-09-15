@@ -50,9 +50,23 @@ export async function GET(
                   include: {
                     contribuinte: true
                   }
+                },
+                votos: {
+                  include: {
+                    conselheiro: true
+                  },
+                  orderBy: { ordemApresentacao: 'asc' }
                 }
               },
-              orderBy: { dataDecisao: 'desc' }
+              orderBy: { createdAt: 'asc' }
+            },
+            presidente: {
+              select: {
+                id: true,
+                nome: true,
+                email: true,
+                cargo: true
+              }
             },
             conselheiros: {
               select: {

@@ -518,6 +518,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
               const isJulgado = !!decisao
               const cardBackground = getCardBackground(decisao)
               const resultadoDetails = getResultadoDetails(decisao)
+              
 
               return (
                 <div
@@ -543,6 +544,14 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                         <p className="text-sm text-gray-600">{processoPauta.processo.contribuinte.nome}</p>
                         {processoPauta.relator && (
                           <p className="text-sm text-blue-600">Relator: {processoPauta.relator}</p>
+                        )}
+                        {processoPauta.revisores && Array.isArray(processoPauta.revisores) && processoPauta.revisores.length > 0 && (
+                          <p className="text-sm text-blue-600">
+                            Revisor{processoPauta.revisores.length > 1 ? 'es' : ''}: {formatarListaNomes(processoPauta.revisores)}
+                          </p>
+                        )}
+                        {processoPauta.distribuidoPara && (
+                          <p className="text-sm text-green-600">Distribuição: {processoPauta.distribuidoPara}</p>
                         )}
                       </div>
                     </div>
@@ -611,6 +620,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                                             <span className="truncate font-medium">{voto.nomeVotante}</span>
                                           </div>
                                           <span className={`font-medium text-xs ${
+                                            voto.acompanhaVoto ? 'text-blue-600' :
                                             voto.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
                                             voto.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
                                             voto.posicaoVoto === 'PARCIAL' ? 'text-yellow-600' :

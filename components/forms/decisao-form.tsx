@@ -94,6 +94,7 @@ interface ProcessoPauta {
   ordem: number
   relator: string
   revisores: string[]
+  distribuidoPara: string
   processo: Processo
 }
 
@@ -373,6 +374,14 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                         {processoPauta.relator && (
                           <p className="text-xs text-blue-600">Relator: {processoPauta.relator}</p>
                         )}
+                        {processoPauta.revisores && processoPauta.revisores.length > 0 && (
+                          <p className="text-xs text-blue-600">
+                            Revisor{processoPauta.revisores.length > 1 ? 'es' : ''}: {formatarListaNomes(processoPauta.revisores)}
+                          </p>
+                        )}
+                        {processoPauta.distribuidoPara && (
+                          <p className="text-xs text-green-600">Distribuição: {processoPauta.distribuidoPara}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -396,6 +405,19 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                       <span className="text-sm text-blue-700">
                         R$ {(selectedProcesso.processo.valorOriginal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
+                    </div>
+                    <div className="mt-2 space-y-1">
+                      {selectedProcesso.relator && (
+                        <p className="text-xs text-blue-600">Relator: {selectedProcesso.relator}</p>
+                      )}
+                      {selectedProcesso.revisores && selectedProcesso.revisores.length > 0 && (
+                        <p className="text-xs text-blue-600">
+                          Revisor{selectedProcesso.revisores.length > 1 ? 'es' : ''}: {formatarListaNomes(selectedProcesso.revisores)}
+                        </p>
+                      )}
+                      {selectedProcesso.distribuidoPara && (
+                        <p className="text-xs text-green-600">Distribuição: {selectedProcesso.distribuidoPara}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -892,7 +914,10 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
           onConfirm={handleVotacaoConfirm}
           processo={selectedProcesso}
           conselheiros={conselheiros}
-          relatoresRevisores={selectedProcesso.relator ? [{ nome: selectedProcesso.relator, tipo: 'RELATOR' as const }] : []}
+          relatoresRevisores={[
+            ...(selectedProcesso.relator ? [{ nome: selectedProcesso.relator, tipo: 'RELATOR' as const }] : []),
+            ...(selectedProcesso.revisores ? selectedProcesso.revisores.map(revisor => ({ nome: revisor, tipo: 'REVISOR' as const })) : [])
+          ]}
           presidente={presidente}
         />
       )}

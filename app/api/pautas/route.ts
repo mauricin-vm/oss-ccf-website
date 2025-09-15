@@ -156,7 +156,41 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Remover verificação de status - qualquer processo pode ser pautado
+    // Buscar histórico de distribuição para cada processo
+    const processosComDistribuicao = await Promise.all(
+      data.processos.map(async (processoPauta) => {
+        const ultimaDistribuicao = await prisma.processoPauta.findFirst({
+          where: { processoId: processoPauta.processoId },
+          include: { pauta: true },
+          orderBy: { pauta: { dataPauta: 'desc' } }
+        })
+
+        let relator = processoPauta.relator
+        let distribuidoPara = processoPauta.relator
+        let revisores: string[] = []
+
+        if (ultimaDistribuicao) {
+          // Se existe histórico, manter o relator original
+          relator = ultimaDistribuicao.relator
+          revisores = [...(ultimaDistribuicao.revisores || [])]
+          
+          // Se o conselheiro escolhido não é relator nem revisor existente, adiciona aos revisores
+          if (processoPauta.relator !== relator && !revisores.includes(processoPauta.relator)) {
+            revisores = [...revisores, processoPauta.relator]
+          }
+          
+          distribuidoPara = processoPauta.relator
+        }
+
+        return {
+          processoId: processoPauta.processoId,
+          ordem: processoPauta.ordem,
+          relator,
+          distribuidoPara,
+          revisores
+        }
+      })
+    )
 
     // Criar a pauta
     const pauta = await prisma.pauta.create({
@@ -166,11 +200,7 @@ export async function POST(request: NextRequest) {
         status: 'aberta',
         observacoes: data.observacoes,
         processos: {
-          create: data.processos.map(p => ({
-            processoId: p.processoId,
-            ordem: p.ordem,
-            relator: p.relator
-          }))
+          create: processosComDistribuicao
         }
       },
       include: {
@@ -195,25 +225,25 @@ export async function POST(request: NextRequest) {
         data: { status: 'EM_PAUTA' }
       }),
       // Criar histórico para cada processo
-      ...data.processos.map((processoPauta) => {
-        const distribucaoInfo = processoPauta.relator ? ` - Distribuído para: ${processoPauta.relator}` : ''
+      ...processosComDistribuicao.map((processoPauta) => {
+        const distribucaoInfo = processoPauta.distribuidoPara ? ` - Distribuído para: ${processoPauta.distribuidoPara}` : ''
         return prisma.$queryRaw`
           INSERT INTO "HistoricoProcesso" ("id", "processoId", "usuarioId", "titulo", "descricao", "tipo", "createdAt")
           VALUES (gen_random_uuid(), ${processoPauta.processoId}, ${user.id}, ${'Processo incluído em pauta'}, ${`Processo incluído na ${data.numero} agendada para ${data.dataPauta.toLocaleDateString('pt-BR')}${distribucaoInfo}`}, ${'PAUTA'}, ${new Date()})
         `
       }),
       // Criar tramitações para cada processo na pauta (apenas se houver distribuição)
-      ...data.processos
-        .filter(processoPauta => processoPauta.relator) // Só criar tramitação se houver distribuição
+      ...processosComDistribuicao
+        .filter(processoPauta => processoPauta.distribuidoPara) // Só criar tramitação se houver distribuição
         .map((processoPauta) => {
           return prisma.tramitacao.create({
             data: {
               processoId: processoPauta.processoId,
               usuarioId: user.id,
               setorOrigem: 'CCF',
-              setorDestino: processoPauta.relator, // Nome da pessoa (conselheiro)
+              setorDestino: processoPauta.distribuidoPara, // Nome da pessoa (conselheiro)
               // Remover dataRecebimento - tramitação não deve ser marcada como concluída automaticamente
-              observacoes: `Processo distribuído na ${data.numero} para julgamento em ${data.dataPauta.toLocaleDateString('pt-BR')}`
+              observacoes: `Processo distribuído na ${data.numero} para julgamento em ${data.dataPauta.toLocaleDateString('pt-BR')}${processoPauta.revisores.length > 0 ? ` - Revisores: ${processoPauta.revisores.join(', ')}` : ''}`
             }
           })
         })
@@ -231,11 +261,11 @@ export async function POST(request: NextRequest) {
     })
 
     // Criar histórico para cada processo adicionado
-    if (data.processos.length > 0) {
+    if (processosComDistribuicao.length > 0) {
       await Promise.all(
-        data.processos.map((processoPauta) => {
+        processosComDistribuicao.map((processoPauta) => {
           const processo = processos.find(p => p.id === processoPauta.processoId)
-          const distribucaoInfo = processoPauta.relator ? ` - Distribuído para: ${processoPauta.relator}` : ''
+          const distribucaoInfo = processoPauta.distribuidoPara ? ` - Distribuído para: ${processoPauta.distribuidoPara}` : ''
           return prisma.historicoPauta.create({
             data: {
               pautaId: pauta.id,
@@ -259,7 +289,7 @@ export async function POST(request: NextRequest) {
         dadosNovos: {
           numero: pauta.numero,
           dataPauta: pauta.dataPauta,
-          totalProcessos: data.processos.length,
+          totalProcessos: processosComDistribuicao.length,
           processos: processos.map(p => ({
             numero: p.numero,
             contribuinte: p.contribuinte.nome

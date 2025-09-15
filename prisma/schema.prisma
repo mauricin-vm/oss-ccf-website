@@ -274,7 +274,8 @@ model ProcessoPauta {
   pauta             Pauta           @relation(fields: [pautaId], references: [id])
   
   ordem             Int
-  relator           String?
+  relator           String?         // Relator técnico (sempre o relator original)
+  distribuidoPara   String?         // Para quem foi distribuído o processo
   revisores         String[]        @default([])
   
   // Novo: status específico na sessão

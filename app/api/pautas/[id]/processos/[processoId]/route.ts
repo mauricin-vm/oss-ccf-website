@@ -69,7 +69,59 @@ export async function DELETE(
     }
 
     await prisma.$transaction(async (tx) => {
-      // Remover processo da pauta
+      // Buscar distribuição anterior (antes desta pauta)
+      const distribuicaoAnterior = await tx.processoPauta.findFirst({
+        where: { 
+          processoId,
+          pautaId: { not: pautaId }
+        },
+        include: {
+          pauta: true
+        },
+        orderBy: {
+          pauta: {
+            dataPauta: 'desc'
+          }
+        }
+      })
+
+      // Buscar última decisão para determinar status correto
+      const ultimaDecisao = await tx.decisao.findFirst({
+        where: { processoId },
+        orderBy: { createdAt: 'desc' }
+      })
+
+      // Determinar status e distribuição para reverter
+      let novoStatus = 'EM_ANALISE'
+      let observacaoReversao = ''
+
+      if (ultimaDecisao) {
+        // Se há decisão anterior, voltar ao status da decisão
+        switch (ultimaDecisao.tipoResultado) {
+          case 'SUSPENSO':
+            novoStatus = 'SUSPENSO'
+            break
+          case 'PEDIDO_VISTA':
+            novoStatus = 'PEDIDO_VISTA'
+            break
+          case 'PEDIDO_DILIGENCIA':
+            novoStatus = 'PEDIDO_DILIGENCIA'
+            break
+          case 'JULGADO':
+            if (ultimaDecisao.definirAcordo) {
+              novoStatus = 'ACORDO_FIRMADO'
+            } else {
+              novoStatus = 'JULGADO'
+            }
+            break
+        }
+        observacaoReversao = ` - Status revertido para: ${novoStatus}`
+      } else if (distribuicaoAnterior) {
+        // Se não há decisão mas há distribuição anterior, manter EM_ANALISE
+        observacaoReversao = ` - Processo retornado ao status anterior`
+      }
+
+      // Remover processo da pauta atual
       await tx.processoPauta.delete({
         where: {
           processoId_pautaId: {
@@ -97,10 +149,10 @@ export async function DELETE(
         })
       }
 
-      // Atualizar status do processo de volta para EM_ANALISE
+      // Atualizar status do processo baseado no histórico
       await tx.processo.update({
         where: { id: processoId },
-        data: { status: 'EM_ANALISE' }
+        data: { status: novoStatus as any }
       })
 
       // Criar histórico no processo
@@ -109,13 +161,10 @@ export async function DELETE(
           processoId,
           usuarioId: user.id,
           titulo: 'Processo removido de pauta',
-          descricao: `Processo removido da ${pauta.numero} agendada para ${pauta.dataPauta.toLocaleDateString('pt-BR')}`,
+          descricao: `Processo removido da ${pauta.numero} agendada para ${pauta.dataPauta.toLocaleDateString('pt-BR')}${observacaoReversao}`,
           tipo: 'PAUTA'
         }
       })
-
-      // Não criar tramitação automática na remoção
-      // O retorno deve ser feito manualmente pelo usuário quando necessário
 
       // Criar histórico na pauta
       await tx.historicoPauta.create({
@@ -123,7 +172,7 @@ export async function DELETE(
           pautaId,
           usuarioId: user.id,
           titulo: 'Processo removido',
-          descricao: `Processo ${processo.numero} removido da pauta`,
+          descricao: `Processo ${processo.numero} removido da pauta${observacaoReversao}`,
           tipo: 'PROCESSO_REMOVIDO'
         }
       })

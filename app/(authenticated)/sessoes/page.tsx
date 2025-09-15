@@ -42,7 +42,8 @@ interface Sessao {
   }
   decisoes: Array<{
     id: string
-    tipo: 'deferido' | 'indeferido' | 'parcial'
+    tipoResultado: 'SUSPENSO' | 'PEDIDO_VISTA' | 'PEDIDO_DILIGENCIA' | 'JULGADO'
+    tipoDecisao?: 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL'
     processo: {
       id: string
       numero: string
@@ -302,7 +303,7 @@ export default function SessoesPage() {
             <div className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-blue-600" />
               <div>
-                <p className="text-sm font-medium text-gray-600">Decisões</p>
+                <p className="text-sm font-medium text-gray-600">Resultados</p>
                 <p className="text-2xl font-bold">{totalDecisoes}</p>
               </div>
             </div>
@@ -374,7 +375,7 @@ export default function SessoesPage() {
                           />
                         </div>
                         <div className="text-xs text-gray-500">
-                          {progresso.julgados} de {progresso.total} processos julgados
+                          {progresso.julgados} de {progresso.total} processos analisados
                         </div>
                       </div>
 
@@ -394,34 +395,16 @@ export default function SessoesPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4" />
-                          <span>{sessao.decisoes.length} {sessao.decisoes.length !== 1 ? 'decisões' : 'decisão'}</span>
+                          <span>{sessao.decisoes.length} {sessao.decisoes.length !== 1 ? 'resultados' : 'resultado'}</span>
                         </div>
                       </div>
 
-                      {/* Conselheiros */}
-                      {sessao.conselheiros.length > 0 && (
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-900 mb-2">Conselheiros:</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {sessao.conselheiros.slice(0, 3).map((conselheiro) => (
-                              <Badge key={conselheiro.id} variant="outline" className="text-xs">
-                                {conselheiro.nome}
-                              </Badge>
-                            ))}
-                            {sessao.conselheiros.length > 3 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{sessao.conselheiros.length - 3} mais
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      )}
 
                       {/* Últimas Decisões */}
                       {sessao.decisoes.length > 0 && (
                         <div className="border-t pt-3">
                           <h4 className="text-sm font-medium text-gray-900 mb-2">
-                            Últimas Decisões:
+                            Últimos Resultados:
                           </h4>
                           <div className="space-y-1">
                             {sessao.decisoes.slice(0, 2).map((decisao) => (
@@ -434,20 +417,24 @@ export default function SessoesPage() {
                                 </Link>
                                 <Badge 
                                   className={
-                                    decisao.tipo === 'deferido' ? 'bg-green-100 text-green-800' :
-                                    decisao.tipo === 'indeferido' ? 'bg-red-100 text-red-800' :
-                                    'bg-yellow-100 text-yellow-800'
+                                    decisao.tipoResultado === 'JULGADO' ? 'bg-green-100 text-green-800' :
+                                    decisao.tipoResultado === 'PEDIDO_VISTA' ? 'bg-blue-100 text-blue-800' :
+                                    decisao.tipoResultado === 'PEDIDO_DILIGENCIA' ? 'bg-orange-100 text-orange-800' :
+                                    decisao.tipoResultado === 'SUSPENSO' ? 'bg-gray-100 text-gray-800' :
+                                    'bg-gray-100 text-gray-800'
                                   }
                                 >
-                                  {decisao.tipo === 'deferido' ? 'Deferido' :
-                                   decisao.tipo === 'indeferido' ? 'Indeferido' :
-                                   'Parcial'}
+                                  {decisao.tipoResultado === 'JULGADO' ? 'Julgado' :
+                                   decisao.tipoResultado === 'PEDIDO_VISTA' ? 'Pedido de vista' :
+                                   decisao.tipoResultado === 'PEDIDO_DILIGENCIA' ? 'Pedido de diligência' :
+                                   decisao.tipoResultado === 'SUSPENSO' ? 'Suspenso' :
+                                   'Julgado'}
                                 </Badge>
                               </div>
                             ))}
                             {sessao.decisoes.length > 2 && (
                               <div className="text-xs text-gray-500">
-                                ... e mais {sessao.decisoes.length - 2} {sessao.decisoes.length - 2 !== 1 ? 'decisões' : 'decisão'}
+                                ... e mais {sessao.decisoes.length - 2} {sessao.decisoes.length - 2 !== 1 ? 'resultados' : 'resultado'}
                               </div>
                             )}
                           </div>

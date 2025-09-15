@@ -212,6 +212,22 @@ export default function VotacaoModal({
     setVotosConselheiros(novosVotos)
   }
 
+  // Função auxiliar para resolver a posição real de um voto (incluindo "acompanha")
+  const resolverPosicaoVoto = (voto: VotoRelator): string => {
+    if (voto.posicao === 'ACOMPANHA' && voto.acompanhaVoto) {
+      // Encontrar o voto da pessoa que está sendo acompanhada
+      const votoAcompanhado = votosRelatores.find(v => v.nome === voto.acompanhaVoto)
+      if (votoAcompanhado) {
+        // Se a pessoa acompanhada também está acompanhando alguém, resolver recursivamente
+        return votoAcompanhado.posicao === 'ACOMPANHA' 
+          ? resolverPosicaoVoto(votoAcompanhado)
+          : votoAcompanhado.posicao
+      }
+      return 'DEFERIDO' // fallback
+    }
+    return voto.posicao
+  }
+
   const calcularResultado = (): ResultadoVotacao['resultado'] => {
     let deferidos = 0
     let indeferidos = 0
@@ -220,17 +236,14 @@ export default function VotacaoModal({
     let ausentes = 0
     let impedidos = 0
 
-    // Contar votos dos relatores (convertendo ACOMPANHA para o voto correspondente)
+    // Contar votos dos relatores (resolvendo ACOMPANHA corretamente)
     votosRelatores.forEach(voto => {
-      if (voto.posicao === 'ACOMPANHA') {
-        // Se acompanha alguém, precisa ver o voto dessa pessoa
-        // Por simplicidade, vamos contar como deferido se não especificado
+      const posicaoReal = resolverPosicaoVoto(voto)
+      if (posicaoReal === 'DEFERIDO') {
         deferidos++
-      } else if (voto.posicao === 'DEFERIDO') {
-        deferidos++
-      } else if (voto.posicao === 'INDEFERIDO') {
+      } else if (posicaoReal === 'INDEFERIDO') {
         indeferidos++
-      } else if (voto.posicao === 'PARCIAL') {
+      } else if (posicaoReal === 'PARCIAL') {
         parciais++
       }
     })
@@ -497,16 +510,16 @@ export default function VotacaoModal({
   }
 
   const renderEtapa2 = () => {
-    // Obter opções de voto baseadas nos votos dos relatores
-    const opcoesVoto = Array.from(new Set(votosRelatores.map(r => r.posicao === 'ACOMPANHA' ? 'DEFERIDO' : r.posicao)))
+    // Obter opções de voto baseadas nos votos dos relatores (resolvendo "acompanha")
+    const opcoesVoto = Array.from(new Set(votosRelatores.map(r => resolverPosicaoVoto(r))))
 
     // Se não há relatores, usar opções padrão
     const colunas = opcoesVoto.length > 0 ? opcoesVoto : ['DEFERIDO', 'INDEFERIDO', 'PARCIAL']
 
     // Mapear cada coluna com os relatores que votaram assim
     const colunasComRelatores = colunas.map(posicao => {
-      const relatoresComEssePosicao = votosRelatores.filter(r =>
-        (r.posicao === 'ACOMPANHA' ? 'DEFERIDO' : r.posicao) === posicao
+      const relatoresComEssePosicao = votosRelatores.filter(r => 
+        resolverPosicaoVoto(r) === posicao
       )
       return { posicao, relatores: relatoresComEssePosicao }
     })
@@ -558,11 +571,6 @@ export default function VotacaoModal({
                           <div className="flex items-center justify-center">
                             <span className="font-medium text-center">{relator.nome}</span>
                           </div>
-                          {relator.posicao === 'ACOMPANHA' && relator.acompanhaVoto && (
-                            <div className="text-xs text-blue-600 italic mt-1 text-center">
-                              (acompanha {relator.acompanhaVoto})
-                            </div>
-                          )}
                         </div>
                       ))}
                   </div>

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { SessionUser } from '@/types'
 import { z } from 'zod'
+import { formatarStatus } from '@/lib/utils'
 
 const statusSchema = z.object({
   status: z.enum([
@@ -91,20 +92,17 @@ export async function PUT(
       }
     })
 
-    // Criar histórico da mudança de status usando query raw
+    // Criar histórico da mudança de status
     try {
-      await prisma.$queryRaw`
-        INSERT INTO "HistoricoProcesso" ("id", "processoId", "usuarioId", "titulo", "descricao", "tipo", "createdAt")
-        VALUES (
-          gen_random_uuid(), 
-          ${id}, 
-          ${user.id}, 
-          'Status Alterado', 
-          ${`Status alterado de ${processoAtual.status} para ${status}`}, 
-          'ALTERACAO', 
-          NOW()
-        )
-      `
+      await prisma.historicoProcesso.create({
+        data: {
+          processoId: id,
+          usuarioId: user.id,
+          titulo: 'Status Alterado',
+          descricao: `Status alterado de ${formatarStatus(processoAtual.status)} para ${formatarStatus(status)}`,
+          tipo: 'ALTERACAO'
+        }
+      })
     } catch (error) {
       console.error('Erro ao criar histórico de mudança de status:', error)
     }

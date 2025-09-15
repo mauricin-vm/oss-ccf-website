@@ -162,6 +162,63 @@ export default function ProcessoDetalhesPage({ params }: Props) {
   const statusInfo = statusMap[processo.status] || { label: processo.status, color: 'bg-gray-100 text-gray-800', icon: AlertCircle }
   const StatusIcon = statusInfo.icon
 
+  const getResultadoBadge = (decisao: any) => {
+    if (!decisao) return null
+
+    switch (decisao.tipoResultado) {
+      case 'SUSPENSO':
+        return <Badge className="bg-yellow-100 text-yellow-800">Suspenso</Badge>
+      case 'PEDIDO_VISTA':
+        return <Badge className="bg-blue-100 text-blue-800">Pedido de vista</Badge>
+      case 'PEDIDO_DILIGENCIA':
+        return <Badge className="bg-orange-100 text-orange-800">Pedido de diligência</Badge>
+      case 'JULGADO':
+        const tipoDecisao = decisao.tipoDecisao
+        return (
+          <Badge
+            className={
+              tipoDecisao === 'DEFERIDO' ? 'bg-green-100 text-green-800' :
+              tipoDecisao === 'INDEFERIDO' ? 'bg-red-100 text-red-800' :
+              'bg-yellow-100 text-yellow-800'
+            }
+          >
+            {tipoDecisao === 'DEFERIDO' ? 'Deferido' :
+             tipoDecisao === 'INDEFERIDO' ? 'Indeferido' :
+             'Parcial'}
+          </Badge>
+        )
+      default:
+        return <Badge variant="outline">Aguardando</Badge>
+    }
+  }
+
+  const getCardBackground = (decisao: any) => {
+    if (!decisao) return 'bg-gray-50'
+
+    switch (decisao.tipoResultado) {
+      case 'SUSPENSO':
+        return 'bg-yellow-50 border-yellow-200'
+      case 'PEDIDO_VISTA':
+        return 'bg-blue-50 border-blue-200'
+      case 'PEDIDO_DILIGENCIA':
+        return 'bg-orange-50 border-orange-200'
+      case 'JULGADO':
+        return 'bg-green-50 border-green-200'
+      default:
+        return 'bg-gray-50'
+    }
+  }
+
+  const formatarListaNomes = (nomes: string[]): string => {
+    if (nomes.length === 0) return ''
+    if (nomes.length === 1) return nomes[0]
+    if (nomes.length === 2) return `${nomes[0]} e ${nomes[1]}`
+
+    const todosExcetoUltimo = nomes.slice(0, -1).join(', ')
+    const ultimo = nomes[nomes.length - 1]
+    return `${todosExcetoUltimo} e ${ultimo}`
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -266,109 +323,109 @@ export default function ProcessoDetalhesPage({ params }: Props) {
       <Tabs defaultValue="geral" className="space-y-4">
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="geral" className="cursor-pointer">Geral</TabsTrigger>
-          <TabsTrigger value="contribuinte" className="cursor-pointer">Contribuinte</TabsTrigger>
           <TabsTrigger value="tramitacoes" className="cursor-pointer">Tramitações</TabsTrigger>
-          <TabsTrigger value="documentos" className="cursor-pointer">Documentos</TabsTrigger>
+          <TabsTrigger value="julgamento" className="cursor-pointer">Julgamento</TabsTrigger>
           <TabsTrigger value="acordo" className="cursor-pointer">Acordo</TabsTrigger>
+          <TabsTrigger value="documentos" className="cursor-pointer">Documentos</TabsTrigger>
           <TabsTrigger value="historico" className="cursor-pointer">Histórico</TabsTrigger>
         </TabsList>
 
         <TabsContent value="geral">
-          <Card>
-            <CardHeader>
-              <CardTitle>Informações Gerais</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Número do Processo</Label>
-                  <p className="font-medium">{processo.numero}</p>
-                </div>
-                <div>
-                  <Label>Tipo de Processo</Label>
-                  <p className="font-medium">{tipoProcessoMap[processo.tipo].label}</p>
-                </div>
-                <div>
-                  <Label>Valor Original</Label>
-                  <p className="font-medium">R$ {processo.valorOriginal ? Number(processo.valorOriginal).toLocaleString('pt-BR') : '0,00'}</p>
-                </div>
-                {processo.valorNegociado && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Informações Gerais</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label>Valor Negociado</Label>
-                    <p className="font-medium">R$ {Number(processo.valorNegociado).toLocaleString('pt-BR')}</p>
+                    <Label>Número do Processo</Label>
+                    <p className="font-medium">{processo.numero}</p>
+                  </div>
+                  <div>
+                    <Label>Tipo de Processo</Label>
+                    <p className="font-medium">{tipoProcessoMap[processo.tipo].label}</p>
+                  </div>
+                  <div>
+                    <Label>Valor Original</Label>
+                    <p className="font-medium">R$ {processo.valorOriginal ? Number(processo.valorOriginal).toLocaleString('pt-BR') : '0,00'}</p>
+                  </div>
+                  {processo.valorNegociado && (
+                    <div>
+                      <Label>Valor Negociado</Label>
+                      <p className="font-medium">R$ {Number(processo.valorNegociado).toLocaleString('pt-BR')}</p>
+                    </div>
+                  )}
+                  <div>
+                    <Label>Data de Abertura</Label>
+                    <p className="font-medium">{new Date(processo.dataAbertura).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                  <div>
+                    <Label>Criado por</Label>
+                    <p className="font-medium">{processo.createdBy.name}</p>
+                  </div>
+                </div>
+                
+                {processo.observacoes && (
+                  <div>
+                    <Label>Observações</Label>
+                    <p className="mt-1 text-gray-700">{processo.observacoes}</p>
                   </div>
                 )}
-                <div>
-                  <Label>Data de Abertura</Label>
-                  <p className="font-medium">{new Date(processo.dataAbertura).toLocaleDateString('pt-BR')}</p>
-                </div>
-                <div>
-                  <Label>Criado por</Label>
-                  <p className="font-medium">{processo.createdBy.name}</p>
-                </div>
-              </div>
-              
-              {processo.observacoes && (
-                <div>
-                  <Label>Observações</Label>
-                  <p className="mt-1 text-gray-700">{processo.observacoes}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardContent>
+            </Card>
 
-        <TabsContent value="contribuinte">
-          <Card>
-            <CardHeader>
-              <CardTitle>Dados do Contribuinte</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Nome/Razão Social</Label>
-                  <p className="font-medium">{processo.contribuinte.nome}</p>
+            <Card>
+              <CardHeader>
+                <CardTitle>Dados do Contribuinte</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Nome/Razão Social</Label>
+                    <p className="font-medium">{processo.contribuinte.nome}</p>
+                  </div>
+                  <div>
+                    <Label>CPF/CNPJ</Label>
+                    <p className="font-medium">{processo.contribuinte.cpfCnpj}</p>
+                  </div>
+                  {processo.contribuinte.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-gray-500" />
+                      <div>
+                        <Label>Email</Label>
+                        <p className="font-medium">{processo.contribuinte.email}</p>
+                      </div>
+                    </div>
+                  )}
+                  {processo.contribuinte.telefone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-gray-500" />
+                      <div>
+                        <Label>Telefone</Label>
+                        <p className="font-medium">{processo.contribuinte.telefone}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <Label>CPF/CNPJ</Label>
-                  <p className="font-medium">{processo.contribuinte.cpfCnpj}</p>
-                </div>
-                {processo.contribuinte.email && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-gray-500" />
-                    <div>
-                      <Label>Email</Label>
-                      <p className="font-medium">{processo.contribuinte.email}</p>
+
+                {processo.contribuinte.endereco && (
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-gray-500 mt-1" />
+                    <div className="space-y-1">
+                      <Label>Endereço</Label>
+                      <p className="font-medium">{processo.contribuinte.endereco}</p>
+                      {(processo.contribuinte.cidade || processo.contribuinte.estado || processo.contribuinte.cep) && (
+                        <p className="text-sm text-gray-600">
+                          {processo.contribuinte.cidade}, {processo.contribuinte.estado} - {processo.contribuinte.cep}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
-                {processo.contribuinte.telefone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-gray-500" />
-                    <div>
-                      <Label>Telefone</Label>
-                      <p className="font-medium">{processo.contribuinte.telefone}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {processo.contribuinte.endereco && (
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-gray-500 mt-1" />
-                  <div className="space-y-1">
-                    <Label>Endereço</Label>
-                    <p className="font-medium">{processo.contribuinte.endereco}</p>
-                    {(processo.contribuinte.cidade || processo.contribuinte.estado || processo.contribuinte.cep) && (
-                      <p className="text-sm text-gray-600">
-                        {processo.contribuinte.cidade}, {processo.contribuinte.estado} - {processo.contribuinte.cep}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="tramitacoes">
@@ -451,6 +508,224 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="julgamento">
+          <Card>
+            <CardHeader>
+              <CardTitle>Histórico de Julgamento</CardTitle>
+              <CardDescription>
+                Resultados dos julgamentos deste processo nas sessões
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!processo.decisoes || processo.decisoes.length === 0 ? (
+                <div className="text-center py-8">
+                  <Gavel className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Nenhum julgamento registrado
+                  </h3>
+                  <p className="text-gray-600">
+                    Este processo ainda não foi julgado em nenhuma sessão.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {processo.decisoes
+                    .sort((a, b) => {
+                      return new Date(a.dataDecisao).getTime() - new Date(b.dataDecisao).getTime()
+                    })
+                    .map((decisao, index) => {
+                    const processoPauta = processo.pautas.find(p => p.pauta.id === decisao.sessao?.pauta?.id)
+                    const cardBackground = getCardBackground(decisao)
+
+                    return (
+                      <div
+                        key={decisao.id}
+                        className={`border rounded-lg p-4 ${cardBackground}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                              decisao.tipoResultado === 'JULGADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {index + 1}
+                            </span>
+                            <div>
+                              <Link
+                                href={`/sessoes/${decisao.sessao?.id}`}
+                                className="font-medium hover:text-blue-600"
+                              >
+                                Sessão de {decisao.sessao?.pauta ? new Date(decisao.sessao.pauta.dataPauta).toLocaleDateString('pt-BR') : new Date(decisao.dataDecisao).toLocaleDateString('pt-BR')}
+                              </Link>
+                              <p className="text-sm text-gray-600">
+                                Pauta: {decisao.sessao?.pauta?.numero || 'N/A'}
+                              </p>
+                              {processoPauta?.relator && (
+                                <p className="text-sm text-blue-600">Relator: {processoPauta.relator}</p>
+                              )}
+                              {processoPauta?.revisores && processoPauta.revisores.length > 0 && (
+                                <p className="text-sm text-blue-600">
+                                  Revisor{processoPauta.revisores.length > 1 ? 'es' : ''}: {processoPauta.revisores.join(', ')}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right space-y-2">
+                            <div className="space-y-2">
+                              {getResultadoBadge(decisao)}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 space-y-2">
+                          <div className="p-3 bg-white rounded border">
+                            <h5 className="text-sm font-medium mb-2">Ata:</h5>
+                            <p className="text-sm text-gray-700">{processoPauta?.ataTexto || 'Texto da ata não informado'}</p>
+
+                            {decisao.votos && decisao.votos.length > 0 && (
+                              <div className="mt-3 pt-2 border-t">
+                                <h6 className="text-xs font-medium text-gray-600 mb-3">Votos registrados:</h6>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {/* Relatores/Revisores */}
+                                  {decisao.votos.filter((voto: any) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto)).length > 0 && (
+                                    <Card className="p-3">
+                                      <div className="font-medium text-gray-800 mb-2 text-sm">Relatores/Revisores</div>
+                                      <div className="space-y-1">
+                                        {decisao.votos
+                                          .filter((voto: any) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto))
+                                          .map((voto: any, index: number) => (
+                                            <div key={index} className="flex items-center justify-between text-xs">
+                                              <div className="flex items-center gap-2">
+                                                <Badge variant={voto.tipoVoto === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
+                                                  {voto.tipoVoto === 'RELATOR' ? 'Relator' : 'Revisor'}
+                                                </Badge>
+                                                <span className="truncate font-medium">{voto.nomeVotante}</span>
+                                              </div>
+                                              <span className={`font-medium text-xs ${
+                                                voto.acompanhaVoto ? 'text-blue-600' :
+                                                voto.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
+                                                voto.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
+                                                voto.posicaoVoto === 'PARCIAL' ? 'text-yellow-600' :
+                                                'text-blue-600'
+                                              }`}>
+                                                {voto.acompanhaVoto
+                                                  ? `Acomp. ${voto.acompanhaVoto?.split(' ')[0]}`
+                                                  : voto.posicaoVoto}
+                                              </span>
+                                            </div>
+                                          ))}
+                                      </div>
+                                    </Card>
+                                  )}
+
+                                  {/* Conselheiros */}
+                                  <Card className="p-3">
+                                    <div className="font-medium text-gray-800 mb-3 text-sm">Conselheiros</div>
+                                    <div className="max-h-24 overflow-y-auto space-y-1">
+                                      {/* Votos válidos agrupados */}
+                                      {['DEFERIDO', 'INDEFERIDO', 'PARCIAL'].map(posicao => {
+                                        const conselheirosComEssePosicao = decisao.votos
+                                          .filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                          .map((voto: any) => voto.nomeVotante)
+
+                                        if (conselheirosComEssePosicao.length === 0) return null
+
+                                        return (
+                                          <div key={posicao} className="text-xs">
+                                            <span className={`font-medium ${
+                                              posicao === 'DEFERIDO' ? 'text-green-600' :
+                                              posicao === 'INDEFERIDO' ? 'text-red-600' :
+                                              'text-yellow-600'
+                                            }`}>
+                                              {posicao}:
+                                            </span>
+                                            <span className="ml-1 text-gray-700">
+                                              {formatarListaNomes(conselheirosComEssePosicao)}
+                                            </span>
+                                          </div>
+                                        )
+                                      })}
+
+                                      {/* Abstenções agrupadas */}
+                                      {decisao.votos.filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(voto.posicaoVoto)).length > 0 && (
+                                        <div className="border-t pt-1 mt-1">
+                                          {['AUSENTE', 'IMPEDIDO', 'ABSTENCAO'].map(posicao => {
+                                            const conselheirosComEssePosicao = decisao.votos
+                                              .filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                              .map((voto: any) => voto.nomeVotante)
+
+                                            if (conselheirosComEssePosicao.length === 0) return null
+
+                                            return (
+                                              <div key={posicao} className="text-xs">
+                                                <span className="font-medium text-gray-600">
+                                                  {posicao === 'ABSTENCAO' ? 'ABSTENÇÃO' :
+                                                   posicao === 'AUSENTE' ? 'AUSENTE' : 'IMPEDIDO'}:
+                                                </span>
+                                                <span className="ml-1 text-gray-600">
+                                                  {formatarListaNomes(conselheirosComEssePosicao)}
+                                                </span>
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </Card>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Voto do Presidente se houve empate */}
+                            {decisao.sessao?.presidente && decisao.votos.find((voto: any) =>
+                              voto.conselheiroId === decisao.sessao?.presidente?.id ||
+                              voto.nomeVotante === decisao.sessao?.presidente?.nome
+                            ) && (
+                              <Card className="p-3 mt-4 border-yellow-300 bg-yellow-50">
+                                <div className="font-medium text-gray-800 mb-2 text-sm flex items-center gap-2">
+                                  ⚖️ Voto de Desempate - Presidente
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700">
+                                      Presidente
+                                    </Badge>
+                                    <span className="truncate font-medium">{decisao.sessao.presidente.nome}</span>
+                                  </div>
+                                  <span className={`font-medium text-xs ${
+                                    decisao.votos.find((voto: any) =>
+                                      voto.conselheiroId === decisao.sessao?.presidente?.id ||
+                                      voto.nomeVotante === decisao.sessao?.presidente?.nome
+                                    )?.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
+                                    decisao.votos.find((voto: any) =>
+                                      voto.conselheiroId === decisao.sessao?.presidente?.id ||
+                                      voto.nomeVotante === decisao.sessao?.presidente?.nome
+                                    )?.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
+                                    'text-yellow-600'
+                                  }`}>
+                                    {decisao.votos.find((voto: any) =>
+                                      voto.conselheiroId === decisao.sessao?.presidente?.id ||
+                                      voto.nomeVotante === decisao.sessao?.presidente?.nome
+                                    )?.posicaoVoto}
+                                  </span>
+                                </div>
+                              </Card>
+                            )}
+
+                            <p className="text-xs text-gray-500 mt-2">
+                              Registrada em {new Date(decisao.dataDecisao).toLocaleString('pt-BR')}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </CardContent>

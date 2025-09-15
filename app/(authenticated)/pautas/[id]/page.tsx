@@ -52,6 +52,7 @@ export default function PautaDetalhesPage({
   const [selectedProcess, setSelectedProcess] = useState<ProcessoWithRelations | null>(null)
   const [conselheiro, setConselheiro] = useState('')
   const [conselheiros, setConselheiros] = useState<PrismaUser[]>([])
+  const [distribuicaoInfo, setDistribuicaoInfo] = useState<any>(null)
 
   useEffect(() => {
     params.then(p => setId(p.id))
@@ -130,7 +131,8 @@ export default function PautaDetalhesPage({
     }
 
     try {
-      const response = await fetch(`/api/processos?search=${encodeURIComponent(searchTerm)}&limit=10`)
+      // Buscar processos com informações de pautas anteriores (igual à criação de pauta)
+      const response = await fetch(`/api/processos?search=${encodeURIComponent(searchTerm)}&limit=10&includePautas=true`)
       if (response.ok) {
         const data = await response.json()
         // Filtrar processos que já não estão na pauta
@@ -141,6 +143,55 @@ export default function PautaDetalhesPage({
     } catch (error) {
       console.error('Erro ao buscar processos:', error)
     }
+  }
+
+  const fetchDistribuicaoInfo = async (processoId: string, status: string) => {
+    try {
+      const response = await fetch(`/api/processos/${processoId}/distribuicao?status=${encodeURIComponent(status)}`)
+      if (response.ok) {
+        const data = await response.json()
+        setDistribuicaoInfo(data)
+        
+        // Definir sugestão automaticamente se existir
+        if (data.sugestao) {
+          setConselheiro(data.sugestao)
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao buscar informações de distribuição:', error)
+      setDistribuicaoInfo(null)
+    }
+  }
+
+  const handleSelectProcess = async (processo: ProcessoWithRelations) => {
+    setSelectedProcess(processo)
+    setDistribuicaoInfo(null)
+    
+    // Preencher automaticamente com conselheiro correto para distribuição
+    const conselheiroParaDistribuicao = getConselheiroParaDistribuicao(processo)
+    setConselheiro(conselheiroParaDistribuicao)
+    
+    // Ainda buscar informações de distribuição para contexto
+    await fetchDistribuicaoInfo(processo.id, processo.status)
+  }
+
+  // Funções iguais às da criação de pauta
+  const getUltimaPautaInfo = (processo: any) => {
+    if (!processo.pautas || processo.pautas.length === 0) return null
+    return processo.pautas[0] // Já vem ordenado por data desc na API
+  }
+
+  const getConselheiroParaDistribuicao = (processo: any) => {
+    const ultimaPauta = getUltimaPautaInfo(processo)
+    if (!ultimaPauta) return ''
+
+    // Regra: Se houver revisores, pegar o último; senão pegar o relator
+    if (ultimaPauta.revisores && ultimaPauta.revisores.length > 0) {
+      return ultimaPauta.revisores[ultimaPauta.revisores.length - 1]
+    }
+
+    // Se não houver revisor, pegar o relator
+    return ultimaPauta.relator || ''
   }
 
   const handleAddProcesso = async () => {
@@ -172,6 +223,7 @@ export default function PautaDetalhesPage({
       setConselheiro('')
       setSearchProcess('')
       setAvailableProcesses([])
+      setDistribuicaoInfo(null)
       setIsAddProcessModalOpen(false)
 
       // Recarregar dados da pauta
@@ -208,14 +260,131 @@ export default function PautaDetalhesPage({
   }
 
   const statusProcessoMap = {
+    RECEPCIONADO: { label: 'Recepcionado', color: 'bg-gray-100 text-gray-800' },
+    EM_ANALISE: { label: 'Em Análise', color: 'bg-blue-100 text-blue-800' },
     EM_PAUTA: { label: 'Em Pauta', color: 'bg-purple-100 text-purple-800' },
-    JULGADO: { label: 'Julgado', color: 'bg-indigo-100 text-indigo-800' }
+    SUSPENSO: { label: 'Suspenso', color: 'bg-yellow-100 text-yellow-800' },
+    PEDIDO_VISTA: { label: 'Pedido de vista', color: 'bg-blue-100 text-blue-800' },
+    PEDIDO_DILIGENCIA: { label: 'Pedido de diligência', color: 'bg-orange-100 text-orange-800' },
+    JULGADO: { label: 'Julgado', color: 'bg-indigo-100 text-indigo-800' },
+    ACORDO_FIRMADO: { label: 'Acordo Firmado', color: 'bg-green-100 text-green-800' },
+    EM_CUMPRIMENTO: { label: 'Em Cumprimento', color: 'bg-orange-100 text-orange-800' },
+    ARQUIVADO: { label: 'Arquivado', color: 'bg-gray-100 text-gray-800' }
   }
 
   const decisaoMap = {
     deferido: { label: 'Deferido', color: 'bg-green-100 text-green-800' },
     indeferido: { label: 'Indeferido', color: 'bg-red-100 text-red-800' },
     parcial: { label: 'Parcialmente Deferido', color: 'bg-yellow-100 text-yellow-800' }
+  }
+
+  const tipoResultadoMap = {
+    SUSPENSO: { label: 'Suspenso', color: 'bg-yellow-100 text-yellow-800' },
+    PEDIDO_VISTA: { label: 'Pedido de vista', color: 'bg-blue-100 text-blue-800' },
+    PEDIDO_DILIGENCIA: { label: 'Pedido de diligência', color: 'bg-orange-100 text-orange-800' },
+    JULGADO: { label: 'Julgado', color: 'bg-green-100 text-green-800' }
+  }
+
+  const getResultadoBadge = (decisao: any) => {
+    if (!decisao) return null
+
+    switch (decisao.tipoResultado) {
+      case 'SUSPENSO':
+        return <Badge className="bg-yellow-100 text-yellow-800">Suspenso</Badge>
+      case 'PEDIDO_VISTA':
+        return <Badge className="bg-blue-100 text-blue-800">Pedido de vista</Badge>
+      case 'PEDIDO_DILIGENCIA':
+        return <Badge className="bg-orange-100 text-orange-800">Pedido de diligência</Badge>
+      case 'JULGADO':
+        const tipoDecisao = decisao.tipoDecisao
+        return (
+          <Badge
+            className={
+              tipoDecisao === 'DEFERIDO' ? 'bg-green-100 text-green-800' :
+              tipoDecisao === 'INDEFERIDO' ? 'bg-red-100 text-red-800' :
+              'bg-yellow-100 text-yellow-800'
+            }
+          >
+            {tipoDecisao === 'DEFERIDO' ? 'Deferido' :
+             tipoDecisao === 'INDEFERIDO' ? 'Indeferido' :
+             'Parcial'}
+          </Badge>
+        )
+      default:
+        return <Badge variant="outline">Aguardando</Badge>
+    }
+  }
+
+  const getCardBackground = (decisao: any) => {
+    if (!decisao) return 'bg-gray-50'
+
+    switch (decisao.tipoResultado) {
+      case 'SUSPENSO':
+        return 'bg-yellow-50 border-yellow-200'
+      case 'PEDIDO_VISTA':
+        return 'bg-blue-50 border-blue-200'
+      case 'PEDIDO_DILIGENCIA':
+        return 'bg-orange-50 border-orange-200'
+      case 'JULGADO':
+        return 'bg-green-50 border-green-200'
+      default:
+        return 'bg-gray-50'
+    }
+  }
+
+  const getResultadoDetails = (decisao: any) => {
+    if (!decisao) return null
+
+    const details = []
+
+    switch (decisao.tipoResultado) {
+      case 'SUSPENSO':
+        if (decisao.motivoSuspensao) {
+          details.push(`Motivo: ${decisao.motivoSuspensao}`)
+        }
+        break
+      case 'PEDIDO_VISTA':
+        if (decisao.conselheiroPedidoVista) {
+          details.push(`Solicitado por: ${decisao.conselheiroPedidoVista}`)
+        }
+        if (decisao.prazoVista) {
+          details.push(`Prazo: ${new Date(decisao.prazoVista).toLocaleDateString('pt-BR')}`)
+        }
+        break
+      case 'PEDIDO_DILIGENCIA':
+        if (decisao.especificacaoDiligencia) {
+          details.push(`Especificação: ${decisao.especificacaoDiligencia}`)
+        }
+        if (decisao.prazoDiligencia) {
+          details.push(`Prazo: ${new Date(decisao.prazoDiligencia).toLocaleDateString('pt-BR')}`)
+        }
+        break
+      case 'JULGADO':
+        if (decisao.definirAcordo) {
+          details.push('Processo seguirá para análise de acordo')
+          if (decisao.tipoAcordo) {
+            const tiposAcordo = {
+              'aceita_proposta': 'Aceita proposta da prefeitura',
+              'contra_proposta': 'Fará contra-proposta',
+              'sem_acordo': 'Não há possibilidade de acordo'
+            }
+            details.push(`Tipo: ${tiposAcordo[decisao.tipoAcordo] || decisao.tipoAcordo}`)
+          }
+        }
+        break
+    }
+
+    return details
+  }
+
+  const formatarListaNomes = (nomes: string[]): string => {
+    if (nomes.length === 0) return ''
+    if (nomes.length === 1) return nomes[0]
+    if (nomes.length === 2) return `${nomes[0]} e ${nomes[1]}`
+
+    const todosExcetoUltimo = nomes.slice(0, -1).join(', ')
+    const ultimo = nomes[nomes.length - 1]
+    return `${todosExcetoUltimo} e ${ultimo}`
   }
 
   const user = session?.user as SessionUser
@@ -448,9 +617,9 @@ export default function PautaDetalhesPage({
                             </div>
                           </div>
 
-                          {processoPauta.relator && (
+                          {processoPauta.distribuidoPara && (
                             <div className="text-sm">
-                              <strong>Distribuição:</strong> {processoPauta.relator}
+                              <strong>Distribuição:</strong> {processoPauta.distribuidoPara}
                             </div>
                           )}
 
@@ -587,37 +756,193 @@ export default function PautaDetalhesPage({
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {pauta.sessao.decisoes.map((decisao) => (
-                    <div key={decisao.id} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <Link
-                            href={`/processos/${decisao.processo.id}`}
-                            className="font-semibold hover:text-blue-600"
-                          >
-                            {decisao.processo.numero}
-                          </Link>
-                          <p className="text-sm text-gray-600">{decisao.processo.contribuinte.nome}</p>
+                <div className="space-y-3">
+                  {pauta.sessao.decisoes
+                    .sort((a, b) => {
+                      const ordemA = pauta.processos.find(p => p.processo.id === a.processoId)?.ordem || 999
+                      const ordemB = pauta.processos.find(p => p.processo.id === b.processoId)?.ordem || 999
+                      return ordemA - ordemB
+                    })
+                    .map((decisao) => {
+                    const processoPauta = pauta.processos.find(p => p.processo.id === decisao.processoId)
+                    const cardBackground = getCardBackground(decisao)
+                    const resultadoDetails = getResultadoDetails(decisao)
+
+                    return (
+                      <div
+                        key={decisao.id}
+                        className={`border rounded-lg p-4 ${cardBackground}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                              decisao.tipoResultado === 'JULGADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {processoPauta?.ordem || '?'}
+                            </span>
+                            <div>
+                              <Link
+                                href={`/processos/${decisao.processo.id}`}
+                                className="font-medium hover:text-blue-600"
+                              >
+                                {decisao.processo.numero}
+                              </Link>
+                              <p className="text-sm text-gray-600">{decisao.processo.contribuinte.nome}</p>
+                              {processoPauta?.relator && (
+                                <p className="text-sm text-blue-600">Relator: {processoPauta.relator}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right space-y-2">
+                            <div className="space-y-2">
+                              {getResultadoBadge(decisao)}
+                            </div>
+                          </div>
                         </div>
-                        <Badge className={decisao.tipoDecisao ? decisaoMap[decisao.tipoDecisao.toLowerCase() as keyof typeof decisaoMap]?.color || 'bg-gray-100 text-gray-800' : 'bg-gray-100 text-gray-800'}>
-                          {decisao.tipoDecisao ? decisaoMap[decisao.tipoDecisao.toLowerCase() as keyof typeof decisaoMap]?.label || decisao.tipoDecisao : 'Sem decisão'}
-                        </Badge>
-                      </div>
 
-                      <div className="bg-gray-50 p-3 rounded">
-                        <h5 className="font-medium mb-2">Observações:</h5>
-                        <p className="text-sm whitespace-pre-wrap">{decisao.observacoes}</p>
-                      </div>
+                        <div className="mt-3 space-y-2">
+                          <div className="p-3 bg-white rounded border">
+                            <h5 className="text-sm font-medium mb-2">Ata:</h5>
+                            <p className="text-sm text-gray-700">{processoPauta?.ataTexto || 'Texto da ata não informado'}</p>
 
-                      <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
-                        <span>Decidido em {new Date(decisao.dataDecisao).toLocaleString('pt-BR')}</span>
-                        {decisao.numeroAcordao && (
-                          <span>Acórdão: {decisao.numeroAcordao}</span>
-                        )}
+                            {decisao.votos && decisao.votos.length > 0 && (
+                              <div className="mt-3 pt-2 border-t">
+                                <h6 className="text-xs font-medium text-gray-600 mb-3">Votos registrados:</h6>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {/* Relatores/Revisores */}
+                                  {decisao.votos.filter((voto: any) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto)).length > 0 && (
+                                    <Card className="p-3">
+                                      <div className="font-medium text-gray-800 mb-2 text-sm">Relatores/Revisores</div>
+                                      <div className="space-y-1">
+                                        {decisao.votos
+                                          .filter((voto: any) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto))
+                                          .map((voto: any, index: number) => (
+                                            <div key={index} className="flex items-center justify-between text-xs">
+                                              <div className="flex items-center gap-2">
+                                                <Badge variant={voto.tipoVoto === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
+                                                  {voto.tipoVoto === 'RELATOR' ? 'Relator' : 'Revisor'}
+                                                </Badge>
+                                                <span className="truncate font-medium">{voto.nomeVotante}</span>
+                                              </div>
+                                              <span className={`font-medium text-xs ${
+                                                voto.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
+                                                voto.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
+                                                voto.posicaoVoto === 'PARCIAL' ? 'text-yellow-600' :
+                                                'text-blue-600'
+                                              }`}>
+                                                {voto.acompanhaVoto
+                                                  ? `Acomp. ${voto.acompanhaVoto?.split(' ')[0]}`
+                                                  : voto.posicaoVoto}
+                                              </span>
+                                            </div>
+                                          ))}
+                                      </div>
+                                    </Card>
+                                  )}
+
+                                  {/* Conselheiros */}
+                                  <Card className="p-3">
+                                    <div className="font-medium text-gray-800 mb-3 text-sm">Conselheiros</div>
+                                    <div className="max-h-24 overflow-y-auto space-y-1">
+                                      {/* Votos válidos agrupados */}
+                                      {['DEFERIDO', 'INDEFERIDO', 'PARCIAL'].map(posicao => {
+                                        const conselheirosComEssePosicao = decisao.votos
+                                          .filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                          .map((voto: any) => voto.nomeVotante)
+
+                                        if (conselheirosComEssePosicao.length === 0) return null
+
+                                        return (
+                                          <div key={posicao} className="text-xs">
+                                            <span className={`font-medium ${
+                                              posicao === 'DEFERIDO' ? 'text-green-600' :
+                                              posicao === 'INDEFERIDO' ? 'text-red-600' :
+                                              'text-yellow-600'
+                                            }`}>
+                                              {posicao}:
+                                            </span>
+                                            <span className="ml-1 text-gray-700">
+                                              {formatarListaNomes(conselheirosComEssePosicao)}
+                                            </span>
+                                          </div>
+                                        )
+                                      })}
+
+                                      {/* Abstenções agrupadas */}
+                                      {decisao.votos.filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(voto.posicaoVoto)).length > 0 && (
+                                        <div className="border-t pt-1 mt-1">
+                                          {['AUSENTE', 'IMPEDIDO', 'ABSTENCAO'].map(posicao => {
+                                            const conselheirosComEssePosicao = decisao.votos
+                                              .filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                              .map((voto: any) => voto.nomeVotante)
+
+                                            if (conselheirosComEssePosicao.length === 0) return null
+
+                                            return (
+                                              <div key={posicao} className="text-xs">
+                                                <span className="font-medium text-gray-600">
+                                                  {posicao === 'ABSTENCAO' ? 'ABSTENÇÃO' :
+                                                   posicao === 'AUSENTE' ? 'AUSENTE' : 'IMPEDIDO'}:
+                                                </span>
+                                                <span className="ml-1 text-gray-600">
+                                                  {formatarListaNomes(conselheirosComEssePosicao)}
+                                                </span>
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </Card>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Voto do Presidente se houve empate */}
+                            {pauta.sessao?.presidente && decisao.votos.find((voto: any) =>
+                              voto.conselheiroId === pauta.sessao?.presidente?.id ||
+                              voto.nomeVotante === pauta.sessao?.presidente?.nome
+                            ) && (
+                              <Card className="p-3 mt-4 border-yellow-300 bg-yellow-50">
+                                <div className="font-medium text-gray-800 mb-2 text-sm flex items-center gap-2">
+                                  ⚖️ Voto de Desempate - Presidente
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700">
+                                      Presidente
+                                    </Badge>
+                                    <span className="truncate font-medium">{pauta.sessao?.presidente?.nome}</span>
+                                  </div>
+                                  <span className={`font-medium text-xs ${
+                                    decisao.votos.find((voto: any) =>
+                                      voto.conselheiroId === pauta.sessao?.presidente?.id ||
+                                      voto.nomeVotante === pauta.sessao?.presidente?.nome
+                                    )?.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
+                                    decisao.votos.find((voto: any) =>
+                                      voto.conselheiroId === pauta.sessao?.presidente?.id ||
+                                      voto.nomeVotante === pauta.sessao?.presidente?.nome
+                                    )?.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
+                                    'text-yellow-600'
+                                  }`}>
+                                    {decisao.votos.find((voto: any) =>
+                                      voto.conselheiroId === pauta.sessao?.presidente?.id ||
+                                      voto.nomeVotante === pauta.sessao?.presidente?.nome
+                                    )?.posicaoVoto}
+                                  </span>
+                                </div>
+                              </Card>
+                            )}
+
+                            <p className="text-xs text-gray-500 mt-2">
+                              Registrada em {new Date(decisao.dataDecisao).toLocaleString('pt-BR')}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </CardContent>
@@ -730,26 +1055,47 @@ export default function PautaDetalhesPage({
                   {availableProcesses.map((processo) => (
                     <div
                       key={processo.id}
-                      onClick={() => setSelectedProcess(processo)}
+                      onClick={() => handleSelectProcess(processo)}
                       className={`p-3 cursor-pointer border-b last:border-b-0 hover:bg-gray-50 ${selectedProcess?.id === processo.id ? 'bg-blue-50 border-blue-200' : ''
                         }`}
                     >
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{processo.numero}</p>
-                          <p className="text-sm text-gray-600">{processo.contribuinte.nome}</p>
-                          <div className="flex items-center space-x-2">
-                            <DollarSign className="h-4 w-4 text-muted-foreground" />
-                            R$ <span>{processo.valorOriginal.toLocaleString('pt-BR')}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium">{processo.numero}</p>
+                            <Badge className={statusProcessoMap[processo.status as keyof typeof statusProcessoMap]?.color || 'bg-gray-100 text-gray-800'}>
+                              {statusProcessoMap[processo.status as keyof typeof statusProcessoMap]?.label || processo.status}
+                            </Badge>
                           </div>
+                          <p className="text-sm text-gray-600">{processo.contribuinte.nome}</p>
+                          <p className="text-xs text-gray-500 mb-1">
+                            {tipoProcessoMap[processo.tipo as keyof typeof tipoProcessoMap]} -
+                            R$ {processo.valorOriginal.toLocaleString('pt-BR')}
+                          </p>
+                          
+                          {/* Informações da última pauta - EXATAMENTE igual ao pauta-form */}
+                          {(() => {
+                            const ultimaPauta = getUltimaPautaInfo(processo)
+                            if (ultimaPauta) {
+                              return (
+                                <div className="text-xs text-blue-600 bg-blue-50 p-1 rounded mt-1">
+                                  <p className="font-medium">Já pautado em: {new Date(ultimaPauta.pauta.dataPauta).toLocaleDateString('pt-BR')}</p>
+                                  {ultimaPauta.relator && (
+                                    <p>Relator: {ultimaPauta.relator}</p>
+                                  )}
+                                  {ultimaPauta.revisores && ultimaPauta.revisores.length > 0 && (
+                                    <p>Revisor{ultimaPauta.revisores.length > 1 ? 'es' : ''}: {ultimaPauta.revisores.join(', ')}</p>
+                                  )}
+                                </div>
+                              )
+                            }
+                            return null
+                          })()}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 ml-4">
                           {selectedProcess?.id === processo.id && (
                             <Check className="h-4 w-4 text-blue-600" />
                           )}
-                          <Badge className="bg-gray-100 text-gray-800">
-                            {processo.status}
-                          </Badge>
                         </div>
                       </div>
                     </div>
@@ -762,8 +1108,36 @@ export default function PautaDetalhesPage({
               <div className="space-y-2">
                 <Label>Processo Selecionado</Label>
                 <div className="p-3 bg-blue-50 rounded-lg">
-                  <p className="font-medium">{selectedProcess.numero}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-medium">{selectedProcess.numero}</p>
+                    <Badge className={statusProcessoMap[selectedProcess.status as keyof typeof statusProcessoMap]?.color || 'bg-gray-100 text-gray-800'}>
+                      {statusProcessoMap[selectedProcess.status as keyof typeof statusProcessoMap]?.label || selectedProcess.status}
+                    </Badge>
+                  </div>
                   <p className="text-sm text-gray-600">{selectedProcess.contribuinte.nome}</p>
+                  <p className="text-xs text-gray-500">
+                    {tipoProcessoMap[selectedProcess.tipo as keyof typeof tipoProcessoMap]} -
+                    R$ {selectedProcess.valorOriginal.toLocaleString('pt-BR')}
+                  </p>
+                  
+                  {/* Informações da última pauta - igual ao pauta-form */}
+                  {(() => {
+                    const ultimaPauta = getUltimaPautaInfo(selectedProcess)
+                    if (ultimaPauta) {
+                      return (
+                        <div className="text-xs text-blue-600 bg-blue-50 p-1 rounded mt-1">
+                          <p className="font-medium">Já pautado em: {new Date(ultimaPauta.pauta.dataPauta).toLocaleDateString('pt-BR')}</p>
+                          {ultimaPauta.relator && (
+                            <p>Relator: {ultimaPauta.relator}</p>
+                          )}
+                          {ultimaPauta.revisores && ultimaPauta.revisores.length > 0 && (
+                            <p>Revisor{ultimaPauta.revisores.length > 1 ? 'es' : ''}: {ultimaPauta.revisores.join(', ')}</p>
+                          )}
+                        </div>
+                      )
+                    }
+                    return null
+                  })()}
                 </div>
               </div>
             )}
@@ -794,6 +1168,7 @@ export default function PautaDetalhesPage({
                 setConselheiro('')
                 setSearchProcess('')
                 setAvailableProcesses([])
+                setDistribuicaoInfo(null)
               }}
               className="cursor-pointer"
             >

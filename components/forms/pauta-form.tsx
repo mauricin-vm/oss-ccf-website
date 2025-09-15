@@ -29,6 +29,17 @@ interface Processo {
   contribuinte: {
     nome: string
   }
+  pautas?: Array<{
+    ordem: number
+    relator?: string
+    revisores?: string[]
+    pauta: {
+      id: string
+      numero: string
+      dataPauta: Date
+      status: string
+    }
+  }>
 }
 
 interface Conselheiro {
@@ -165,10 +176,12 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
       return // Já foi adicionado
     }
 
+    const conselheiroParaDistribuicao = getConselheiroParaDistribuicao(processo)
+
     setSelectedProcessos(prev => [...prev, {
       processo,
       ordem: prev.length + 1,
-      relator: ''
+      relator: conselheiroParaDistribuicao
     }])
     setSearchProcess('')
     setProcessos([])
@@ -210,9 +223,38 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
     TRANSACAO_EXCEPCIONAL: 'Transação Excepcional'
   }
 
-  const statusMap = {
+  const statusProcessoMap = {
+    RECEPCIONADO: { label: 'Recepcionado', color: 'bg-gray-100 text-gray-800' },
     EM_ANALISE: { label: 'Em Análise', color: 'bg-blue-100 text-blue-800' },
+    EM_PAUTA: { label: 'Em Pauta', color: 'bg-purple-100 text-purple-800' },
+    SUSPENSO: { label: 'Suspenso', color: 'bg-yellow-100 text-yellow-800' },
+    PEDIDO_VISTA: { label: 'Pedido de vista', color: 'bg-blue-100 text-blue-800' },
+    PEDIDO_DILIGENCIA: { label: 'Pedido de diligência', color: 'bg-orange-100 text-orange-800' },
+    JULGADO: { label: 'Julgado', color: 'bg-indigo-100 text-indigo-800' },
+    ACORDO_FIRMADO: { label: 'Acordo Firmado', color: 'bg-green-100 text-green-800' },
+    EM_CUMPRIMENTO: { label: 'Em Cumprimento', color: 'bg-orange-100 text-orange-800' },
+    ARQUIVADO: { label: 'Arquivado', color: 'bg-gray-100 text-gray-800' },
     AGUARDANDO_DOCUMENTOS: { label: 'Aguardando Docs', color: 'bg-yellow-100 text-yellow-800' }
+  }
+
+  // Função para obter informações da última pauta
+  const getUltimaPautaInfo = (processo: Processo) => {
+    if (!processo.pautas || processo.pautas.length === 0) return null
+    return processo.pautas[0] // Já vem ordenado por data desc na API
+  }
+
+  // Função para obter o último conselheiro para distribuição
+  const getConselheiroParaDistribuicao = (processo: Processo) => {
+    const ultimaPauta = getUltimaPautaInfo(processo)
+    if (!ultimaPauta) return ''
+
+    // Regra: Se houver revisores, pegar o último; senão pegar o relator
+    if (ultimaPauta.revisores && ultimaPauta.revisores.length > 0) {
+      return ultimaPauta.revisores[ultimaPauta.revisores.length - 1]
+    }
+
+    // Se não houver revisor, pegar o relator
+    return ultimaPauta.relator || ''
   }
 
   return (
@@ -318,18 +360,37 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                     className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
                   >
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{processo.numero}</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium">{processo.numero}</p>
+                          <Badge className={statusProcessoMap[processo.status as keyof typeof statusProcessoMap]?.color || 'bg-gray-100 text-gray-800'}>
+                            {statusProcessoMap[processo.status as keyof typeof statusProcessoMap]?.label || processo.status}
+                          </Badge>
+                        </div>
                         <p className="text-sm text-gray-600">{processo.contribuinte.nome}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 mb-1">
                           {tipoProcessoMap[processo.tipo as keyof typeof tipoProcessoMap]} -
                           R$ {processo.valorOriginal.toLocaleString('pt-BR')}
                         </p>
+                        {(() => {
+                          const ultimaPauta = getUltimaPautaInfo(processo)
+                          if (ultimaPauta) {
+                            return (
+                              <div className="text-xs text-blue-600 bg-blue-50 p-1 rounded mt-1">
+                                <p className="font-medium">Já pautado em: {new Date(ultimaPauta.pauta.dataPauta).toLocaleDateString('pt-BR')}</p>
+                                {ultimaPauta.relator && (
+                                  <p>Relator: {ultimaPauta.relator}</p>
+                                )}
+                                {ultimaPauta.revisores && ultimaPauta.revisores.length > 0 && (
+                                  <p>Revisor{ultimaPauta.revisores.length > 1 ? 'es' : ''}: {ultimaPauta.revisores.join(', ')}</p>
+                                )}
+                              </div>
+                            )
+                          }
+                          return null
+                        })()}
                       </div>
-                      <div className="flex gap-2">
-                        <Badge className={statusMap[processo.status as keyof typeof statusMap]?.color || 'bg-gray-100 text-gray-800'}>
-                          {statusMap[processo.status as keyof typeof statusMap]?.label || processo.status}
-                        </Badge>
+                      <div className="ml-4">
                         <Button
                           type="button"
                           size="sm"
@@ -383,15 +444,32 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-2">
                                     <h5 className="font-medium">{item.processo.numero}</h5>
-                                    <Badge className={statusMap[item.processo.status as keyof typeof statusMap]?.color || 'bg-gray-100 text-gray-800'}>
-                                      {statusMap[item.processo.status as keyof typeof statusMap]?.label || item.processo.status}
+                                    <Badge className={statusProcessoMap[item.processo.status as keyof typeof statusProcessoMap]?.color || 'bg-gray-100 text-gray-800'}>
+                                      {statusProcessoMap[item.processo.status as keyof typeof statusProcessoMap]?.label || item.processo.status}
                                     </Badge>
                                   </div>
                                   <p className="text-sm text-gray-600">{item.processo.contribuinte.nome}</p>
-                                  <p className="text-xs text-gray-500">
+                                  <p className="text-xs text-gray-500 mb-1">
                                     {tipoProcessoMap[item.processo.tipo as keyof typeof tipoProcessoMap]} -
                                     R$ {item.processo.valorOriginal.toLocaleString('pt-BR')}
                                   </p>
+                                  {(() => {
+                                    const ultimaPauta = getUltimaPautaInfo(item.processo)
+                                    if (ultimaPauta) {
+                                      return (
+                                        <div className="text-xs text-blue-600 bg-blue-50 p-1 rounded">
+                                          <p className="font-medium">Já pautado em: {new Date(ultimaPauta.pauta.dataPauta).toLocaleDateString('pt-BR')}</p>
+                                          {ultimaPauta.relator && (
+                                            <p>Relator: {ultimaPauta.relator}</p>
+                                          )}
+                                          {ultimaPauta.revisores && ultimaPauta.revisores.length > 0 && (
+                                            <p>Revisor{ultimaPauta.revisores.length > 1 ? 'es' : ''}: {ultimaPauta.revisores.join(', ')}</p>
+                                          )}
+                                        </div>
+                                      )
+                                    }
+                                    return null
+                                  })()}
                                 </div>
 
                                 <div className="w-60 mr-4">

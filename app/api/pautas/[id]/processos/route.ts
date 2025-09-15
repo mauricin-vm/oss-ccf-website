@@ -91,9 +91,13 @@ export async function POST(
     // Buscar distribuição anterior do processo
     const ultimaDistribuicao = await prisma.processoPauta.findFirst({
       where: { processoId },
-      orderBy: { createdAt: 'desc' },
       include: {
         pauta: true
+      },
+      orderBy: {
+        pauta: {
+          dataPauta: 'desc'
+        }
       }
     })
 
@@ -119,136 +123,61 @@ export async function POST(
       }
     }
 
-    // Definir distribuição baseada no status e histórico
-    let novoRelator = relator?.trim() || null
+    // Definir distribuição baseada no histórico
+    let novoRelator = null
+    let distribuidoPara = null
     let novosRevisores: string[] = []
     let observacaoDistribuicao = ''
 
     if (ultimaDistribuicao) {
-      switch (processo.status) {
-        case 'SUSPENSO':
-          // Para suspensão, permite redistribuição flexível
-          if (relator && relator.trim()) {
-            // Redistribuição manual especificada
-            novoRelator = relator.trim()
-            
-            // Se o novo relator era um dos revisores, remove da lista de revisores
-            novosRevisores = (ultimaDistribuicao.revisores || []).filter(r => r !== novoRelator)
-            
-            // Se mudou relator, o anterior vira revisor (se não estava já)
-            if (ultimaDistribuicao.relator && ultimaDistribuicao.relator !== novoRelator && !novosRevisores.includes(ultimaDistribuicao.relator)) {
-              novosRevisores = [ultimaDistribuicao.relator, ...novosRevisores]
-            }
-            
-            observacaoDistribuicao = ultimaDistribuicao.relator === novoRelator 
-              ? ` - Mantido relator original (${novoRelator})`
-              : ` - Redistribuído de ${ultimaDistribuicao.relator} para ${novoRelator}`
-          } else {
-            // Sem especificação, mantém distribuição original
-            novoRelator = ultimaDistribuicao.relator
-            novosRevisores = ultimaDistribuicao.revisores || []
-            observacaoDistribuicao = ` - Mantida distribuição original (${ultimaDistribuicao.relator})`
-          }
-          break
-          
-        case 'PEDIDO_DILIGENCIA':
-          // Para diligência, sugere último membro mas permite alteração
-          if (relator && relator.trim()) {
-            // Redistribuição manual especificada
-            novoRelator = relator.trim()
-            
-            // Se o novo relator era um dos revisores, remove da lista de revisores
-            novosRevisores = (ultimaDistribuicao.revisores || []).filter(r => r !== novoRelator)
-            
-            // Se mudou relator, o anterior vira revisor (se não estava já)
-            if (ultimaDistribuicao.relator && ultimaDistribuicao.relator !== novoRelator && !novosRevisores.includes(ultimaDistribuicao.relator)) {
-              novosRevisores = [ultimaDistribuicao.relator, ...novosRevisores]
-            }
-            
-            // Determinar último membro da distribuição anterior para comparação
-            const ultimoMembro = ultimaDistribuicao.revisores && ultimaDistribuicao.revisores.length > 0
-              ? ultimaDistribuicao.revisores[ultimaDistribuicao.revisores.length - 1]
-              : ultimaDistribuicao.relator
-              
-            observacaoDistribuicao = novoRelator === ultimoMembro
-              ? ` - Mantido último membro (${novoRelator})`
-              : ` - Redistribuído de ${ultimoMembro} para ${novoRelator}`
-          } else {
-            // Sem especificação, vai para último membro (sugestão padrão)
-            const ultimoMembro = ultimaDistribuicao.revisores && ultimaDistribuicao.revisores.length > 0
-              ? ultimaDistribuicao.revisores[ultimaDistribuicao.revisores.length - 1]
-              : ultimaDistribuicao.relator
-              
-            novoRelator = ultimoMembro
-            // Remove o novo relator da lista de revisores se ele estava lá
-            novosRevisores = (ultimaDistribuicao.revisores || []).filter(r => r !== novoRelator)
-            // Adiciona o relator anterior como revisor se necessário
-            if (ultimaDistribuicao.relator && ultimaDistribuicao.relator !== novoRelator && !novosRevisores.includes(ultimaDistribuicao.relator)) {
-              novosRevisores = [ultimaDistribuicao.relator, ...novosRevisores]
-            }
-            
-            observacaoDistribuicao = ` - Distribuído para último membro (${ultimoMembro})`
-          }
-          break
-          
-        case 'PEDIDO_VISTA':
-          // Buscar todas as vistas pedidas para este processo
-          const decisoesVista = await prisma.decisao.findMany({
-            where: { 
-              processoId,
-              tipoResultado: 'PEDIDO_VISTA'
-            },
-            orderBy: { createdAt: 'asc' } // Ordem cronológica
-          })
-          
-          if (relator && relator.trim()) {
-            // Redistribuição manual especificada
-            novoRelator = relator.trim()
-            
-            // Se o novo relator era um dos revisores, remove da lista
-            novosRevisores = (ultimaDistribuicao.revisores || []).filter(r => r !== novoRelator)
-            
-            // Se mudou relator, o anterior vira revisor
-            if (ultimaDistribuicao.relator && ultimaDistribuicao.relator !== novoRelator && !novosRevisores.includes(ultimaDistribuicao.relator)) {
-              novosRevisores = [ultimaDistribuicao.relator, ...novosRevisores]
-            }
-            
-            // Adicionar quem pediu vista como revisor (se não for o novo relator)
-            const novosRevisoresVista = decisoesVista
-              .map(d => d.conselheiroPedidoVista)
-              .filter(conselheiro => conselheiro && conselheiro !== novoRelator && !novosRevisores.includes(conselheiro))
-            
-            novosRevisores = [...novosRevisores, ...novosRevisoresVista]
-            
-            observacaoDistribuicao = ultimaDistribuicao.relator === novoRelator
-              ? ` - Mantido relator original, adicionados revisores: ${novosRevisoresVista.join(', ')}`
-              : ` - Redistribuído de ${ultimaDistribuicao.relator} para ${novoRelator}, revisores: ${novosRevisoresVista.join(', ')}`
-          } else {
-            // Sem especificação, mantém relator original e adiciona quem pediu vista
-            novoRelator = ultimaDistribuicao.relator
-            
-            // Adicionar todos que pediram vista como revisores
-            novosRevisores = [...(ultimaDistribuicao.revisores || [])]
-            const novosRevisoresVista = decisoesVista
-              .map(d => d.conselheiroPedidoVista)
-              .filter(conselheiro => conselheiro && !novosRevisores.includes(conselheiro))
-            
-            novosRevisores = [...novosRevisores, ...novosRevisoresVista]
-            
-            observacaoDistribuicao = novosRevisoresVista.length > 0
-              ? ` - Mantido relator: ${novoRelator}, novos revisores: ${novosRevisoresVista.join(', ')}`
-              : ` - Mantida distribuição anterior`
-          }
-          break
-          
-        default:
-          // Para EM_ANALISE ou primeira distribuição
-          novoRelator = relator?.trim() || null
-          observacaoDistribuicao = relator ? ` - Distribuído para: ${relator}` : ''
+      // Se existe histórico, manter o relator original
+      novoRelator = ultimaDistribuicao.relator
+      novosRevisores = [...(ultimaDistribuicao.revisores || [])]
+      
+      // Para PEDIDO_VISTA, incluir novos revisores das decisões de vista
+      if (processo.status === 'PEDIDO_VISTA') {
+        const decisoesVista = await prisma.decisao.findMany({
+          where: { 
+            processoId,
+            tipoResultado: 'PEDIDO_VISTA'
+          },
+          orderBy: { createdAt: 'asc' }
+        })
+        
+        const novosRevisoresVista = decisoesVista
+          .map(d => d.conselheiroPedidoVista)
+          .filter(conselheiro => conselheiro && !novosRevisores.includes(conselheiro))
+        
+        novosRevisores = [...novosRevisores, ...novosRevisoresVista]
+      }
+      
+      // Definir distribuição padrão
+      const ultimoRevisor = novosRevisores.length > 0 
+        ? novosRevisores[novosRevisores.length - 1] 
+        : null
+      
+      if (relator && relator.trim()) {
+        // Distribuição manual especificada
+        const conselheiroEscolhido = relator.trim()
+        distribuidoPara = conselheiroEscolhido
+        
+        // Se escolheu um terceiro conselheiro (não é relator nem revisor existente)
+        if (conselheiroEscolhido !== novoRelator && !novosRevisores.includes(conselheiroEscolhido)) {
+          novosRevisores = [...novosRevisores, conselheiroEscolhido]
+        }
+        
+        observacaoDistribuicao = ` - Distribuído para: ${conselheiroEscolhido}`
+      } else {
+        // Distribuição automática: último revisor se existe, senão relator
+        distribuidoPara = ultimoRevisor || novoRelator
+        observacaoDistribuicao = ultimoRevisor 
+          ? ` - Distribuído para último revisor: ${ultimoRevisor}`
+          : ` - Distribuído para relator: ${novoRelator}`
       }
     } else {
       // Primeira distribuição
       novoRelator = relator?.trim() || null
+      distribuidoPara = relator?.trim() || null
       observacaoDistribuicao = relator ? ` - Distribuído para: ${relator}` : ''
     }
 
@@ -260,6 +189,7 @@ export async function POST(
           processoId,
           ordem: proximaOrdem,
           relator: novoRelator,
+          distribuidoPara: distribuidoPara,
           revisores: novosRevisores
         }
       })
@@ -290,20 +220,20 @@ export async function POST(
       })
 
       // Criar tramitação para o processo (apenas se houver distribuição)
-      if (novoRelator) {
+      if (distribuidoPara) {
         await tx.tramitacao.create({
           data: {
             processoId,
             usuarioId: user.id,
             setorOrigem: 'CCF',
-            setorDestino: novoRelator, // Nome da pessoa (conselheiro)
+            setorDestino: distribuidoPara, // Nome da pessoa (conselheiro)
             observacoes: `Processo distribuído na ${pauta.numero} para julgamento em ${pauta.dataPauta.toLocaleDateString('pt-BR')}${novosRevisores.length > 0 ? ` - Revisores: ${novosRevisores.join(', ')}` : ''}`
           }
         })
       }
 
       // Criar histórico na pauta
-      const pautaDistribucaoInfo = relator ? ` - Distribuído para: ${relator}` : ''
+      const pautaDistribucaoInfo = distribuidoPara ? ` - Distribuído para: ${distribuidoPara}` : ''
       await tx.historicoPauta.create({
         data: {
           pautaId,
