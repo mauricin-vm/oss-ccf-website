@@ -3,14 +3,11 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Calculator, FileText, DollarSign, CreditCard, Check, X, Plus, Edit3, Trash2 } from 'lucide-react'
+import { Calculator, FileText, DollarSign, CreditCard, Plus, Edit3, Trash2 } from 'lucide-react'
 
 interface InscricaoDebito {
   id: string
@@ -49,7 +46,7 @@ interface ValoresTransacao {
 
 interface TransacaoExcepcionalAcordoSectionProps {
   valoresTransacao: ValoresTransacao
-  onSelectionChange: (dadosSelecionados: any) => void
+  onSelectionChange: (dadosSelecionados: Record<string, unknown>) => void
 }
 
 export default function TransacaoExcepcionalAcordoSection({
@@ -99,7 +96,7 @@ export default function TransacaoExcepcionalAcordoSection({
 
 
     onSelectionChange(dadosAcordo)
-  }, [inscricoesAcordo, propostaFinal, observacoesAcordo, valorTotalInscricoes])
+  }, [inscricoesAcordo, propostaFinal, observacoesAcordo, valorTotalInscricoes, onSelectionChange])
 
   const openInscricaoModal = () => {
     setEditingInscricao(null)
@@ -115,7 +112,7 @@ export default function TransacaoExcepcionalAcordoSection({
     setEditingInscricao(inscricao)
     setInscricaoForm({
       numeroInscricao: inscricao.numeroInscricao,
-      tipoInscricao: inscricao.tipoInscricao,
+      tipoInscricao: inscricao.tipoInscricao as 'economica' | 'imobiliaria',
       debitos: [...inscricao.debitos]
     })
     setShowInscricaoModal(true)
@@ -176,12 +173,47 @@ export default function TransacaoExcepcionalAcordoSection({
     }))
   }
 
-  const updateDebito = (index: number, field: keyof InscricaoDebito, value: any) => {
+  const formatCurrency = (value: string) => {
+    // Remove tudo que não for número
+    const numericValue = value.replace(/\D/g, '')
+
+    // Se não há número, retorna vazio
+    if (!numericValue) return ''
+
+    // Converte para centavos
+    const cents = parseInt(numericValue, 10)
+
+    // Divide por 100 para ter o valor em reais
+    const reais = cents / 100
+
+    // Formata no padrão brasileiro
+    return reais.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })
+  }
+
+  const parseCurrencyToNumber = (value: string): number => {
+    // Remove tudo que não for número ou vírgula
+    const cleanValue = value.replace(/[^\d,]/g, '')
+
+    // Substitui vírgula por ponto para parseFloat
+    const numericValue = cleanValue.replace(',', '.')
+
+    return parseFloat(numericValue) || 0
+  }
+
+  const updateDebito = (index: number, field: keyof InscricaoDebito, value: string | number) => {
     setInscricaoForm(prev => ({
       ...prev,
       debitos: prev.debitos.map((debito, i) =>
         i === index
-          ? { ...debito, [field]: field === 'valor' ? parseFloat(value) || 0 : value }
+          ? {
+              ...debito,
+              [field]: field === 'valor'
+                ? parseCurrencyToNumber(value as string)
+                : value
+            }
           : debito
       )
     }))
@@ -203,7 +235,7 @@ export default function TransacaoExcepcionalAcordoSection({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-green-50 rounded-lg border border-green-200">
               <div className="flex items-center gap-2 mb-1">
                 <FileText className="h-4 w-4 text-green-600" />
@@ -240,18 +272,6 @@ export default function TransacaoExcepcionalAcordoSection({
                 {Math.max(0, percentualDesconto).toFixed(1)}% de desconto
               </p>
             </div>
-            <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <div className="flex items-center gap-2 mb-1">
-                <Check className="h-4 w-4 text-purple-600" />
-                <span className="text-sm font-medium text-purple-800">Status</span>
-              </div>
-              <p className={`text-sm font-medium ${valorProposto > 0 ? 'text-green-600' : 'text-orange-600'}`}>
-                {valorProposto > 0 ? 'Negociável' : 'Pendente'}
-              </p>
-              <p className="text-xs text-purple-600">
-                {valorProposto > 0 ? 'Proposta definida' : 'Definir proposta'}
-              </p>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -284,7 +304,7 @@ export default function TransacaoExcepcionalAcordoSection({
                 Nenhuma inscrição adicionada ainda
               </p>
               <p className="text-sm text-gray-400 mt-1">
-                Clique em "Adicionar Inscrição" para começar
+                Clique em &quot;Adicionar Inscrição&quot; para começar
               </p>
             </div>
           ) : (
@@ -439,11 +459,21 @@ export default function TransacaoExcepcionalAcordoSection({
                         <Label htmlFor={`debito-valor-${index}`}>Valor Lançado <span className="text-red-500">*</span></Label>
                         <Input
                           id={`debito-valor-${index}`}
-                          type="number"
-                          step="0.01"
-                          value={debito.valor}
-                          onChange={(e) => updateDebito(index, 'valor', e.target.value)}
-                          placeholder="Ex: 1500.00"
+                          type="text"
+                          value={debito.valor ? debito.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}
+                          onChange={(e) => {
+                            const formattedValue = formatCurrency(e.target.value)
+                            const numericValue = parseCurrencyToNumber(formattedValue)
+                            updateDebito(index, 'valor', formattedValue)
+                            // Update the form state with the formatted value for display
+                            setInscricaoForm(prev => ({
+                              ...prev,
+                              debitos: prev.debitos.map((d, i) =>
+                                i === index ? { ...d, valor: numericValue } : d
+                              )
+                            }))
+                          }}
+                          placeholder="Ex: 1.500,00"
                         />
                       </div>
 
@@ -499,12 +529,16 @@ export default function TransacaoExcepcionalAcordoSection({
               <Input
                 id="valorTotalProposto"
                 type="text"
-                value={propostaFinal.valorTotalProposto}
-                onChange={(e) => setPropostaFinal(prev => ({
-                  ...prev,
-                  valorTotalProposto: parseFloat(e.target.value) || 0
-                }))}
-                placeholder="Ex: 120000.00"
+                value={propostaFinal.valorTotalProposto ? propostaFinal.valorTotalProposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}
+                onChange={(e) => {
+                  const formattedValue = formatCurrency(e.target.value)
+                  const numericValue = parseCurrencyToNumber(formattedValue)
+                  setPropostaFinal(prev => ({
+                    ...prev,
+                    valorTotalProposto: numericValue
+                  }))
+                }}
+                placeholder="Ex: 120.000,00"
               />
             </div>
 
@@ -531,12 +565,16 @@ export default function TransacaoExcepcionalAcordoSection({
               <Input
                 id="valorEntrada"
                 type="text"
-                value={propostaFinal.valorEntrada}
-                onChange={(e) => setPropostaFinal(prev => ({
-                  ...prev,
-                  valorEntrada: parseFloat(e.target.value) || 0
-                }))}
-                placeholder="Ex: 20000.00"
+                value={propostaFinal.valorEntrada ? propostaFinal.valorEntrada.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}
+                onChange={(e) => {
+                  const formattedValue = formatCurrency(e.target.value)
+                  const numericValue = parseCurrencyToNumber(formattedValue)
+                  setPropostaFinal(prev => ({
+                    ...prev,
+                    valorEntrada: numericValue
+                  }))
+                }}
+                placeholder="Ex: 20.000,00"
               />
             </div>
 
@@ -578,7 +616,25 @@ export default function TransacaoExcepcionalAcordoSection({
           {propostaFinal.valorTotalProposto > 0 && (
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
               <h5 className="font-medium mb-3 text-blue-800">Simulação do Pagamento:</h5>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 text-sm">
+                <div>
+                  <span className="text-blue-600">Valor Original:</span>
+                  <p className="font-medium text-blue-700">
+                    R$ {valorTotalInscricoes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-blue-600">Valor Proposto:</span>
+                  <p className="font-medium text-blue-700">
+                    R$ {propostaFinal.valorTotalProposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-blue-600">Desconto:</span>
+                  <p className="font-medium text-blue-700">
+                    R$ {Math.max(0, valorDesconto).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
                 <div>
                   <span className="text-blue-600">Valor de Entrada:</span>
                   <p className="font-medium text-blue-700">

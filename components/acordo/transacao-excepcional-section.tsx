@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Calculator, FileText, DollarSign, CreditCard, Check } from 'lucide-react'
+import { Calculator, FileText, CreditCard, Check } from 'lucide-react'
 
 interface InscricaoTransacao {
   id: string
@@ -38,7 +38,7 @@ interface ValoresTransacao {
 
 interface TransacaoExcepcionalSectionProps {
   valoresTransacao: ValoresTransacao
-  onSelectionChange: (dadosSelecionados: any) => void
+  onSelectionChange: (dadosSelecionados: Record<string, unknown>) => void
 }
 
 export default function TransacaoExcepcionalSection({
@@ -68,7 +68,7 @@ export default function TransacaoExcepcionalSection({
     }
 
     onSelectionChange(dadosSelecionados)
-  }, [inscricoesSelecionadas, incluirProposta, valoresTransacao])
+  }, [inscricoesSelecionadas, incluirProposta, valoresTransacao, onSelectionChange])
 
   const handleInscricaoChange = (inscricaoId: string, checked: boolean) => {
     setInscricoesSelecionadas(prev =>

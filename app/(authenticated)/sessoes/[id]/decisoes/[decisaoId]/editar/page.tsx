@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { redirect, notFound } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -130,8 +130,6 @@ export default async function EditarDecisaoPage({ params }: EditarDecisaoPagePro
               ...processoNaPauta,
               processo: {
                 ...decisao.processo,
-                valorOriginal: Number(decisao.processo.valorOriginal),
-                valorNegociado: decisao.processo.valorNegociado ? Number(decisao.processo.valorNegociado) : undefined,
                 contribuinte: decisao.processo.contribuinte
               }
             } : null}

@@ -18,7 +18,6 @@ import {
 import Link from 'next/link'
 import { SessionUser } from '@/types'
 import SessaoActions from '@/components/sessao/sessao-actions'
-import EditarAtaForm from '@/components/forms/editar-ata-form'
 import EditarInformacoesSessaoForm from '@/components/forms/editar-informacoes-sessao-form'
 import AssuntosAdministrativosForm from '@/components/forms/assuntos-administrativos-form'
 import EditarConselheirosForm from '@/components/forms/editar-conselheiros-sessao-form'
@@ -103,18 +102,14 @@ async function getSessao(id: string) {
       processos: sessao.pauta.processos.map(processoPauta => ({
         ...processoPauta,
         processo: {
-          ...processoPauta.processo,
-          valorOriginal: processoPauta.processo.valorOriginal ? Number(processoPauta.processo.valorOriginal) : null,
-          valorNegociado: processoPauta.processo.valorNegociado ? Number(processoPauta.processo.valorNegociado) : null
+          ...processoPauta.processo
         }
       }))
     },
     decisoes: sessao.decisoes.map(decisao => ({
       ...decisao,
       processo: {
-        ...decisao.processo,
-        valorOriginal: decisao.processo.valorOriginal ? Number(decisao.processo.valorOriginal) : null,
-        valorNegociado: decisao.processo.valorNegociado ? Number(decisao.processo.valorNegociado) : null
+        ...decisao.processo
       }
     }))
   }
@@ -217,7 +212,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
     }
   }
 
-  const getResultadoBadge = (decisao: any) => {
+  const getResultadoBadge = (decisao: Record<string, unknown>) => {
     if (!decisao) return null
 
     switch (decisao.tipoResultado) {
@@ -247,7 +242,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
     }
   }
 
-  const getCardBackground = (decisao: any) => {
+  const getCardBackground = (decisao: Record<string, unknown>) => {
     if (!decisao) return 'bg-gray-50'
 
     switch (decisao.tipoResultado) {
@@ -264,50 +259,6 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
     }
   }
 
-  const getResultadoDetails = (decisao: any) => {
-    if (!decisao) return null
-
-    const details = []
-
-    switch (decisao.tipoResultado) {
-      case 'SUSPENSO':
-        if (decisao.motivoSuspensao) {
-          details.push(`Motivo: ${decisao.motivoSuspensao}`)
-        }
-        break
-      case 'PEDIDO_VISTA':
-        if (decisao.conselheiroPedidoVista) {
-          details.push(`Solicitado por: ${decisao.conselheiroPedidoVista}`)
-        }
-        if (decisao.prazoVista) {
-          details.push(`Prazo: ${new Date(decisao.prazoVista).toLocaleDateString('pt-BR')}`)
-        }
-        break
-      case 'PEDIDO_DILIGENCIA':
-        if (decisao.especificacaoDiligencia) {
-          details.push(`Especificação: ${decisao.especificacaoDiligencia}`)
-        }
-        if (decisao.prazoDiligencia) {
-          details.push(`Prazo: ${new Date(decisao.prazoDiligencia).toLocaleDateString('pt-BR')}`)
-        }
-        break
-      case 'JULGADO':
-        if (decisao.definirAcordo) {
-          details.push('Processo seguirá para análise de acordo')
-          if (decisao.tipoAcordo) {
-            const tiposAcordo = {
-              'aceita_proposta': 'Aceita proposta da prefeitura',
-              'contra_proposta': 'Fará contra-proposta',
-              'sem_acordo': 'Não há possibilidade de acordo'
-            }
-            details.push(`Tipo: ${tiposAcordo[decisao.tipoAcordo] || decisao.tipoAcordo}`)
-          }
-        }
-        break
-    }
-
-    return details
-  }
 
   const formatarListaNomes = (nomes: string[]): string => {
     if (nomes.length === 0) return ''
@@ -517,7 +468,6 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
               const decisao = sessao.decisoes.find(d => d.processoId === processoPauta.processo.id)
               const isJulgado = !!decisao
               const cardBackground = getCardBackground(decisao)
-              const resultadoDetails = getResultadoDetails(decisao)
               
 
               return (
@@ -605,13 +555,13 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                             {/* Layout organizado - mesmo da página de nova decisão */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               {/* Relatores/Revisores */}
-                              {decisao.votos.filter((voto: any) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto)).length > 0 && (
+                              {decisao.votos.filter((voto: Record<string, unknown>) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto as string)).length > 0 && (
                                 <Card className="p-3">
                                   <div className="font-medium text-gray-800 mb-2 text-sm">Relatores/Revisores</div>
                                   <div className="space-y-1">
                                     {decisao.votos
-                                      .filter((voto: any) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto))
-                                      .map((voto: any, index: number) => (
+                                      .filter((voto: Record<string, unknown>) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto as string))
+                                      .map((voto: Record<string, unknown>, index: number) => (
                                         <div key={index} className="flex items-center justify-between text-xs">
                                           <div className="flex items-center gap-2">
                                             <Badge variant={voto.tipoVoto === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
@@ -643,8 +593,8 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                                   {/* Votos válidos agrupados */}
                                   {['DEFERIDO', 'INDEFERIDO', 'PARCIAL'].map(posicao => {
                                     const conselheirosComEssePosicao = decisao.votos
-                                      .filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
-                                      .map((voto: any) => voto.nomeVotante)
+                                      .filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                      .map((voto: Record<string, unknown>) => voto.nomeVotante)
 
                                     if (conselheirosComEssePosicao.length === 0) return null
 
@@ -665,12 +615,12 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                                   })}
 
                                   {/* Abstenções agrupadas */}
-                                  {decisao.votos.filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(voto.posicaoVoto)).length > 0 && (
+                                  {decisao.votos.filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(voto.posicaoVoto as string)).length > 0 && (
                                     <div className="border-t pt-1 mt-1">
                                       {['AUSENTE', 'IMPEDIDO', 'ABSTENCAO'].map(posicao => {
                                         const conselheirosComEssePosicao = decisao.votos
-                                          .filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
-                                          .map((voto: any) => voto.nomeVotante)
+                                          .filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                          .map((voto: Record<string, unknown>) => voto.nomeVotante)
 
                                         if (conselheirosComEssePosicao.length === 0) return null
 
@@ -695,7 +645,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                         )}
 
                         {/* Voto do Presidente se houve empate */}
-                        {sessao.presidente && decisao.votos.find((voto: any) =>
+                        {sessao.presidente && decisao.votos.find((voto: Record<string, unknown>) =>
                           voto.conselheiroId === sessao.presidente?.id ||
                           voto.nomeVotante === sessao.presidente?.nome
                         ) && (
@@ -711,17 +661,17 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                                 <span className="truncate font-medium">{sessao.presidente.nome}</span>
                               </div>
                               <span className={`font-medium text-xs ${
-                                decisao.votos.find((voto: any) =>
+                                decisao.votos.find((voto: Record<string, unknown>) =>
                                   voto.conselheiroId === sessao.presidente?.id ||
                                   voto.nomeVotante === sessao.presidente?.nome
                                 )?.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
-                                decisao.votos.find((voto: any) =>
+                                decisao.votos.find((voto: Record<string, unknown>) =>
                                   voto.conselheiroId === sessao.presidente?.id ||
                                   voto.nomeVotante === sessao.presidente?.nome
                                 )?.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
                                 'text-yellow-600'
                               }`}>
-                                {decisao.votos.find((voto: any) =>
+                                {decisao.votos.find((voto: Record<string, unknown>) =>
                                   voto.conselheiroId === sessao.presidente?.id ||
                                   voto.nomeVotante === sessao.presidente?.nome
                                 )?.posicaoVoto}

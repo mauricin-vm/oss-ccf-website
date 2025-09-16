@@ -4,18 +4,15 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { processoSchema } from '@/lib/validations/processo'
 import { SessionUser } from '@/types'
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const { id } = await params
     const processo = await prisma.processo.findUnique({
       where: { id },
@@ -75,12 +72,16 @@ export async function GET(
           },
           orderBy: { dataDecisao: 'asc' }
         },
-        acordo: {
+        acordos: {
           include: {
             parcelas: {
+              include: {
+                pagamentos: true
+              },
               orderBy: { numero: 'asc' }
             }
-          }
+          },
+          orderBy: { createdAt: 'desc' }
         },
         imoveis: {
           include: {
@@ -104,14 +105,12 @@ export async function GET(
         }
       }
     })
-
     if (!processo) {
       return NextResponse.json(
         { error: 'Processo não encontrado' },
         { status: 404 }
       )
     }
-
     // Buscar históricos separadamente usando query raw
     let historicos = []
     try {
@@ -131,7 +130,6 @@ export async function GET(
         WHERE hp."processoId" = ${id}
         ORDER BY hp."createdAt" DESC
       `
-      
       historicos = historicos.map(h => ({
         id: h.id,
         titulo: h.titulo,
@@ -149,7 +147,6 @@ export async function GET(
       console.log('Error fetching historicos:', error)
       historicos = []
     }
-
     // Os valores específicos já estão nas relações creditos e imoveis do processo
     let valoresEspecificos = null
     if (['COMPENSACAO', 'DACAO_PAGAMENTO', 'TRANSACAO_EXCEPCIONAL'].includes(processo.tipo)) {
@@ -209,7 +206,6 @@ export async function GET(
         }
       }
     }
-
     // Converter campos Decimal para números antes de enviar para o cliente
     const processData = {
       ...processo,
@@ -224,7 +220,6 @@ export async function GET(
         }))
       } : null
     }
-
     return NextResponse.json({ processo: processData })
   } catch (error) {
     console.error('Erro ao buscar processo:', error)
@@ -234,21 +229,17 @@ export async function GET(
     )
   }
 }
-
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
     const { id } = await params
-
     // Apenas Admin e Funcionário podem editar processos
     if (user.role === 'VISUALIZADOR') {
       return NextResponse.json(
@@ -256,35 +247,29 @@ export async function PUT(
         { status: 403 }
       )
     }
-
     const body = await request.json()
     const validationResult = processoSchema.safeParse(body)
-
     if (!validationResult.success) {
       return NextResponse.json(
         { 
           error: 'Dados inválidos',
-          details: validationResult.error.errors
+          details: validationResult.error.issues
         },
         { status: 400 }
       )
     }
-
     const { contribuinte: contribuinteData, ...processoData } = validationResult.data
-    
     // Buscar processo atual para auditoria
     const processoAtual = await prisma.processo.findUnique({
       where: { id },
       include: { contribuinte: true }
     })
-
     if (!processoAtual) {
       return NextResponse.json(
         { error: 'Processo não encontrado' },
         { status: 404 }
       )
     }
-
     // Verificar se o número do processo já existe em outro processo
     if (processoData.numero !== processoAtual.numero) {
       const processoComMesmoNumero = await prisma.processo.findFirst({
@@ -293,7 +278,6 @@ export async function PUT(
           id: { not: id }
         }
       })
-
       if (processoComMesmoNumero) {
         return NextResponse.json(
           { error: 'Número de processo já existe' },
@@ -301,22 +285,18 @@ export async function PUT(
         )
       }
     }
-
     // Atualizar contribuinte
     const contribuinteUpdateData = {
       ...contribuinteData
     }
-    
     // Só incluir cpfCnpj se tiver valor
     if (contribuinteData.cpfCnpj) {
       contribuinteUpdateData.cpfCnpj = contribuinteData.cpfCnpj.replace(/\D/g, '')
     }
-    
     await prisma.contribuinte.update({
       where: { id: processoAtual.contribuinteId },
       data: contribuinteUpdateData
     })
-
     // Atualizar o processo
     const processoAtualizado = await prisma.processo.update({
       where: { id },
@@ -336,7 +316,6 @@ export async function PUT(
         }
       }
     })
-
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
@@ -358,12 +337,10 @@ export async function PUT(
         }
       }
     })
-
     // Retornar processo atualizado
     const processoAtualizadoSerializado = {
       ...processoAtualizado
     }
-
     return NextResponse.json(processoAtualizadoSerializado)
   } catch (error) {
     console.error('Erro ao atualizar processo:', error)
@@ -373,21 +350,17 @@ export async function PUT(
     )
   }
 }
-
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
     const { id } = await params
-
     // Apenas Admin pode deletar processos
     if (user.role !== 'ADMIN') {
       return NextResponse.json(
@@ -395,18 +368,15 @@ export async function DELETE(
         { status: 403 }
       )
     }
-
     const processo = await prisma.processo.findUnique({
       where: { id }
     })
-
     if (!processo) {
       return NextResponse.json(
         { error: 'Processo não encontrado' },
         { status: 404 }
       )
     }
-
     // Verificar se pode ser deletado (apenas processos em status inicial)
     if (!['RECEPCIONADO', 'EM_ANALISE'].includes(processo.status)) {
       return NextResponse.json(
@@ -414,11 +384,9 @@ export async function DELETE(
         { status: 400 }
       )
     }
-
     await prisma.processo.delete({
       where: { id }
     })
-
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
@@ -433,7 +401,6 @@ export async function DELETE(
         }
       }
     })
-
     return NextResponse.json({ message: 'Processo deletado com sucesso' })
   } catch (error) {
     console.error('Erro ao deletar processo:', error)

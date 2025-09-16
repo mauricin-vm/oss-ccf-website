@@ -8,12 +8,11 @@ import { acordoSchema, type AcordoInput } from '@/lib/validations/acordo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Loader2, AlertCircle, HandCoins, Calculator, FileText, Search, User, Building, Settings, CreditCard } from 'lucide-react'
+import { Loader2, AlertCircle, HandCoins, Search, Building, Settings, CreditCard } from 'lucide-react'
 import TransacaoExcepcionalAcordoSection from '@/components/acordo/transacao-excepcional-acordo-section'
 import CompensacaoSection from '@/components/acordo/compensacao-section'
 import DacaoSection from '@/components/acordo/dacao-section'
@@ -39,7 +38,7 @@ interface Processo {
     configurado: boolean
     valorOriginal: number
     valorFinal: number
-    detalhes?: any
+    detalhes?: Record<string, unknown>
   }
 }
 
@@ -52,14 +51,13 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
   const [processos, setProcessos] = useState<Processo[]>([])
   const [selectedProcesso, setSelectedProcesso] = useState<Processo | null>(null)
   const [searchProcesso, setSearchProcesso] = useState('')
-  const [dadosEspecificos, setDadosEspecificos] = useState<any>(null)
+  const [dadosEspecificos, setDadosEspecificos] = useState<Record<string, unknown> | null>(null)
 
   const {
     register,
     handleSubmit,
     setValue,
     watch,
-    getValues,
     formState: { errors }
   } = useForm<AcordoInput>({
     resolver: zodResolver(acordoSchema),
@@ -76,7 +74,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
       const response = await fetch(`/api/processos/${processoId}/decisoes`)
       if (response.ok) {
         const data = await response.json()
-        const decisaoDeferida = data.decisoes?.find((decisao: any) =>
+        const decisaoDeferida = data.decisoes?.find((decisao: Record<string, unknown>) =>
           ['DEFERIDO', 'PARCIAL'].includes(decisao.tipoDecisao)
         )
         return decisaoDeferida ? decisaoDeferida.tipoDecisao : null
@@ -88,7 +86,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
   }, [])
 
   // Função para buscar valores específicos baseado no tipo do processo
-  const fetchValoresEspecificos = useCallback(async (processo: any) => {
+  const fetchValoresEspecificos = useCallback(async (processo: Processo) => {
     try {
       let valoresResponse
 
@@ -135,7 +133,8 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
           const processosElegiveis = await Promise.all(
             (data.processos || []).map(async (processo) => {
               // Verificar se já tem acordo
-              if (processo.acordo && processo.acordo.length > 0) {
+              // Verificar se já tem acordo ativo
+              if (processo.acordos && processo.acordos.some(acordo => acordo.status === 'ativo')) {
                 return null
               }
 
@@ -267,13 +266,26 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
     setError(null)
 
     try {
-      // Calcular valores finais antes de enviar
-      const valores = calcularValores()
-      const finalData = {
-        ...data,
-        valorFinal: valores.final,
-        valorDesconto: valores.desconto,
-        dadosEspecificos
+      // Para transação excepcional, usar dados específicos, senão calcular valores normalmente
+      let finalData
+      if (selectedProcesso?.tipo === 'TRANSACAO_EXCEPCIONAL' && dadosEspecificos?.valorInscricoes) {
+        // Para transação excepcional: usar valores dos dados específicos
+        finalData = {
+          ...data,
+          valorTotal: dadosEspecificos.valorInscricoes, // Valor original das inscrições
+          valorFinal: dadosEspecificos.propostaFinal?.valorTotalProposto || data.valorTotal,
+          valorDesconto: dadosEspecificos.valorInscricoes - (dadosEspecificos.propostaFinal?.valorTotalProposto || data.valorTotal),
+          dadosEspecificos
+        }
+      } else {
+        // Para outros tipos: calcular valores normalmente
+        const valores = calcularValores()
+        finalData = {
+          ...data,
+          valorFinal: valores.final,
+          valorDesconto: valores.desconto,
+          dadosEspecificos
+        }
       }
 
 
@@ -287,7 +299,15 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Erro ao criar acordo')
+        console.error('❌ Erro detalhado da API:', errorData)
+        console.error('❌ Status da resposta:', response.status)
+        console.error('❌ Status text:', response.statusText)
+
+        if (errorData.details) {
+          console.error('❌ Detalhes específicos:', errorData.details)
+        }
+
+        throw new Error(errorData.error || errorData.details || 'Erro ao criar acordo')
       }
 
       const resultado = await response.json()
@@ -466,6 +486,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                   type="button"
                   variant="outline"
                   size="sm"
+                  className="cursor-pointer"
                   onClick={() => {
                     setSelectedProcesso(null)
                     setValue('processoId', '')
@@ -737,6 +758,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
             <Button
               type="button"
               variant="outline"
+              className="cursor-pointer"
               onClick={() => router.back()}
               disabled={isLoading}
             >
@@ -744,6 +766,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
             </Button>
             <Button
               type="submit"
+              className="cursor-pointer"
               disabled={isLoading || !selectedProcesso}
             >
               {isLoading ? (

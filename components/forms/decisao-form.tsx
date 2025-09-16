@@ -12,10 +12,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Loader2, AlertCircle, Gavel, FileText, User, Building, Clock, Pause, Search, CheckCircle, Plus, X, Users } from 'lucide-react'
+import { Loader2, AlertCircle, Gavel, Clock, Pause, Search, CheckCircle, Users } from 'lucide-react'
 import VotacaoModal from '@/components/modals/votacao-modal'
 
 const votoSchema = z.object({
@@ -116,7 +114,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
   const [conselheiros, setConselheiros] = useState<Conselheiro[]>([])
   const [votos, setVotos] = useState<VotoInput[]>([])
   const [showVotacaoModal, setShowVotacaoModal] = useState(false)
-  const [votacaoResultado, setVotacaoResultado] = useState<any>(null)
+  const [votacaoResultado, setVotacaoResultado] = useState<Record<string, unknown> | null>(null)
   const [presidente, setPresidente] = useState<{ id: string; nome: string; email?: string; cargo?: string } | null>(null)
 
   const {
@@ -135,7 +133,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
   })
 
   const tipoResultado = watch('tipoResultado')
-  const definirAcordo = watch('definirAcordo')
 
   // Buscar dados da sessão
   useEffect(() => {
@@ -221,24 +218,8 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
     }
   }
 
-  const adicionarVoto = () => {
-    const novoVoto: VotoInput = {
-      tipoVoto: 'CONSELHEIRO',
-      nomeVotante: '',
-      ordemApresentacao: votos.length + 1
-    }
-    setVotos([...votos, novoVoto])
-  }
 
-  const removerVoto = (index: number) => {
-    setVotos(votos.filter((_, i) => i !== index))
-  }
 
-  const atualizarVoto = (index: number, campo: keyof VotoInput, valor: any) => {
-    const novosVotos = [...votos]
-    novosVotos[index] = { ...novosVotos[index], [campo]: valor }
-    setVotos(novosVotos)
-  }
 
   const formatarListaNomes = (nomes: string[]): string => {
     if (nomes.length === 0) return ''
@@ -250,13 +231,13 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
     return `${todosExcetoUltimo} e ${ultimo}`
   }
 
-  const handleVotacaoConfirm = (resultado: any) => {
+  const handleVotacaoConfirm = (resultado: Record<string, unknown>) => {
     setVotacaoResultado(resultado)
     // Converter resultado para o formato de votos esperado
     const novosVotos: VotoInput[] = []
 
     // Adicionar votos dos relatores/revisores
-    resultado.relatores.forEach((relator: any, index: number) => {
+    resultado.relatores.forEach((relator: Record<string, unknown>, index: number) => {
       novosVotos.push({
         tipoVoto: relator.tipo,
         nomeVotante: relator.nome,
@@ -267,7 +248,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
     })
 
     // Adicionar votos dos conselheiros
-    resultado.conselheiros.forEach((conselheiro: any, index: number) => {
+    resultado.conselheiros.forEach((conselheiro: Record<string, unknown>, index: number) => {
       if (conselheiro.posicao !== 'ABSTENCAO') {
         novosVotos.push({
           tipoVoto: 'CONSELHEIRO',
@@ -368,9 +349,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-medium">
-                          R$ {(processoPauta.processo.valorOriginal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
                         {processoPauta.relator && (
                           <p className="text-xs text-blue-600">Relator: {processoPauta.relator}</p>
                         )}
@@ -402,9 +380,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                       <Badge variant="outline">
                         {getTipoProcessoLabel(selectedProcesso.processo.tipo)}
                       </Badge>
-                      <span className="text-sm text-blue-700">
-                        R$ {(selectedProcesso.processo.valorOriginal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
                     </div>
                     <div className="mt-2 space-y-1">
                       {selectedProcesso.relator && (
@@ -556,7 +531,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
               <CardContent className="space-y-4">
                 <div className="w-1/2">
                   <div className="space-y-2">
-                    <Label htmlFor="conselheiroPedidoVista">Conselheiro que pediu vista *</Label>
+                    <Label htmlFor="conselheiroPedidoVista">Conselheiro que pediu vista <span className="text-red-500">*</span></Label>
                     <Select
                       value={watch('conselheiroPedidoVista') || ''}
                       onValueChange={(value) => setValue('conselheiroPedidoVista', value)}
@@ -633,7 +608,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                   )}
                 </div>
                 <div className="space-y-2 w-1/2">
-                  <Label htmlFor="prazoDiligencia">Prazo para cumprimento *</Label>
+                  <Label htmlFor="prazoDiligencia">Prazo para cumprimento <span className="text-red-500">*</span></Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="prazoDiligencia"
@@ -707,7 +682,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                           <Card className="p-3">
                             <div className="font-medium text-gray-800 mb-2 text-sm">Relatores/Revisores</div>
                             <div className="space-y-1">
-                              {votacaoResultado.relatores.map((relator: any, index: number) => (
+                              {votacaoResultado.relatores.map((relator: Record<string, unknown>, index: number) => (
                                 <div key={index} className="flex items-center justify-between text-xs">
                                   <div className="flex items-center gap-2">
                                     <Badge variant={relator.tipo === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
@@ -735,7 +710,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                           <div className="max-h-24 overflow-y-auto space-y-1">
                             {/* Votos válidos agrupados */}
                             {['DEFERIDO', 'INDEFERIDO', 'PARCIAL'].map(posicao => {
-                              const conselheirosComEssePosicao = votacaoResultado.conselheiros.filter((conselheiro: any) => conselheiro.posicao === posicao)
+                              const conselheirosComEssePosicao = votacaoResultado.conselheiros.filter((conselheiro: Record<string, unknown>) => conselheiro.posicao === posicao)
                               if (conselheirosComEssePosicao.length === 0) return null
 
                               return (
@@ -747,17 +722,17 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                                     {posicao}:
                                   </span>
                                   <span className="ml-1 text-gray-700">
-                                    {formatarListaNomes(conselheirosComEssePosicao.map((conselheiro: any) => conselheiro.nome))}
+                                    {formatarListaNomes(conselheirosComEssePosicao.map((conselheiro: Record<string, unknown>) => conselheiro.nome as string))}
                                   </span>
                                 </div>
                               )
                             })}
 
                             {/* Abstenções agrupadas */}
-                            {votacaoResultado.conselheiros.filter((conselheiro: any) => ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(conselheiro.posicao)).length > 0 && (
+                            {votacaoResultado.conselheiros.filter((conselheiro: Record<string, unknown>) => ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(conselheiro.posicao as string)).length > 0 && (
                               <div className="border-t pt-1 mt-1">
                                 {['AUSENTE', 'IMPEDIDO', 'ABSTENCAO'].map(posicao => {
-                                  const conselheirosComEssePosicao = votacaoResultado.conselheiros.filter((conselheiro: any) => conselheiro.posicao === posicao)
+                                  const conselheirosComEssePosicao = votacaoResultado.conselheiros.filter((conselheiro: Record<string, unknown>) => conselheiro.posicao === posicao)
                                   if (conselheirosComEssePosicao.length === 0) return null
 
                                   return (
@@ -767,7 +742,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                                           posicao === 'AUSENTE' ? 'AUSENTE' : 'IMPEDIDO'}:
                                       </span>
                                       <span className="ml-1 text-gray-600">
-                                        {formatarListaNomes(conselheirosComEssePosicao.map((conselheiro: any) => conselheiro.nome))}
+                                        {formatarListaNomes(conselheirosComEssePosicao.map((conselheiro: Record<string, unknown>) => conselheiro.nome as string))}
                                       </span>
                                     </div>
                                   )
@@ -781,7 +756,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                       {/* Voto do Presidente (se houve empate e presidente votou) */}
                       {(() => {
                         // Verifica se existe um voto do presidente (conselheiro com mesmo nome/id do presidente)
-                        const votoPresidente = presidente && votacaoResultado.conselheiros.find((conselheiro: any) =>
+                        const votoPresidente = presidente && votacaoResultado.conselheiros.find((conselheiro: Record<string, unknown>) =>
                           conselheiro.conselheiroId === presidente.id ||
                           conselheiro.nome === presidente.nome
                         )
@@ -816,7 +791,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                     <div className="text-center py-8 text-gray-500">
                       <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                       <p>Sistema de votação não configurado</p>
-                      <p className="text-sm mt-1">Clique em "Definir Votação" para configurar os votos</p>
+                      <p className="text-sm mt-1">Clique em &quot;Definir Votação&quot; para configurar os votos</p>
                     </div>
                   )}
                 </CardContent>
@@ -853,7 +828,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
           {/* Texto da Ata */}
           <Card>
             <CardHeader>
-              <CardTitle>Texto da Ata *</CardTitle>
+              <CardTitle>Texto da Ata <span className="text-red-500">*</span></CardTitle>
               <CardDescription>
                 Texto obrigatório que aparecerá na ata para este processo
               </CardDescription>

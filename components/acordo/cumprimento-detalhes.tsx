@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -28,13 +28,11 @@ interface AcordoDetalhe {
 }
 
 interface CumprimentoDetalhesProps {
-  acordoId: string
   detalhes: AcordoDetalhe[]
   onStatusUpdate: (detalheId: string, novoStatus: string, observacoes?: string) => void
 }
 
 export default function CumprimentoDetalhes({
-  acordoId,
   detalhes,
   onStatusUpdate
 }: CumprimentoDetalhesProps) {

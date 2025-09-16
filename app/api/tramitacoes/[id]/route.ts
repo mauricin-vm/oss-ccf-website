@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { SessionUser, TramitacaoUpdateData } from '@/types'
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -11,11 +10,9 @@ export async function GET(
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const tramitacao = await prisma.tramitacao.findUnique({
       where: { id },
       include: {
@@ -34,14 +31,12 @@ export async function GET(
         }
       }
     })
-
     if (!tramitacao) {
       return NextResponse.json(
         { error: 'Tramitação não encontrada' },
         { status: 404 }
       )
     }
-
     return NextResponse.json(tramitacao)
   } catch (error) {
     console.error('Erro ao buscar tramitação:', error)
@@ -51,7 +46,6 @@ export async function GET(
     )
   }
 }
-
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -59,13 +53,10 @@ export async function PUT(
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
-
     // Apenas Admin e Funcionário podem editar tramitações
     if (user.role === 'VISUALIZADOR') {
       return NextResponse.json(
@@ -73,28 +64,23 @@ export async function PUT(
         { status: 403 }
       )
     }
-
     const body = await request.json()
-    
     // Buscar tramitação atual para auditoria
     const tramitacaoAtual = await prisma.tramitacao.findUnique({
       where: { id: id },
       include: { processo: true }
     })
-
     if (!tramitacaoAtual) {
       return NextResponse.json(
         { error: 'Tramitação não encontrada' },
         { status: 404 }
       )
     }
-
     // Preparar dados de atualização
     const updateData: TramitacaoUpdateData = {
       ...body,
       updatedAt: new Date()
     }
-
     const tramitacaoAtualizada = await prisma.tramitacao.update({
       where: { id: id },
       data: updateData,
@@ -114,7 +100,6 @@ export async function PUT(
         }
       }
     })
-
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
@@ -138,7 +123,6 @@ export async function PUT(
         }
       }
     })
-
     return NextResponse.json(tramitacaoAtualizada)
   } catch (error) {
     console.error('Erro ao atualizar tramitação:', error)

@@ -1,15 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ChevronRight, ChevronLeft, Users, Gavel, CheckCircle, AlertCircle, Plus, X } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Gavel, CheckCircle, AlertCircle, X } from 'lucide-react'
 
 interface ProcessoPauta {
   ordem: number
@@ -145,7 +144,7 @@ export default function VotacaoModal({
     if (etapaAtual === 2 && votosConselheiros.length > 0) {
       calcularResultado() // Isso atualiza o estado de empate
     }
-  }, [votosConselheiros, votosRelatores, etapaAtual])
+  }, [votosConselheiros, votosRelatores, etapaAtual, calcularResultado])
 
   const adicionarRevisor = (nomeConselheiro: string) => {
     if (!revisoresAdicionais.includes(nomeConselheiro)) {
@@ -197,7 +196,7 @@ export default function VotacaoModal({
     const novosVotos = [...votosRelatores]
     novosVotos[index] = {
       ...novosVotos[index],
-      posicao: posicao as any,
+      posicao: posicao as string,
       acompanhaVoto: posicao === 'ACOMPANHA' ? acompanhaVoto : undefined
     }
     setVotosRelatores(novosVotos)
@@ -207,28 +206,28 @@ export default function VotacaoModal({
     const novosVotos = [...votosConselheiros]
     novosVotos[index] = {
       ...novosVotos[index],
-      posicao: posicao as any
+      posicao: posicao as string
     }
     setVotosConselheiros(novosVotos)
   }
 
   // Função auxiliar para resolver a posição real de um voto (incluindo "acompanha")
-  const resolverPosicaoVoto = (voto: VotoRelator): string => {
+  const resolverPosicaoVoto = useCallback((voto: VotoRelator): string => {
     if (voto.posicao === 'ACOMPANHA' && voto.acompanhaVoto) {
       // Encontrar o voto da pessoa que está sendo acompanhada
       const votoAcompanhado = votosRelatores.find(v => v.nome === voto.acompanhaVoto)
       if (votoAcompanhado) {
         // Se a pessoa acompanhada também está acompanhando alguém, resolver recursivamente
-        return votoAcompanhado.posicao === 'ACOMPANHA' 
+        return votoAcompanhado.posicao === 'ACOMPANHA'
           ? resolverPosicaoVoto(votoAcompanhado)
           : votoAcompanhado.posicao
       }
       return 'DEFERIDO' // fallback
     }
     return voto.posicao
-  }
+  }, [votosRelatores])
 
-  const calcularResultado = (): ResultadoVotacao['resultado'] => {
+  const calcularResultado = useCallback((): ResultadoVotacao['resultado'] => {
     let deferidos = 0
     let indeferidos = 0
     let parciais = 0
@@ -287,7 +286,6 @@ export default function VotacaoModal({
     }
 
     // Determinar decisão final (maioria simples dos votos válidos)
-    const totalVotos = deferidos + indeferidos + parciais
     let decisaoFinal: 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL' = 'DEFERIDO'
 
     if (indeferidos > deferidos && indeferidos > parciais) {
@@ -297,7 +295,7 @@ export default function VotacaoModal({
     }
 
     return { deferidos, indeferidos, parciais, abstencoes, ausentes, impedidos, decisaoFinal }
-  }
+  }, [votosRelatores, votosConselheiros, setTemEmpate, presidente, resolverPosicaoVoto, temEmpate, votoPresidente])
 
   const podeAvancar = () => {
     if (etapaAtual === 1) {
@@ -322,7 +320,7 @@ export default function VotacaoModal({
     const resultado = calcularResultado()
 
     // Incluir voto do presidente se houve empate
-    let conselheirosComPresidente = [...votosConselheiros]
+    const conselheirosComPresidente = [...votosConselheiros]
     if (temEmpate && votoPresidente && presidente) {
       conselheirosComPresidente.push({
         conselheiroId: presidente.id,
@@ -527,7 +525,7 @@ export default function VotacaoModal({
     const marcarTodosColuna = (posicao: string) => {
       const novosVotos = votosConselheiros.map(voto => ({
         ...voto,
-        posicao: posicao as any
+        posicao: posicao as string
       }))
       setVotosConselheiros(novosVotos)
     }
@@ -717,7 +715,7 @@ export default function VotacaoModal({
             <div className="flex justify-center">
               <RadioGroup
                 value={votoPresidente || ''}
-                onValueChange={(value) => setVotoPresidente(value as any)}
+                onValueChange={(value) => setVotoPresidente(value as string)}
                 className="flex items-center gap-6"
               >
                 {colunasComRelatores.map(({ posicao }) => (

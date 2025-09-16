@@ -10,9 +10,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Loader2, AlertCircle, Plus, Trash2, FileText, Calculator, DollarSign, Badge as BadgeIcon, Edit } from 'lucide-react'
+import { Loader2, AlertCircle, Plus, Trash2, FileText, Calculator, Edit } from 'lucide-react'
 import { toast } from 'sonner'
 
 const inscricaoOferecidaSchema = z.object({
@@ -20,14 +19,60 @@ const inscricaoOferecidaSchema = z.object({
   tipoInscricao: z.enum(['imobiliaria', 'economica'], {
     required_error: 'Tipo de inscrição é obrigatório'
   }),
-  valor: z.number().min(0.01, 'Valor deve ser maior que zero'),
+  valor: z.union([
+    z.string(),
+    z.number()
+  ])
+    .refine((val) => {
+      if (typeof val === 'number') return val > 0
+      if (typeof val === 'string') {
+        if (val === '') return false
+        const cleanValue = val.replace(/[^\d,]/g, '')
+        const numericValue = cleanValue.replace(',', '.')
+        const num = parseFloat(numericValue)
+        return !isNaN(num) && num >= 0.01
+      }
+      return false
+    }, 'Valor é obrigatório e deve ser maior que zero')
+    .transform((val) => {
+      if (typeof val === 'number') return val
+      if (typeof val === 'string') {
+        const cleanValue = val.replace(/[^\d,]/g, '')
+        const numericValue = cleanValue.replace(',', '.')
+        return parseFloat(numericValue)
+      }
+      return 0
+    }),
   dataVencimento: z.string().optional(),
   descricao: z.string().optional()
 })
 
 const debitoSchema = z.object({
   descricao: z.string().min(1, 'Descrição do débito é obrigatória'),
-  valor: z.number().min(0.01, 'Valor deve ser maior que zero'),
+  valor: z.union([
+    z.string(),
+    z.number()
+  ])
+    .refine((val) => {
+      if (typeof val === 'number') return val > 0
+      if (typeof val === 'string') {
+        if (val === '') return false
+        const cleanValue = val.replace(/[^\d,]/g, '')
+        const numericValue = cleanValue.replace(',', '.')
+        const num = parseFloat(numericValue)
+        return !isNaN(num) && num >= 0.01
+      }
+      return false
+    }, 'Valor é obrigatório e deve ser maior que zero')
+    .transform((val) => {
+      if (typeof val === 'number') return val
+      if (typeof val === 'string') {
+        const cleanValue = val.replace(/[^\d,]/g, '')
+        const numericValue = cleanValue.replace(',', '.')
+        return parseFloat(numericValue)
+      }
+      return 0
+    }),
   dataVencimento: z.string().min(1, 'Data de vencimento é obrigatória')
 })
 
@@ -59,8 +104,8 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
   // Estados dos modais
   const [showInscricaoOferecidaModal, setShowInscricaoOferecidaModal] = useState(false)
   const [showInscricaoCompensarModal, setShowInscricaoCompensarModal] = useState(false)
-  const [editingInscricaoOferecida, setEditingInscricaoOferecida] = useState<{ index: number; inscricao: any } | null>(null)
-  const [editingInscricaoCompensar, setEditingInscricaoCompensar] = useState<{ index: number; inscricao: any } | null>(null)
+  const [editingInscricaoOferecida, setEditingInscricaoOferecida] = useState<{ index: number; inscricao: Record<string, unknown> } | null>(null)
+  const [editingInscricaoCompensar, setEditingInscricaoCompensar] = useState<{ index: number; inscricao: Record<string, unknown> } | null>(null)
 
   // Formulários dos modais
   const [inscricaoOferecidaForm, setInscricaoOferecidaForm] = useState({
@@ -78,12 +123,10 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
   })
 
   const {
-    register,
     control,
     handleSubmit,
     watch,
-    setValue,
-    formState: { errors }
+    setValue
   } = useForm<ValoresDacaoInput>({
     resolver: zodResolver(valoresDacaoSchema),
     defaultValues: {
@@ -91,6 +134,37 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
       inscricoesCompensar: []
     }
   })
+
+  // Funções de formatação de moeda (igual ao transacao-form)
+  const formatCurrency = (value: string) => {
+    // Remove tudo que não for número
+    const numericValue = value.replace(/\D/g, '')
+
+    // Se não há número, retorna vazio
+    if (!numericValue) return ''
+
+    // Converte para centavos
+    const cents = parseInt(numericValue, 10)
+
+    // Divide por 100 para ter o valor em reais
+    const reais = cents / 100
+
+    // Formata no padrão brasileiro
+    return reais.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })
+  }
+
+  const parseCurrencyToNumber = (value: string): number => {
+    // Remove tudo que não for número ou vírgula
+    const cleanValue = value.replace(/[^\d,]/g, '')
+
+    // Substitui vírgula por ponto para parseFloat
+    const numericValue = cleanValue.replace(',', '.')
+
+    return parseFloat(numericValue) || 0
+  }
 
   const { fields: inscricoesOferecidasFields, append: appendInscricaoOferecida, remove: removeInscricaoOferecida } = useFieldArray({
     control,
@@ -117,11 +191,16 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
 
           // Carregar inscrições oferecidas
           if (data.inscricoesOferecidas && data.inscricoesOferecidas.length > 0) {
-            data.inscricoesOferecidas.forEach((inscricao: any) => {
+            data.inscricoesOferecidas.forEach((inscricao: Record<string, unknown>) => {
+              // Formatar valor monetário ao carregar
+              const valorFormatado = inscricao.valor
+                ? (inscricao.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                : ''
+
               appendInscricaoOferecida({
                 numeroInscricao: inscricao.numeroInscricao,
                 tipoInscricao: inscricao.tipoInscricao,
-                valor: inscricao.valor,
+                valor: valorFormatado,
                 dataVencimento: inscricao.dataVencimento || '',
                 descricao: inscricao.descricao || ''
               })
@@ -130,11 +209,19 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
 
           // Carregar inscrições a compensar
           if (data.inscricoesCompensar && data.inscricoesCompensar.length > 0) {
-            data.inscricoesCompensar.forEach((inscricao: any) => {
+            data.inscricoesCompensar.forEach((inscricao: Record<string, unknown>) => {
+              const debitosFormatados = (inscricao.debitos as Record<string, unknown>[])?.map((debito: Record<string, unknown>) => ({
+                descricao: debito.descricao,
+                valor: debito.valor
+                  ? (debito.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                  : '',
+                dataVencimento: debito.dataVencimento || ''
+              })) || []
+
               appendInscricaoCompensar({
                 numeroInscricao: inscricao.numeroInscricao,
                 tipoInscricao: inscricao.tipoInscricao,
-                debitos: inscricao.debitos || []
+                debitos: debitosFormatados
               })
             })
           }
@@ -176,8 +263,8 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
   }
 
   const handleSaveInscricaoOferecida = () => {
-    const valor = parseFloat(inscricaoOferecidaForm.valor)
-    if (!inscricaoOferecidaForm.numeroInscricao || isNaN(valor)) {
+    const valor = parseCurrencyToNumber(inscricaoOferecidaForm.valor)
+    if (!inscricaoOferecidaForm.numeroInscricao || valor <= 0) {
       toast.error('Preencha todos os campos obrigatórios')
       return
     }
@@ -185,7 +272,7 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
     const inscricaoData = {
       numeroInscricao: inscricaoOferecidaForm.numeroInscricao,
       tipoInscricao: inscricaoOferecidaForm.tipoInscricao,
-      valor,
+      valor: inscricaoOferecidaForm.valor, // Manter formato de string para o form
       dataVencimento: inscricaoOferecidaForm.dataVencimento || undefined,
       descricao: inscricaoOferecidaForm.descricao || undefined
     }
@@ -225,7 +312,7 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
     setInscricaoCompensarForm({
       numeroInscricao: inscricao.numeroInscricao,
       tipoInscricao: inscricao.tipoInscricao,
-      debitos: inscricao.debitos?.map((d: any) => ({
+      debitos: (inscricao.debitos as Record<string, unknown>[])?.map((d: Record<string, unknown>) => ({
         descricao: d.descricao,
         valor: d.valor?.toString() || '',
         dataVencimento: d.dataVencimento || ''
@@ -275,7 +362,7 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
       tipoInscricao: inscricaoCompensarForm.tipoInscricao,
       debitos: debitosValidos.map(d => ({
         descricao: d.descricao,
-        valor: parseFloat(d.valor),
+        valor: d.valor, // Manter formato de string para o form
         dataVencimento: d.dataVencimento
       }))
     }
@@ -330,14 +417,18 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
 
   const calcularTotalOferecidas = () => {
     const inscricoes = watch('inscricoesOferecidas') || []
-    return inscricoes.reduce((total, inscricao) => total + (inscricao.valor || 0), 0)
+    return inscricoes.reduce((total, inscricao) => {
+      const valor = typeof inscricao.valor === 'string' ? parseCurrencyToNumber(inscricao.valor) : (inscricao.valor || 0)
+      return total + valor
+    }, 0)
   }
 
   const calcularTotalCompensar = () => {
     const inscricoes = watch('inscricoesCompensar') || []
     return inscricoes.reduce((total, inscricao) => {
-      return total + (inscricao.debitos?.reduce((subtotal: number, debito: any) => {
-        return subtotal + (debito.valor || 0)
+      return total + ((inscricao.debitos as Record<string, unknown>[])?.reduce((subtotal: number, debito: Record<string, unknown>) => {
+        const valor = typeof debito.valor === 'string' ? parseCurrencyToNumber(debito.valor) : (debito.valor || 0)
+        return subtotal + valor
       }, 0) || 0)
     }, 0)
   }
@@ -384,7 +475,7 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 bg-green-50 rounded-lg border border-green-200">
                 <div className="flex items-center gap-2 mb-1">
                   <FileText className="h-4 w-4 text-green-600" />
@@ -423,19 +514,6 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
                   {totalOferecidas >= totalCompensar ? 'Superávit' : 'Déficit'}
                 </p>
               </div>
-
-              <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <BadgeIcon className="h-4 w-4 text-purple-600" />
-                  <span className="text-sm font-medium text-purple-800">Status</span>
-                </div>
-                <p className={`text-sm font-medium ${totalOferecidas >= totalCompensar ? 'text-green-600' : 'text-orange-600'}`}>
-                  {totalOferecidas >= totalCompensar ? 'Viável' : 'Insuficiente'}
-                </p>
-                <p className="text-xs text-purple-600">
-                  {Math.abs(((totalOferecidas / totalCompensar) * 100) || 0).toFixed(1)}% cobertura
-                </p>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -472,7 +550,7 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
                   Nenhuma inscrição adicionada ainda
                 </p>
                 <p className="text-sm text-gray-400 mt-1">
-                  Clique em "Adicionar Inscrição" para começar
+                  Clique em &quot;Adicionar Inscrição&quot; para começar
                 </p>
               </div>
             ) : (
@@ -516,7 +594,7 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
 
                       <div className="space-y-1">
                         <p className="text-lg font-bold text-green-700">
-                          R$ {(inscricao.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          R$ {(typeof inscricao.valor === 'string' ? parseCurrencyToNumber(inscricao.valor) : (inscricao.valor || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                         {inscricao.dataVencimento && (
                           <p className="text-xs text-green-600">
@@ -569,7 +647,7 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
                   Nenhuma inscrição adicionada ainda
                 </p>
                 <p className="text-sm text-gray-400 mt-1">
-                  Clique em "Adicionar Inscrição" para começar
+                  Clique em &quot;Adicionar Inscrição&quot; para começar
                 </p>
               </div>
             ) : (
@@ -613,7 +691,10 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
 
                       <div className="space-y-1">
                         <p className="text-lg font-bold text-blue-700">
-                          R$ {(inscricao.debitos?.reduce((total: number, debito: any) => total + (debito.valor || 0), 0) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          R$ {((inscricao.debitos as Record<string, unknown>[])?.reduce((total: number, debito: Record<string, unknown>) => {
+                            const valor = typeof debito.valor === 'string' ? parseCurrencyToNumber(debito.valor) : (debito.valor || 0)
+                            return total + valor
+                          }, 0) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                         <p className="text-xs text-blue-600">
                           {inscricao.debitos?.length || 0} {inscricao.debitos?.length === 1 ? 'débito' : 'débitos'}
@@ -692,7 +773,10 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
                 id="modal-valor-inscricao"
                 type="text"
                 value={inscricaoOferecidaForm.valor}
-                onChange={(e) => setInscricaoOferecidaForm({ ...inscricaoOferecidaForm, valor: e.target.value })}
+                onChange={(e) => {
+                  const formatted = formatCurrency(e.target.value)
+                  setInscricaoOferecidaForm({ ...inscricaoOferecidaForm, valor: formatted })
+                }}
                 placeholder="Ex: 25.000,00"
               />
             </div>
@@ -828,7 +912,10 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
                           id={`debito-valor-${index}`}
                           type="text"
                           value={debito.valor}
-                          onChange={(e) => updateDebito(index, 'valor', e.target.value)}
+                          onChange={(e) => {
+                            const formatted = formatCurrency(e.target.value)
+                            updateDebito(index, 'valor', formatted)
+                          }}
                           placeholder="Ex: 1.500,00"
                         />
                       </div>
@@ -851,7 +938,7 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
                 <div className="flex justify-between items-center">
                   <span className="font-medium text-blue-800">Total dos Débitos:</span>
                   <span className="text-lg font-bold text-blue-700">
-                    R$ {inscricaoCompensarForm.debitos.reduce((total, d) => total + (parseFloat(d.valor) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {inscricaoCompensarForm.debitos.reduce((total, d) => total + parseCurrencyToNumber(d.valor), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>

@@ -4,37 +4,30 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { sessaoSchema } from '@/lib/validations/pauta'
 import { SessionUser, PrismaWhereFilter } from '@/types'
-
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const status = searchParams.get('status') // 'ativa' ou 'finalizada'
     const ano = searchParams.get('ano')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
-    
     const where: PrismaWhereFilter = {}
-    
     if (search) {
       where.OR = [
         { pauta: { numero: { contains: search, mode: 'insensitive' } } },
         { conselheiros: { some: { nome: { contains: search, mode: 'insensitive' } } } }
       ]
     }
-    
     if (status === 'ativa') {
       where.dataFim = null
     } else if (status === 'finalizada') {
       where.dataFim = { not: null }
     }
-    
     if (ano) {
       const startDate = new Date(`${ano}-01-01`)
       const endDate = new Date(`${ano}-12-31`)
@@ -43,7 +36,6 @@ export async function GET(request: NextRequest) {
         lte: endDate
       }
     }
-
     const [sessoes, total] = await Promise.all([
       prisma.sessaoJulgamento.findMany({
         where,
@@ -94,7 +86,6 @@ export async function GET(request: NextRequest) {
       }),
       prisma.sessaoJulgamento.count({ where })
     ])
-
     // Converter valores Decimal para number antes de retornar
     const sessoesSerializadas = sessoes.map(sessao => ({
       ...sessao,
@@ -104,8 +95,6 @@ export async function GET(request: NextRequest) {
           ...processoPauta,
           processo: {
             ...processoPauta.processo,
-            valorOriginal: processoPauta.processo.valorOriginal ? Number(processoPauta.processo.valorOriginal) : null,
-            valorNegociado: processoPauta.processo.valorNegociado ? Number(processoPauta.processo.valorNegociado) : null
           }
         }))
       },
@@ -113,12 +102,9 @@ export async function GET(request: NextRequest) {
         ...decisao,
         processo: {
           ...decisao.processo,
-          valorOriginal: decisao.processo.valorOriginal ? Number(decisao.processo.valorOriginal) : null,
-          valorNegociado: decisao.processo.valorNegociado ? Number(decisao.processo.valorNegociado) : null
         }
       }))
     }))
-
     return NextResponse.json({
       sessoes: sessoesSerializadas,
       pagination: {
@@ -136,17 +122,13 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
-
     // Apenas Admin e Funcionário podem criar sessões
     if (user.role === 'VISUALIZADOR') {
       return NextResponse.json(
@@ -154,28 +136,22 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       )
     }
-
     const body = await request.json()
-    
     // Converter dataInicio para Date se necessário
     if (body.dataInicio) {
       body.dataInicio = new Date(body.dataInicio)
     }
-
     const validationResult = sessaoSchema.safeParse(body)
-
     if (!validationResult.success) {
       return NextResponse.json(
         { 
           error: 'Dados inválidos',
-          details: validationResult.error.errors
+          details: validationResult.error.issues
         },
         { status: 400 }
       )
     }
-
     const data = validationResult.data
-
     // Verificar se a pauta existe e está aberta
     const pauta = await prisma.pauta.findUnique({
       where: { id: data.pautaId },
@@ -192,35 +168,30 @@ export async function POST(request: NextRequest) {
         sessao: true
       }
     })
-
     if (!pauta) {
       return NextResponse.json(
         { error: 'Pauta não encontrada' },
         { status: 404 }
       )
     }
-
     if (pauta.status !== 'aberta') {
       return NextResponse.json(
         { error: 'Apenas pautas com status "aberta" podem ter sessões criadas' },
         { status: 400 }
       )
     }
-
     if (pauta.sessao) {
       return NextResponse.json(
         { error: 'Esta pauta já possui uma sessão de julgamento' },
         { status: 400 }
       )
     }
-
     // Verificar se o presidente existe e está ativo (se fornecido)
     let presidente = null
     if (data.presidenteId) {
       presidente = await prisma.conselheiro.findUnique({
         where: { id: data.presidenteId, ativo: true }
       })
-
       if (!presidente) {
         return NextResponse.json(
           { error: 'Presidente selecionado não encontrado ou inativo' },
@@ -228,7 +199,6 @@ export async function POST(request: NextRequest) {
         )
       }
     }
-
     // Verificar se todos os conselheiros participantes existem e estão ativos
     const conselheiros = await prisma.conselheiro.findMany({
       where: { 
@@ -236,14 +206,12 @@ export async function POST(request: NextRequest) {
         ativo: true
       }
     })
-
     if (conselheiros.length !== data.conselheiros.length) {
       return NextResponse.json(
         { error: 'Um ou mais conselheiros não foram encontrados ou não são elegíveis' },
         { status: 400 }
       )
     }
-
     // Criar a sessão
     const sessao = await prisma.sessaoJulgamento.create({
       data: {
@@ -288,13 +256,11 @@ export async function POST(request: NextRequest) {
         }
       }
     })
-
     // Atualizar status da pauta para EM_JULGAMENTO
     await prisma.pauta.update({
       where: { id: data.pautaId },
       data: { status: 'em_julgamento' }
     })
-
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
@@ -324,7 +290,6 @@ export async function POST(request: NextRequest) {
         }
       }
     })
-
     // Converter valores Decimal para number antes de retornar
     const sessaoSerializada = {
       ...sessao,
@@ -334,13 +299,10 @@ export async function POST(request: NextRequest) {
           ...processoPauta,
           processo: {
             ...processoPauta.processo,
-            valorOriginal: processoPauta.processo.valorOriginal ? Number(processoPauta.processo.valorOriginal) : null,
-            valorNegociado: processoPauta.processo.valorNegociado ? Number(processoPauta.processo.valorNegociado) : null
           }
         }))
       }
     }
-
     return NextResponse.json(sessaoSerializada, { status: 201 })
   } catch (error) {
     console.error('Erro ao criar sessão:', error)

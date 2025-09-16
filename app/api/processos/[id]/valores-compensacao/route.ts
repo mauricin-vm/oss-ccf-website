@@ -4,19 +4,16 @@ import { prisma } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { SessionUser } from '@/types'
 import { z } from 'zod'
-
 const debitoSchema = z.object({
   descricao: z.string().min(1),
   valor: z.number().min(0.01),
   dataVencimento: z.string().min(1)
 })
-
 const inscricaoSchema = z.object({
   numeroInscricao: z.string().min(1),
   tipoInscricao: z.enum(['imobiliaria', 'economica']),
   debitos: z.array(debitoSchema).min(1, 'Pelo menos um débito deve ser informado')
 })
-
 const creditoSchema = z.object({
   tipo: z.enum(['precatorio', 'credito_tributario', 'alvara_judicial', 'outro']),
   numero: z.string().min(1),
@@ -24,12 +21,10 @@ const creditoSchema = z.object({
   dataVencimento: z.string().optional(),
   descricao: z.string().optional()
 })
-
 const valoresCompensacaoSchema = z.object({
   creditos: z.array(creditoSchema),
   inscricoes: z.array(inscricaoSchema)
 })
-
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -39,15 +34,12 @@ export async function POST(
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
     if (user.role !== 'ADMIN' && user.role !== 'FUNCIONARIO') {
       return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
     }
-
     const { id } = await params
     const body = await req.json()
-
     // Validar dados de entrada
     const validationResult = valoresCompensacaoSchema.safeParse(body)
     if (!validationResult.success) {
@@ -56,41 +48,33 @@ export async function POST(
         { status: 400 }
       )
     }
-
     const { creditos, inscricoes } = validationResult.data
-
     // Verificar se o processo existe e é do tipo correto
     const processo = await prisma.processo.findUnique({
       where: { id }
     })
-
     if (!processo) {
       return NextResponse.json({ error: 'Processo não encontrado' }, { status: 404 })
     }
-
     if (processo.tipo !== 'COMPENSACAO') {
       return NextResponse.json({ error: 'Processo não é do tipo Compensação' }, { status: 400 })
     }
-
     // Iniciar transação para salvar os dados
     const result = await prisma.$transaction(async (tx) => {
       // Primeiro, remover valores existentes para este processo
       await tx.processoCredito.deleteMany({
         where: { processoId: id }
       })
-
       // Remover inscrições existentes
       await tx.processoInscricao.deleteMany({
         where: { processoId: id }
       })
-      
       // Processar cada crédito
       for (const creditoData of creditos) {
         // Verificar se o crédito já existe ou criar um novo
         let credito = await tx.credito.findUnique({
           where: { numero: creditoData.numero }
         })
-
         if (!credito) {
           // Criar novo crédito
           credito = await tx.credito.create({
@@ -114,7 +98,6 @@ export async function POST(
             }
           })
         }
-
         // Criar relação processo-crédito
         await tx.processoCredito.create({
           data: {
@@ -124,7 +107,6 @@ export async function POST(
           }
         })
       }
-
       // Processar cada inscrição
       for (const inscricaoData of inscricoes) {
         // Criar a inscrição
@@ -135,7 +117,6 @@ export async function POST(
             tipoInscricao: inscricaoData.tipoInscricao
           }
         })
-
         // Criar os débitos da inscrição
         for (const debitoData of inscricaoData.debitos) {
           await tx.processoDebito.create({
@@ -148,13 +129,9 @@ export async function POST(
           })
         }
       }
-
-
       return { success: true }
     })
-
     return NextResponse.json(result)
-
   } catch (error) {
     console.error('Erro ao salvar valores de compensação:', error)
     return NextResponse.json(
@@ -163,7 +140,6 @@ export async function POST(
     )
   }
 }
-
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -173,9 +149,7 @@ export async function GET(
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const { id } = await params
-
     // Buscar valores de compensação para o processo
     const processo = await prisma.processo.findUnique({
       where: { id },
@@ -192,15 +166,12 @@ export async function GET(
         }
       }
     })
-
     if (!processo) {
       return NextResponse.json({ error: 'Processo não encontrado' }, { status: 404 })
     }
-
     if (processo.tipo !== 'COMPENSACAO') {
       return NextResponse.json({ error: 'Processo não é do tipo Compensação' }, { status: 400 })
     }
-
     // Formatar dados para retorno
     const valoresCompensacao = {
       creditos: processo.creditos.map(pc => ({
@@ -224,9 +195,7 @@ export async function GET(
         }))
       }))
     }
-
     return NextResponse.json(valoresCompensacao)
-
   } catch (error) {
     console.error('Erro ao buscar valores de compensação:', error)
     return NextResponse.json(

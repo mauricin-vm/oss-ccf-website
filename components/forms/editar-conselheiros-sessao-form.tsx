@@ -41,12 +41,14 @@ export default function EditarConselheirosForm({
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isFetchingConselheiros, setIsFetchingConselheiros] = useState(false)
   const [conselheiros, setConselheiros] = useState<Conselheiro[]>([])
   const [selectedConselheiros, setSelectedConselheiros] = useState<string[]>([])
 
   // Buscar conselheiros ativos
   useEffect(() => {
     const fetchConselheiros = async () => {
+      setIsFetchingConselheiros(true)
       try {
         const response = await fetch('/api/conselheiros')
         if (response.ok) {
@@ -56,6 +58,8 @@ export default function EditarConselheirosForm({
         }
       } catch (error) {
         console.error('Erro ao buscar conselheiros:', error)
+      } finally {
+        setIsFetchingConselheiros(false)
       }
     }
 
@@ -147,37 +151,46 @@ export default function EditarConselheirosForm({
 
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3 max-h-[400px] overflow-y-auto">
-            {conselheirosDisponiveis.map((conselheiro) => (
-              <div key={conselheiro.id} className="flex items-center space-x-3 p-3 border rounded-lg">
-                <Checkbox
-                  id={`conselheiro-${conselheiro.id}`}
-                  checked={selectedConselheiros.includes(conselheiro.id)}
-                  onCheckedChange={(checked) =>
-                    handleConselheiroToggle(conselheiro.id, checked as boolean)
-                  }
-                  disabled={isLoading}
-                  className="cursor-pointer"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <label
-                      htmlFor={`conselheiro-${conselheiro.id}`}
-                      className="text-sm font-medium cursor-pointer"
-                    >
-                      {conselheiro.nome}
-                    </label>
-                    {conselheiro.cargo && (
-                      <Badge variant="outline" className="text-xs">
-                        {conselheiro.cargo}
-                      </Badge>
-                    )}
-                  </div>
-                  {conselheiro.email && (
-                    <p className="text-xs text-gray-600">{conselheiro.email}</p>
-                  )}
+            {isFetchingConselheiros ? (
+              <div className="flex items-center justify-center p-8">
+                <div className="text-center">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3 text-gray-400" />
+                  <p className="text-sm text-gray-600">Carregando conselheiros...</p>
                 </div>
               </div>
-            ))}
+            ) : (
+              conselheirosDisponiveis.map((conselheiro) => (
+                <div key={conselheiro.id} className="flex items-center space-x-3 p-3 border rounded-lg">
+                  <Checkbox
+                    id={`conselheiro-${conselheiro.id}`}
+                    checked={selectedConselheiros.includes(conselheiro.id)}
+                    onCheckedChange={(checked) =>
+                      handleConselheiroToggle(conselheiro.id, checked as boolean)
+                    }
+                    disabled={isLoading}
+                    className="cursor-pointer"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <label
+                        htmlFor={`conselheiro-${conselheiro.id}`}
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        {conselheiro.nome}
+                      </label>
+                      {conselheiro.cargo && (
+                        <Badge variant="outline" className="text-xs">
+                          {conselheiro.cargo}
+                        </Badge>
+                      )}
+                    </div>
+                    {conselheiro.email && (
+                      <p className="text-xs text-gray-600">{conselheiro.email}</p>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           {selectedConselheiros.length > 0 && (
@@ -208,9 +221,9 @@ export default function EditarConselheirosForm({
           >
             Cancelar
           </Button>
-          <Button 
-            onClick={handleSubmit} 
-            disabled={isLoading}
+          <Button
+            onClick={handleSubmit}
+            disabled={isLoading || isFetchingConselheiros}
             className="cursor-pointer"
           >
             {isLoading ? (

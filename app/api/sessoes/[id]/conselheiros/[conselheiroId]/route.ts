@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { SessionUser } from '@/types'
-
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string, conselheiroId: string }> }
@@ -11,13 +10,10 @@ export async function DELETE(
   try {
     const { id, conselheiroId } = await params
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
-
     // Apenas Admin e Funcionário podem editar sessões
     if (user.role === 'VISUALIZADOR') {
       return NextResponse.json(
@@ -25,7 +21,6 @@ export async function DELETE(
         { status: 403 }
       )
     }
-
     // Buscar sessão atual
     const sessaoAtual = await prisma.sessaoJulgamento.findUnique({
       where: { id },
@@ -33,14 +28,12 @@ export async function DELETE(
         conselheiros: true
       }
     })
-
     if (!sessaoAtual) {
       return NextResponse.json(
         { error: 'Sessão não encontrada' },
         { status: 404 }
       )
     }
-
     // Verificar se a sessão pode ser editada (apenas sessões não finalizadas)
     if (sessaoAtual.dataFim) {
       return NextResponse.json(
@@ -48,7 +41,6 @@ export async function DELETE(
         { status: 400 }
       )
     }
-
     // Verificar se o conselheiro está realmente na sessão
     const conselheiroNaSessao = sessaoAtual.conselheiros.find(c => c.id === conselheiroId)
     if (!conselheiroNaSessao) {
@@ -57,7 +49,6 @@ export async function DELETE(
         { status: 404 }
       )
     }
-
     // Remover o conselheiro da sessão
     await prisma.sessaoJulgamento.update({
       where: { id },
@@ -68,7 +59,6 @@ export async function DELETE(
         updatedAt: new Date()
       }
     })
-
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
@@ -85,7 +75,6 @@ export async function DELETE(
         }
       }
     })
-
     return NextResponse.json({ 
       message: 'Conselheiro removido da sessão com sucesso' 
     })

@@ -6,16 +6,13 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Loader2, AlertCircle, Gavel, FileText, User, Building, Clock, Pause, Search, CheckCircle, Plus, X } from 'lucide-react'
+import { Loader2, AlertCircle, Gavel, FileText, User, Building, Clock, Pause, Search, CheckCircle } from 'lucide-react'
 
 const votoSchema = z.object({
   tipoVoto: z.enum(['RELATOR', 'REVISOR', 'CONSELHEIRO']),
@@ -55,7 +52,6 @@ const decisaoSchema = z.object({
 })
 
 type DecisaoInput = z.infer<typeof decisaoSchema>
-type VotoInput = z.infer<typeof votoSchema>
 
 interface DecisaoFormProps {
   sessaoId: string
@@ -89,16 +85,7 @@ interface ProcessoPauta {
   processo: Processo
 }
 
-interface Conselheiro {
-  id: string
-  nome: string
-  email?: string
-  cargo?: string
-}
 
-interface SessaoData {
-  conselheiros: Conselheiro[]
-}
 
 export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
   const router = useRouter()
@@ -107,9 +94,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [processos, setProcessos] = useState<ProcessoPauta[]>([])
   const [selectedProcesso, setSelectedProcesso] = useState<ProcessoPauta | null>(null)
-  const [conselheiros, setConselheiros] = useState<Conselheiro[]>([])
-  const [votos, setVotos] = useState<VotoInput[]>([])
-  const [showVotacao, setShowVotacao] = useState(false)
 
   const {
     register,
@@ -225,37 +209,11 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
     }
   }
 
-  const adicionarVoto = () => {
-    const novoVoto: VotoInput = {
-      tipoVoto: 'CONSELHEIRO',
-      nomeVotante: '',
-      ordemApresentacao: votos.length + 1
-    }
-    setVotos([...votos, novoVoto])
-  }
 
-  const removerVoto = (index: number) => {
-    setVotos(votos.filter((_, i) => i !== index))
-  }
 
-  const atualizarVoto = (index: number, campo: keyof VotoInput, valor: any) => {
-    const novosVotos = [...votos]
-    novosVotos[index] = { ...novosVotos[index], [campo]: valor }
-    setVotos(novosVotos)
-  }
 
   const tipoResultado = watch('tipoResultado')
-  const definirAcordo = watch('definirAcordo')
 
-  const getTipoResultadoIcon = (tipo: string) => {
-    switch (tipo) {
-      case 'SUSPENSO': return <Pause className="h-4 w-4" />
-      case 'PEDIDO_VISTA': return <Search className="h-4 w-4" />
-      case 'PEDIDO_DILIGENCIA': return <Clock className="h-4 w-4" />
-      case 'JULGADO': return <CheckCircle className="h-4 w-4" />
-      default: return <Gavel className="h-4 w-4" />
-    }
-  }
 
   const getTipoResultadoColor = (tipo: string) => {
     switch (tipo) {
@@ -421,7 +379,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
             <CardContent>
               <RadioGroup
                 value={tipoResultado}
-                onValueChange={(value) => setValue('tipoResultado', value as any)}
+                onValueChange={(value) => setValue('tipoResultado', value as 'SUSPENSO' | 'PEDIDO_VISTA' | 'PEDIDO_DILIGENCIA' | 'JULGADO')}
                 className="grid grid-cols-1 md:grid-cols-2 gap-4"
               >
                 <div className={`flex items-start space-x-3 p-4 border-2 rounded-lg cursor-pointer ${tipoResultado === 'SUSPENSO' ? getTipoResultadoColor('SUSPENSO') : 'border-gray-200'}`}>
@@ -496,11 +454,11 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                   id="descricao"
                   placeholder="Descreva os fundamentos jurídicos, análise dos documentos e motivos da decisão..."
                   rows={6}
-                  {...register('descricao')}
+                  {...register('fundamentacao')}
                   disabled={isLoading}
                 />
-                {errors.descricao && (
-                  <p className="text-sm text-red-500">{errors.descricao.message}</p>
+                {errors.fundamentacao && (
+                  <p className="text-sm text-red-500">{errors.fundamentacao.message}</p>
                 )}
               </div>
 
@@ -510,7 +468,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                   id="observacoes"
                   placeholder="Observações complementares, recomendações ou orientações..."
                   rows={3}
-                  {...register('observacoes')}
+                  {...register('ataTexto')}
                   disabled={isLoading}
                 />
                 <p className="text-xs text-gray-500">

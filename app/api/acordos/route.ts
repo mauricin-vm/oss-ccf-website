@@ -4,45 +4,53 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { acordoSchema } from '@/lib/validations/acordo'
 import { SessionUser, AcordoWhereFilter } from '@/types'
-
-async function criarDetalhesEspecificos(acordoId: string, tipoProcesso: string, dadosEspecificos: any) {
+async function criarDetalhesEspecificos(acordoId: string, tipoProcesso: string, dadosEspecificos: Record<string, unknown>) {
+  console.log('🔍 Criando detalhes específicos para:', { acordoId, tipoProcesso })
+  console.log('📋 Dados específicos recebidos:', JSON.stringify(dadosEspecificos, null, 2))
   switch (tipoProcesso) {
     case 'TRANSACAO_EXCEPCIONAL':
-      if (dadosEspecificos.inscricoesSelecionadas?.length > 0) {
+      // Verificar se tem dados de inscrições (novo formato) ou formato antigo
+      const inscricoesData = dadosEspecificos.inscricoesAcordo || dadosEspecificos.inscricoesSelecionadas
+      console.log('📝 Inscrições encontradas:', inscricoesData?.length || 0)
+      if (inscricoesData?.length > 0) {
         const detalhe = await prisma.acordoDetalhes.create({
           data: {
             acordoId,
             tipo: 'transacao',
             descricao: 'Transação Excepcional - Acordo Final',
             valorOriginal: dadosEspecificos.valorInscricoes || 0,
-            valorNegociado: dadosEspecificos.propostaFinal?.valorTotalProposto || dadosEspecificos.valorTotal || 0,
             status: 'PENDENTE',
             observacoes: dadosEspecificos.observacoesAcordo || null
           }
         })
-
-        // Criar registros detalhados das inscrições e débitos selecionados
-        for (const inscricaoDetalhes of dadosEspecificos.inscricoesSelecionadasDetalhes) {
-          // Calcular valor total dos débitos selecionados para esta inscrição
-          const valorDebitosSelecionados = inscricaoDetalhes.debitosSelecionados?.reduce(
-            (total: number, debito: any) => total + (debito?.valor || 0), 0
+        // Criar registros detalhados das inscrições
+        for (const inscricao of inscricoesData) {
+          // Calcular valor total dos débitos para esta inscrição
+          const valorDebitos = inscricao.debitos?.reduce(
+            (total: number, debito: Record<string, unknown>) => total + (Number(debito?.valor) || 0), 0
           ) || 0
-
+          // Preparar lista de débitos para salvar no JSON
+          const debitosDetalhados = (inscricao.debitos as Record<string, unknown>[])?.map((debito: Record<string, unknown>) => ({
+            id: debito.id,
+            descricao: debito.descricao,
+            valor: Number(debito.valor),
+            dataVencimento: debito.dataVencimento
+          })) || []
           await prisma.acordoInscricao.create({
             data: {
               acordoDetalheId: detalhe.id,
-              numeroInscricao: inscricaoDetalhes.numeroInscricao,
-              tipoInscricao: inscricaoDetalhes.tipoInscricao,
-              valorDebito: valorDebitosSelecionados,
-              valorAbatido: valorDebitosSelecionados,
+              numeroInscricao: inscricao.numeroInscricao,
+              tipoInscricao: inscricao.tipoInscricao,
+              valorDebito: valorDebitos,
+              valorAbatido: valorDebitos,
               percentualAbatido: 100,
-              situacao: 'pendente'
+              situacao: 'pendente',
+              descricaoDebitos: debitosDetalhados
             }
           })
         }
       }
       break
-
     case 'COMPENSACAO':
       if (dadosEspecificos.creditosSelecionados?.length > 0 || dadosEspecificos.inscricoesSelecionadas?.length > 0) {
         const detalhe = await prisma.acordoDetalhes.create({
@@ -51,11 +59,9 @@ async function criarDetalhesEspecificos(acordoId: string, tipoProcesso: string, 
             tipo: 'compensacao',
             descricao: 'Compensação de Créditos e Débitos',
             valorOriginal: Math.max(dadosEspecificos.valorCreditos || 0, dadosEspecificos.valorDebitos || 0),
-            valorNegociado: dadosEspecificos.valorCompensacao || 0,
             status: 'PENDENTE'
           }
         })
-
         // Criar registros para inscrições compensadas
         if (dadosEspecificos.inscricoesSelecionadas?.length > 0) {
           for (const inscricaoId of dadosEspecificos.inscricoesSelecionadas) {
@@ -74,7 +80,6 @@ async function criarDetalhesEspecificos(acordoId: string, tipoProcesso: string, 
         }
       }
       break
-
     case 'DACAO_PAGAMENTO':
       if (dadosEspecificos.inscricoesOferecidas?.length > 0 || dadosEspecificos.inscricoesCompensar?.length > 0) {
         const detalhe = await prisma.acordoDetalhes.create({
@@ -83,11 +88,9 @@ async function criarDetalhesEspecificos(acordoId: string, tipoProcesso: string, 
             tipo: 'dacao',
             descricao: 'Dação em Pagamento',
             valorOriginal: dadosEspecificos.valorCompensar || 0,
-            valorNegociado: dadosEspecificos.valorDacao || 0,
             status: 'PENDENTE'
           }
         })
-
         // Criar registros para inscrições a compensar
         if (dadosEspecificos.inscricoesCompensar?.length > 0) {
           for (const inscricaoId of dadosEspecificos.inscricoesCompensar) {
@@ -108,35 +111,28 @@ async function criarDetalhesEspecificos(acordoId: string, tipoProcesso: string, 
       break
   }
 }
-
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const status = searchParams.get('status')
     const ano = searchParams.get('ano')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
-    
     const where: AcordoWhereFilter = {}
-    
     if (search) {
       where.OR = [
         { processo: { numero: { contains: search, mode: 'insensitive' } } },
         { processo: { contribuinte: { nome: { contains: search, mode: 'insensitive' } } } }
       ]
     }
-    
     if (status) {
       where.status = status
     }
-    
     if (ano) {
       const startDate = new Date(`${ano}-01-01`)
       const endDate = new Date(`${ano}-12-31`)
@@ -145,7 +141,6 @@ export async function GET(request: NextRequest) {
         lte: endDate
       }
     }
-
     const [acordos, total] = await Promise.all([
       prisma.acordo.findMany({
         where,
@@ -168,7 +163,6 @@ export async function GET(request: NextRequest) {
       }),
       prisma.acordo.count({ where })
     ])
-
     return NextResponse.json({
       acordos,
       pagination: {
@@ -186,17 +180,13 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
-
     // Apenas Admin e Funcionário podem criar acordos
     if (user.role === 'VISUALIZADOR') {
       return NextResponse.json(
@@ -204,56 +194,75 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       )
     }
-
     const body = await request.json()
-
-
+    // DEBUG: Log dos dados recebidos
+    console.log('=== DEBUG ACORDO ===')
+    console.log('Dados recebidos:', JSON.stringify(body, null, 2))
+    console.log('Dados específicos:', JSON.stringify(body.dadosEspecificos, null, 2))
+    console.log('==================')
+    console.log('📅 Iniciando conversão de datas...')
+    console.log('📅 dataAssinatura original:', body.dataAssinatura, typeof body.dataAssinatura)
+    console.log('📅 dataVencimento original:', body.dataVencimento, typeof body.dataVencimento)
     // Converter datas (ajustar timezone para evitar diferença de um dia)
     if (body.dataAssinatura) {
-      const dataAssinatura = new Date(body.dataAssinatura)
-      dataAssinatura.setHours(12, 0, 0, 0) // Meio-dia para evitar problemas de timezone
-      body.dataAssinatura = dataAssinatura
+      try {
+        const dataAssinatura = new Date(body.dataAssinatura)
+        console.log('📅 dataAssinatura convertida:', dataAssinatura)
+        dataAssinatura.setHours(12, 0, 0, 0) // Meio-dia para evitar problemas de timezone
+        body.dataAssinatura = dataAssinatura
+        console.log('📅 dataAssinatura final:', body.dataAssinatura)
+      } catch (error) {
+        console.error('❌ Erro ao converter dataAssinatura:', error)
+        throw error
+      }
     }
     if (body.dataVencimento) {
-      const dataVencimento = new Date(body.dataVencimento)
-      dataVencimento.setHours(12, 0, 0, 0) // Meio-dia para evitar problemas de timezone
-      body.dataVencimento = dataVencimento
+      try {
+        const dataVencimento = new Date(body.dataVencimento)
+        console.log('📅 dataVencimento convertida:', dataVencimento)
+        dataVencimento.setHours(12, 0, 0, 0) // Meio-dia para evitar problemas de timezone
+        body.dataVencimento = dataVencimento
+        console.log('📅 dataVencimento final:', body.dataVencimento)
+      } catch (error) {
+        console.error('❌ Erro ao converter dataVencimento:', error)
+        throw error
+      }
     }
-
+    console.log('✅ Conversão de datas concluída')
+    console.log('🔍 Iniciando validação do schema...')
     const validationResult = acordoSchema.safeParse(body)
-
     if (!validationResult.success) {
+      console.log('❌ Erro de validação:', validationResult.error.issues)
       return NextResponse.json(
-        { 
+        {
           error: 'Dados inválidos',
-          details: validationResult.error.errors
+          details: validationResult.error.issues
         },
         { status: 400 }
       )
     }
-
+    console.log('✅ Validação do schema passou')
     const data = validationResult.data
-
     // Verificar se o processo existe e está elegível
     const processo = await prisma.processo.findUnique({
       where: { id: data.processoId },
       include: {
         contribuinte: true,
-        acordo: true,
+        acordos: {
+          orderBy: { createdAt: 'desc' }
+        },
         decisoes: {
           orderBy: { dataDecisao: 'desc' },
           take: 1
         }
       }
     })
-
     if (!processo) {
       return NextResponse.json(
         { error: 'Processo não encontrado' },
         { status: 404 }
       )
     }
-
     // Verificar se o processo foi julgado e tem decisão favorável
     if (processo.status !== 'JULGADO' || processo.decisoes.length === 0) {
       return NextResponse.json(
@@ -261,7 +270,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
     const ultimaDecisao = processo.decisoes[0]
     if (!ultimaDecisao.tipoDecisao || !['DEFERIDO', 'PARCIAL'].includes(ultimaDecisao.tipoDecisao)) {
       return NextResponse.json(
@@ -269,14 +277,19 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
-    if (processo.acordo) {
+    // Verificar se já existe acordo ativo
+    const acordoAtivo = processo.acordos.find(acordo => acordo.status === 'ativo')
+    if (acordoAtivo) {
       return NextResponse.json(
-        { error: 'Este processo já possui um acordo' },
+        { error: 'Este processo já possui um acordo ativo' },
         { status: 400 }
       )
     }
-
+    // Se existe acordo cancelado, permitir novo acordo
+    const acordoCancelado = processo.acordos.find(acordo => acordo.status === 'cancelado')
+    if (acordoCancelado) {
+      console.log('ℹ️ Processo tem acordo cancelado, permitindo criação de novo acordo')
+    }
     // Verificar se data de vencimento é posterior à data de assinatura
     if (data.dataVencimento <= data.dataAssinatura) {
       return NextResponse.json(
@@ -284,7 +297,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
     // Gerar número do termo automaticamente
     const ano = new Date().getFullYear()
     const ultimoAcordo = await prisma.acordo.findFirst({
@@ -295,29 +307,43 @@ export async function POST(request: NextRequest) {
       },
       orderBy: { numeroTermo: 'desc' }
     })
-
     let proximoNumero = 1
     if (ultimoAcordo) {
       const ultimoNumero = parseInt(ultimoAcordo.numeroTermo.split('/')[0])
       proximoNumero = ultimoNumero + 1
     }
-
     const numeroTermo = `${proximoNumero.toString().padStart(4, '0')}/${ano}`
-
     // Calcular valores corretos para o acordo
     let valorOriginal = data.valorTotal
     let valorDesconto = data.valorDesconto || 0
     let percentualDesconto = data.percentualDesconto || 0
-
-    // Para transação excepcional, usar valor das inscrições como valor original
+    // Para transação excepcional, usar valor das inscrições como valor original (valor fixo no momento da criação)
     if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && data.dadosEspecificos?.valorInscricoes) {
+      // IMPORTANTE: Este valor é "congelado" no momento da criação do acordo
+      // para manter a integridade histórica, mesmo se as inscrições forem alteradas depois
+      console.log('=== CÁLCULO TRANSAÇÃO EXCEPCIONAL ===')
+      console.log('Valor das inscrições:', data.dadosEspecificos.valorInscricoes)
+      console.log('Valor final:', data.valorFinal)
       valorOriginal = data.dadosEspecificos.valorInscricoes
       valorDesconto = valorOriginal - data.valorFinal
       percentualDesconto = valorOriginal > 0 ? (valorDesconto / valorOriginal) * 100 : 0
-
+      console.log('Valor original calculado:', valorOriginal)
+      console.log('Valor desconto calculado:', valorDesconto)
+      console.log('Percentual desconto calculado:', percentualDesconto)
+      console.log('=====================================')
     }
-
+    // Definir valor de entrada
+    let valorEntrada = 0
+    if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && data.dadosEspecificos?.propostaFinal?.valorEntrada) {
+      valorEntrada = data.dadosEspecificos.propostaFinal.valorEntrada
+    }
+    // DEBUG: Verificar observações
+    console.log('=== DEBUG OBSERVAÇÕES ===')
+    console.log('data.observacoes:', data.observacoes)
+    console.log('data.dadosEspecificos?.observacoesAcordo:', data.dadosEspecificos?.observacoesAcordo)
+    console.log('==========================')
     // Criar o acordo
+    console.log('🔥 Iniciando criação do acordo no banco...')
     const acordo = await prisma.acordo.create({
       data: {
         processoId: data.processoId,
@@ -326,11 +352,14 @@ export async function POST(request: NextRequest) {
         valorDesconto: valorDesconto,
         percentualDesconto: percentualDesconto,
         valorFinal: data.valorFinal,
+        valorEntrada: valorEntrada > 0 ? valorEntrada : null,
         dataAssinatura: data.dataAssinatura,
         dataVencimento: data.dataVencimento,
         modalidadePagamento: data.modalidadePagamento,
         numeroParcelas: data.numeroParcelas || 1,
-        observacoes: data.observacoes,
+        observacoes: processo.tipo === 'TRANSACAO_EXCEPCIONAL' && data.dadosEspecificos?.observacoesAcordo
+          ? data.dadosEspecificos.observacoesAcordo
+          : data.observacoes,
         clausulasEspeciais: data.clausulasEspeciais,
         status: 'ativo'
       },
@@ -342,33 +371,23 @@ export async function POST(request: NextRequest) {
         }
       }
     })
-
+    console.log('✅ Acordo criado no banco com ID:', acordo.id)
     // Criar detalhes específicos do acordo baseado no tipo de processo
     if (data.dadosEspecificos && processo.tipo) {
+      console.log('🔧 Criando detalhes específicos...')
       await criarDetalhesEspecificos(acordo.id, processo.tipo, data.dadosEspecificos)
+      console.log('✅ Detalhes específicos criados')
     }
-
     // Gerar parcelas se for parcelado
-
     if (data.modalidadePagamento === 'parcelado' && data.numeroParcelas && data.numeroParcelas > 1) {
-      // Para transação excepcional, considerar entrada da proposta
-      let valorEntrada = 0
-      let valorParaParcelas = data.valorFinal
-
-      if (data.dadosEspecificos?.propostaFinal?.valorEntrada && processo.tipo === 'TRANSACAO_EXCEPCIONAL') {
-        valorEntrada = data.dadosEspecificos.propostaFinal.valorEntrada
-        valorParaParcelas = data.valorFinal - valorEntrada
-      }
-
+      // Usar o valor de entrada já definido anteriormente
+      const valorParaParcelas = data.valorFinal - valorEntrada
       const valorParcela = valorParaParcelas / data.numeroParcelas
-
       const parcelas = []
-
       // Se há entrada, criar uma "parcela" de entrada com vencimento na data de assinatura
       if (valorEntrada > 0) {
         const dataVencimentoEntrada = new Date(data.dataAssinatura)
         dataVencimentoEntrada.setHours(12, 0, 0, 0) // Ajustar timezone
-
         parcelas.push({
           acordoId: acordo.id,
           numero: 0, // Entrada como parcela 0
@@ -377,13 +396,11 @@ export async function POST(request: NextRequest) {
           status: 'PENDENTE'
         })
       }
-
       for (let i = 1; i <= data.numeroParcelas; i++) {
         // Usar data de vencimento como base para as parcelas
         const dataVencimentoParcela = new Date(data.dataVencimento)
         dataVencimentoParcela.setMonth(dataVencimentoParcela.getMonth() + (i - 1)) // Primeira parcela vence na data de vencimento
         dataVencimentoParcela.setHours(12, 0, 0, 0) // Ajustar timezone
-
         parcelas.push({
           acordoId: acordo.id,
           numero: i, // Parcelas 1, 2, 3, ..., 20
@@ -394,7 +411,6 @@ export async function POST(request: NextRequest) {
           status: 'PENDENTE'
         })
       }
-
       await prisma.parcela.createMany({
         data: parcelas
       })
@@ -402,7 +418,6 @@ export async function POST(request: NextRequest) {
       // Criar parcela única para pagamento à vista
       const dataVencimentoAvista = new Date(data.dataVencimento)
       dataVencimentoAvista.setHours(12, 0, 0, 0) // Ajustar timezone
-
       await prisma.parcela.create({
         data: {
           acordoId: acordo.id,
@@ -413,13 +428,21 @@ export async function POST(request: NextRequest) {
         }
       })
     }
-
     // Atualizar status do processo
     await prisma.processo.update({
       where: { id: data.processoId },
       data: { status: 'EM_CUMPRIMENTO' }
     })
-
+    // Registrar no histórico do processo
+    await prisma.historicoProcesso.create({
+      data: {
+        processoId: data.processoId,
+        usuarioId: user.id,
+        titulo: 'Acordo de Pagamento Criado',
+        descricao: `Termo ${numeroTermo} - ${acordo.modalidadePagamento === 'avista' ? 'Pagamento à vista' : `Parcelamento em ${acordo.numeroParcelas}x`}. Valor: R$ ${acordo.valorFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        tipo: 'ACORDO'
+      }
+    })
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
@@ -439,7 +462,6 @@ export async function POST(request: NextRequest) {
         }
       }
     })
-
     // Buscar acordo completo para retorno
     const acordoCompleto = await prisma.acordo.findUnique({
       where: { id: acordo.id },
@@ -454,12 +476,21 @@ export async function POST(request: NextRequest) {
         }
       }
     })
-
     return NextResponse.json(acordoCompleto, { status: 201 })
   } catch (error) {
-    console.error('Erro ao criar acordo:', error)
+    console.error('❌ ERRO COMPLETO ao criar acordo:', error)
+    console.error('❌ Stack trace:', error instanceof Error ? error.stack : 'No stack trace')
+    console.error('❌ Mensagem:', error instanceof Error ? error.message : String(error))
+    // Se for erro de validação do Prisma, retornar detalhes
+    if (error && typeof error === 'object' && 'code' in error) {
+      console.error('❌ Código do erro Prisma:', (error as { code?: string }).code)
+      console.error('❌ Meta do erro Prisma:', (error as { meta?: unknown }).meta)
+    }
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      {
+        error: 'Erro interno do servidor',
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     )
   }

@@ -408,7 +408,7 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 w-1/2">
               <Label htmlFor="prazoResposta">Prazo para Resposta</Label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />

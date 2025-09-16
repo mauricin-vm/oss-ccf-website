@@ -1,141 +1,299 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/config'
-import { prisma } from '@/lib/db'
-import { redirect, notFound } from 'next/navigation'
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
+import { notFound } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { 
-  HandCoins, 
-  DollarSign, 
+import {
+  HandCoins,
+  DollarSign,
   FileText,
   ArrowLeft,
   AlertTriangle,
-  User,
-  Building,
   Calculator,
   CreditCard,
-  Home,
-  Settings
+  Check,
+  X,
+  Edit,
+  AlertCircle,
+  Receipt
 } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import { SessionUser } from '@/types'
 import AcordoActions from '@/components/acordo/acordo-actions'
 import CumprimentoWrapper from '@/components/acordo/cumprimento-wrapper'
 
+import { toast } from 'sonner'
+
 interface AcordoPageProps {
   params: Promise<{ id: string }>
 }
 
-async function getAcordo(id: string) {
-  return prisma.acordo.findUnique({
-    where: { id },
-    include: {
-      processo: {
-        include: {
-          contribuinte: true,
-          tramitacoes: {
-            orderBy: { createdAt: 'desc' },
-            take: 3,
-            include: {
-              usuario: {
-                select: {
-                  name: true,
-                  email: true
-                }
-              }
-            }
-          },
-          decisoes: {
-            orderBy: { createdAt: 'desc' }
-          }
-        }
-      },
-      parcelas: {
-        orderBy: { numero: 'asc' },
-        include: {
-          pagamentos: {
-            orderBy: { createdAt: 'desc' }
-          }
-        }
-      },
-      detalhes: {
-        include: {
-          inscricoes: true,
-          imovel: true,
-          credito: true
-        },
-        orderBy: { createdAt: 'asc' }
-      }
-    }
+export default function AcordoPage({ params }: AcordoPageProps) {
+  const { data: session } = useSession()
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
+  const [acordo, setAcordo] = useState<Record<string, unknown> | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [modoRegistrarPagamento, setModoRegistrarPagamento] = useState(false)
+  const [parcelasSelecionadas, setParcelasSelecionadas] = useState<Set<string>>(new Set())
+  const [processandoPagamento, setProcessandoPagamento] = useState(false)
+  const [parcelaEditando, setParcelaEditando] = useState<string | null>(null)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [formEdicaoParcela, setFormEdicaoParcela] = useState({
+    dataVencimento: '',
+    dataPagamento: ''
   })
-}
+  const [errorEdit, setErrorEdit] = useState<string | null>(null)
+  const [detalhesAcordo, setDetalhesAcordo] = useState<Record<string, unknown> | null>(null)
 
-export default async function AcordoPage({ params }: AcordoPageProps) {
-  const session = await getServerSession(authOptions)
-  
-  if (!session) {
-    redirect('/login')
+  useEffect(() => {
+    const resolveParams = async () => {
+      const resolved = await params
+      setResolvedParams(resolved)
+    }
+    resolveParams()
+  }, [params])
+
+  const loadAcordo = useCallback(async () => {
+    if (!resolvedParams) return
+
+    try {
+      setLoading(true)
+      const [acordoResponse, detalhesResponse] = await Promise.all([
+        fetch(`/api/acordos/${resolvedParams.id}`),
+        fetch(`/api/acordos/${resolvedParams.id}/detalhes`)
+      ])
+
+      if (acordoResponse.ok) {
+        const acordoData = await acordoResponse.json()
+        setAcordo(acordoData)
+      } else if (acordoResponse.status === 404) {
+        notFound()
+      }
+
+      if (detalhesResponse.ok) {
+        const detalhesData = await detalhesResponse.json()
+        setDetalhesAcordo(detalhesData)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar acordo:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [resolvedParams])
+
+  useEffect(() => {
+    if (!session) {
+      return
+    }
+
+    if (resolvedParams) {
+      loadAcordo()
+    }
+  }, [session, resolvedParams, loadAcordo])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin h-8 w-8 border-2 border-gray-300 border-t-blue-600 rounded-full"></div>
+        <span className="ml-2">Carregando acordo...</span>
+      </div>
+    )
+  }
+
+  if (!acordo || !session) {
+    return null
   }
 
   const user = session.user as SessionUser
-  const { id } = await params
-  const acordo = await getAcordo(id)
 
-  if (!acordo) {
-    notFound()
+  // Funções para gerenciar modo de pagamento
+  const handleIniciarRegistroPagamento = () => {
+    setModoRegistrarPagamento(true)
+    setParcelasSelecionadas(new Set())
   }
 
-  // Serializar acordo para evitar problemas com Decimal objects
-  const accordoSerializado = {
-    ...acordo,
-    valorTotal: Number(acordo.valorTotal),
-    valorDesconto: Number(acordo.valorDesconto),
-    percentualDesconto: Number(acordo.percentualDesconto),
-    valorFinal: Number(acordo.valorFinal),
-    valorEntrada: acordo.valorEntrada ? Number(acordo.valorEntrada) : null,
-    parcelas: acordo.parcelas.map(parcela => ({
-      ...parcela,
-      valor: Number(parcela.valor),
-      pagamentos: (parcela.pagamentos || []).map(pagamento => ({
-        ...pagamento,
-        valorPago: pagamento.valorPago ? Number(pagamento.valorPago) : 0
-      }))
-    })),
-    detalhes: acordo.detalhes.map(detalhe => ({
-      ...detalhe,
-      valorOriginal: Number(detalhe.valorOriginal),
-      valorNegociado: Number(detalhe.valorNegociado),
-      inscricoes: detalhe.inscricoes.map(inscricao => ({
-        ...inscricao,
-        valorDebito: Number(inscricao.valorDebito),
-        valorAbatido: Number(inscricao.valorAbatido),
-        percentualAbatido: Number(inscricao.percentualAbatido)
-      }))
-    }))
+  const handleCancelarRegistroPagamento = () => {
+    setModoRegistrarPagamento(false)
+    setParcelasSelecionadas(new Set())
   }
+
+  const handleToggleParcela = (parcelaId: string) => {
+    const novaSelecao = new Set(parcelasSelecionadas)
+    if (novaSelecao.has(parcelaId)) {
+      novaSelecao.delete(parcelaId)
+    } else {
+      novaSelecao.add(parcelaId)
+    }
+    setParcelasSelecionadas(novaSelecao)
+  }
+
+  const handleConfirmarPagamento = async () => {
+    if (parcelasSelecionadas.size === 0) {
+      toast.error('Selecione pelo menos uma parcela para registrar o pagamento')
+      return
+    }
+
+    setProcessandoPagamento(true)
+    try {
+      const parcelasParaPagar = Array.from(parcelasSelecionadas)
+
+      for (const parcelaId of parcelasParaPagar) {
+        const parcela = (acordo.parcelas as Record<string, unknown>[])?.find((p: Record<string, unknown>) => p.id === parcelaId)
+        if (!parcela) continue
+
+        const valorPago = (parcela.pagamentos as Record<string, unknown>[])?.reduce((total: number, p: Record<string, unknown>) => total + Number(p.valorPago || 0), 0) || 0
+        const valorRestante = Number(parcela.valor) - valorPago
+
+        if (valorRestante <= 0) continue
+
+        const response = await fetch(`/api/pagamentos`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            parcelaId: parcela.id,
+            dataPagamento: new Date(),
+            valorPago: valorRestante,
+            formaPagamento: 'dinheiro'
+          })
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || 'Erro ao registrar pagamento')
+        }
+      }
+
+      toast.success(`Pagamento${parcelasSelecionadas.size > 1 ? 's' : ''} registrado${parcelasSelecionadas.size > 1 ? 's' : ''} com sucesso!`)
+
+      // Recarregar dados e sair do modo de pagamento
+      await loadAcordo()
+      handleCancelarRegistroPagamento()
+    } catch (error) {
+      console.error('Erro ao registrar pagamento:', error)
+      toast.error(error instanceof Error ? error.message : 'Erro ao registrar pagamento')
+    } finally {
+      setProcessandoPagamento(false)
+    }
+  }
+
+  // Funções para edição de parcelas
+  const handleEditarParcela = (parcela: Record<string, unknown>) => {
+    setParcelaEditando(parcela.id as string)
+    setFormEdicaoParcela({
+      dataVencimento: new Date(parcela.dataVencimento as string).toISOString().split('T')[0],
+      dataPagamento: parcela.dataPagamento ? new Date(parcela.dataPagamento as string).toISOString().split('T')[0] : ''
+    })
+    setErrorEdit(null)
+    setShowEditModal(true)
+  }
+
+  const handleCancelarEdicao = () => {
+    setParcelaEditando(null)
+    setShowEditModal(false)
+    setFormEdicaoParcela({
+      dataVencimento: '',
+      dataPagamento: ''
+    })
+    setErrorEdit(null)
+  }
+
+  const calcularStatusAutomatico = (dataVencimento: string, dataPagamento: string) => {
+    if (dataPagamento) {
+      return 'PAGO'
+    }
+
+    const hoje = new Date()
+    const vencimento = new Date(dataVencimento)
+
+    if (vencimento < hoje) {
+      return 'VENCIDO'
+    }
+
+    return 'PENDENTE'
+  }
+
+  const handleSalvarEdicaoParcela = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!parcelaEditando) return
+
+    if (!formEdicaoParcela.dataVencimento.trim()) {
+      setErrorEdit('Data de vencimento é obrigatória')
+      return
+    }
+
+    try {
+      setProcessandoPagamento(true)
+      setErrorEdit(null)
+
+      const status = calcularStatusAutomatico(formEdicaoParcela.dataVencimento, formEdicaoParcela.dataPagamento)
+
+      const response = await fetch(`/api/parcelas/${parcelaEditando}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          dataVencimento: new Date(formEdicaoParcela.dataVencimento),
+          dataPagamento: formEdicaoParcela.dataPagamento ? new Date(formEdicaoParcela.dataPagamento) : null,
+          status: status
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao atualizar parcela')
+      }
+
+      toast.success('Parcela atualizada com sucesso!')
+
+      // Recarregar dados
+      await loadAcordo()
+      handleCancelarEdicao()
+    } catch (error) {
+      console.error('Erro ao atualizar parcela:', error)
+      setErrorEdit(error instanceof Error ? error.message : 'Erro ao atualizar parcela')
+    } finally {
+      setProcessandoPagamento(false)
+    }
+  }
+
+  // Helper para acessar propriedades do acordo
+  const acordo_data = acordo as Record<string, unknown>
 
   const canEdit = user.role === 'ADMIN' || user.role === 'FUNCIONARIO'
-  const canRegisterPayment = canEdit && accordoSerializado.status === 'ativo'
+  const canRegisterPayment = canEdit && acordo_data?.status === 'ativo'
+
+  if (!acordo_data) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin h-8 w-8 border-2 border-gray-300 border-t-blue-600 rounded-full"></div>
+        <span className="ml-2">Carregando acordo...</span>
+      </div>
+    )
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ativo': return 'bg-green-100 text-green-800'
       case 'cumprido': return 'bg-blue-100 text-blue-800'
       case 'vencido': return 'bg-red-100 text-red-800'
-      case 'cancelado': return 'bg-gray-100 text-gray-800'
+      case 'cancelado': return 'bg-orange-100 text-orange-800'
       case 'renegociado': return 'bg-yellow-100 text-yellow-800'
       default: return 'bg-gray-100 text-gray-800'
     }
   }
 
-  // Consolidar todos os pagamentos de todas as parcelas
-  const todosPagamentos = accordoSerializado.parcelas.flatMap(parcela =>
-    (parcela.pagamentos || []).map(pagamento => ({
-      ...pagamento,
-      parcela: parcela
-    }))
-  )
 
   const getStatusLabel = (status: string) => {
     switch (status) {
@@ -150,29 +308,31 @@ export default async function AcordoPage({ params }: AcordoPageProps) {
 
   const getParcelaStatusColor = (status: string) => {
     switch (status) {
-      case 'pendente': return 'bg-yellow-100 text-yellow-800'
-      case 'paga': return 'bg-green-100 text-green-800'
-      case 'vencida': return 'bg-red-100 text-red-800'
-      case 'cancelada': return 'bg-gray-100 text-gray-800'
+      case 'PENDENTE': return 'bg-yellow-100 text-yellow-800'
+      case 'PAGO': return 'bg-green-100 text-green-800'
+      case 'VENCIDO': return 'bg-red-100 text-red-800'
+      case 'CANCELADO': return 'bg-orange-100 text-orange-800'
       default: return 'bg-gray-100 text-gray-800'
     }
   }
 
   const getParcelaStatusLabel = (status: string) => {
     switch (status) {
-      case 'pendente': return 'Pendente'
-      case 'paga': return 'Paga'
-      case 'vencida': return 'Vencida'
-      case 'cancelada': return 'Cancelada'
+      case 'PENDENTE': return 'Pendente'
+      case 'PAGO': return 'Pago'
+      case 'VENCIDO': return 'Vencido'
+      case 'CANCELADO': return 'Cancelado'
       default: return status
     }
   }
 
   const getProgressoPagamento = () => {
-    const valorTotal = accordoSerializado.valorFinal || 0
-    const valorPago = accordoSerializado.parcelas.reduce((total, parcela) => {
-      return total + (parcela.pagamentos || []).reduce((subtotal, pagamento) => {
-        return subtotal + (pagamento.valorPago || 0)
+    const valorTotal = Number(acordo_data.valorFinal || 0)
+    const parcelas = (acordo_data.parcelas as Record<string, unknown>[]) || []
+    const valorPago = parcelas.reduce((total: number, parcela: Record<string, unknown>) => {
+      const pagamentos = (parcela.pagamentos as Record<string, unknown>[]) || []
+      return total + pagamentos.reduce((subtotal: number, pagamento: Record<string, unknown>) => {
+        return subtotal + Number(pagamento.valorPago || 0)
       }, 0)
     }, 0)
     const percentual = valorTotal > 0 ? Math.round((valorPago / valorTotal) * 100) : 0
@@ -194,26 +354,25 @@ export default async function AcordoPage({ params }: AcordoPageProps) {
   }
 
   const isVencido = (dataVencimento: Date) => {
-    return new Date(dataVencimento) < new Date() && accordoSerializado.status === 'ativo'
+    return new Date(dataVencimento) < new Date() && acordo_data.status === 'ativo'
   }
 
-  const progresso = getProgressoPagamento()
-  const vencido = isVencido(accordoSerializado.dataVencimento)
+  const progresso = acordo_data ? getProgressoPagamento() : null
+  const vencido = acordo_data ? isVencido(acordo_data.dataVencimento as Date) : false
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/acordos">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
+          <Button variant="outline" size="icon" className="cursor-pointer">
+            <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold">Acordo de Pagamento</h1>
-            <Badge className={getStatusColor(accordoSerializado.status)}>
-              {getStatusLabel(accordoSerializado.status)}
+            <Badge className={getStatusColor(acordo_data.status as string)}>
+              {getStatusLabel(acordo_data.status as string)}
             </Badge>
             {vencido && (
               <Badge className="bg-red-100 text-red-800">
@@ -223,20 +382,48 @@ export default async function AcordoPage({ params }: AcordoPageProps) {
             )}
           </div>
           <p className="text-gray-600">
-            Processo: {accordoSerializado.processo.numero} - {accordoSerializado.processo.contribuinte.nome}
+            Processo: {(acordo_data.processo as Record<string, unknown>)?.numero as string} - {((acordo_data.processo as Record<string, unknown>)?.contribuinte as Record<string, unknown>)?.nome as string}
           </p>
         </div>
         <div className="flex gap-2">
-          {canRegisterPayment && progresso.valorPendente > 0 && (
-            <Link href={`/acordos/${accordoSerializado.id}/pagamentos/novo`}>
-              <Button>
-                <DollarSign className="mr-2 h-4 w-4" />
-                Registrar Pagamento
+          {canRegisterPayment && (progresso?.valorPendente || 0) > 0 && !modoRegistrarPagamento && (
+            <Button onClick={handleIniciarRegistroPagamento} className="cursor-pointer">
+              <DollarSign className="mr-2 h-4 w-4" />
+              Registrar Pagamento
+            </Button>
+          )}
+          {modoRegistrarPagamento && (
+            <>
+              <Button
+                onClick={handleConfirmarPagamento}
+                disabled={parcelasSelecionadas.size === 0 || processandoPagamento}
+                className="bg-green-600 hover:bg-green-700 cursor-pointer"
+              >
+                {processandoPagamento ? (
+                  <>
+                    <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    Confirmar Pagamento ({parcelasSelecionadas.size})
+                  </>
+                )}
               </Button>
-            </Link>
+              <Button
+                onClick={handleCancelarRegistroPagamento}
+                variant="outline"
+                disabled={processandoPagamento}
+                className="cursor-pointer"
+              >
+                <X className="mr-2 h-4 w-4" />
+                Cancelar
+              </Button>
+            </>
           )}
           {canEdit && (
-            <AcordoActions acordo={accordoSerializado} />
+            <AcordoActions acordo={acordo as { id: string; status: string; parcelas: { id: string; pagamentos: { id: string; valorPago: number; }[]; }[]; valorFinal: number; }} />
           )}
         </div>
       </div>
@@ -254,21 +441,21 @@ export default async function AcordoPage({ params }: AcordoPageProps) {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">Data de Assinatura:</span>
-                <p className="font-medium">{formatarData(accordoSerializado.dataAssinatura)}</p>
+                <p className="font-medium">{formatarData(acordo_data.dataAssinatura as Date)}</p>
               </div>
               <div>
                 <span className="text-gray-600">Data de Vencimento:</span>
-                <p className="font-medium">{formatarData(accordoSerializado.dataVencimento)}</p>
+                <p className="font-medium">{formatarData(acordo_data.dataVencimento as Date)}</p>
               </div>
               <div>
                 <span className="text-gray-600">Modalidade:</span>
                 <p className="font-medium">
-                  {accordoSerializado.modalidadePagamento === 'avista' ? 'À Vista' : `${accordoSerializado.numeroParcelas}x`}
+                  {acordo_data.modalidadePagamento === 'avista' ? 'À Vista' : `Parcelamento (${acordo_data.numeroParcelas as number}x)`}
                 </p>
               </div>
               <div>
                 <span className="text-gray-600">Status:</span>
-                <p className="font-medium">{getStatusLabel(accordoSerializado.status)}</p>
+                <p className="font-medium">{getStatusLabel(acordo_data.status as string)}</p>
               </div>
             </div>
           </CardContent>
@@ -277,22 +464,31 @@ export default async function AcordoPage({ params }: AcordoPageProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Dados do Contribuinte
+              <FileText className="h-5 w-5" />
+              Informações do Processo
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-gray-400" />
-              <span>{acordo.processo.contribuinte.nome}</span>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-gray-600">Número do Processo:</span>
+                <p className="font-medium">{(acordo_data.processo as Record<string, unknown>).numero as string}</p>
+              </div>
+              <div>
+                <span className="text-gray-600">Contribuinte:</span>
+                <p className="font-medium">{((acordo_data.processo as Record<string, unknown>).contribuinte as Record<string, unknown>).nome as string}</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Building className="h-4 w-4 text-gray-400" />
-              <span>{acordo.processo.contribuinte.documento}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-gray-400" />
-              <span>{acordo.processo.contribuinte.email}</span>
+            <div className="grid grid-cols-1 gap-4 text-sm">
+              <div>
+                <span className="text-gray-600">Tipo de Processo:</span>
+                <p className="font-medium">
+                  {(acordo_data.processo as Record<string, unknown>).tipo === 'TRANSACAO_EXCEPCIONAL' ? 'Transação Excepcional' :
+                    (acordo_data.processo as Record<string, unknown>).tipo === 'COMPENSACAO' ? 'Compensação' :
+                      (acordo_data.processo as Record<string, unknown>).tipo === 'DACAO_PAGAMENTO' ? 'Dação em Pagamento' :
+                        (acordo_data.processo as Record<string, unknown>).tipo as string}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -311,64 +507,101 @@ export default async function AcordoPage({ params }: AcordoPageProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Resumo dos Valores */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
-              <div>
-                <span className="text-sm text-gray-600">Valor Original:</span>
-                <p className="font-medium">
-                  R$ {accordoSerializado.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-              {accordoSerializado.valorDesconto > 0 && (
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h5 className="font-medium mb-3 text-blue-800">Detalhamento do Acordo:</h5>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 text-sm">
                 <div>
-                  <span className="text-sm text-gray-600">Desconto:</span>
-                  <p className="font-medium text-red-600">
-                    - R$ {accordoSerializado.valorDesconto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    {accordoSerializado.percentualDesconto > 0 && ` (${accordoSerializado.percentualDesconto.toFixed(1)}%)`}
+                  <span className="text-blue-600">Valor Original:</span>
+                  <p className="font-medium text-blue-700">
+                    R$ {Number(acordo_data.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-              )}
-              <div>
-                <span className="text-sm text-gray-600">Valor do Acordo:</span>
-                <p className="font-bold text-lg">
-                  R$ {accordoSerializado.valorFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
+                <div>
+                  <span className="text-blue-600">Valor Proposto:</span>
+                  <p className="font-medium text-blue-700">
+                    R$ {Number(acordo_data.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-blue-600">Desconto:</span>
+                  <p className="font-medium text-blue-700">
+                    R$ {Number(acordo_data.valorDesconto || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-blue-600">Valor de Entrada:</span>
+                  <p className="font-medium text-blue-700">
+                    R$ {Number(acordo_data.valorEntrada || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-blue-600">
+                    {acordo_data.modalidadePagamento === 'avista' ? 'Valor Total:' : 'Valor das Parcelas:'}
+                  </span>
+                  <p className="font-medium text-blue-700">
+                    {acordo_data.modalidadePagamento === 'avista'
+                      ? `R$ ${Number(acordo_data.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                      : (acordo_data.numeroParcelas as number) > 0
+                        ? `${acordo_data.numeroParcelas as number}x de R$ ${((Number(acordo_data.valorFinal) - Number(acordo_data.valorEntrada || 0)) / (acordo_data.numeroParcelas as number)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                        : `R$ ${Number(acordo_data.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                    }
+                  </p>
+                </div>
+                <div>
+                  <span className="text-blue-600">Total Final:</span>
+                  <p className="font-bold text-blue-700">
+                    R$ {Number(acordo_data.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Progresso do Pagamento */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">Progresso do Pagamento</span>
-                <span className="font-medium">{progresso.percentual}%</span>
+                <span className="font-medium">{(progresso?.percentual as number) || 0}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
-                <div 
+                <div
                   className="bg-blue-600 h-3 rounded-full transition-all duration-300"
-                  style={{ width: `${progresso.percentual}%` }}
+                  style={{ width: `${progresso?.percentual || 0}%` }}
                 />
               </div>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <p className="text-lg font-bold text-blue-600">
-                    R$ {progresso.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {(progresso?.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                   <p className="text-xs text-gray-600">Total</p>
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-green-600">
-                    R$ {progresso.valorPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-xs text-gray-600">Pago</p>
-                </div>
-                <div>
                   <p className="text-lg font-bold text-yellow-600">
-                    R$ {progresso.valorPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {(progresso?.valorPendente || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                   <p className="text-xs text-gray-600">Pendente</p>
                 </div>
+                <div>
+                  <p className="text-lg font-bold text-green-600">
+                    R$ {(progresso?.valorPago || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs text-gray-600">Pago</p>
+                </div>
               </div>
             </div>
+
+            {/* Observações do Acordo */}
+            {(acordo_data.observacoes as string) && (
+              <>
+                <div className="border-t pt-4">
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-gray-900">Observações do Acordo</h4>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {acordo_data.observacoes as string}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -376,91 +609,104 @@ export default async function AcordoPage({ params }: AcordoPageProps) {
       {/* Parcelas */}
       <Card>
         <CardHeader>
-          <CardTitle>Parcelas do Acordo</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Parcelas do Acordo
+          </CardTitle>
           <CardDescription>
             Cronograma de pagamento e status das parcelas
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {accordoSerializado.parcelas.map((parcela) => {
-              const isVencidaParcela = new Date(parcela.dataVencimento) < new Date() && parcela.status === 'pendente'
-              const totalPagoParcela = parcela.pagamentos.reduce((total, p) => total + p.valorPago, 0)
-              const restanteParcela = parcela.valor - totalPagoParcela
-              
+            {(acordo_data.parcelas as Record<string, unknown>[]).map((parcela: Record<string, unknown>) => {
+              const isVencidaParcela = new Date(parcela.dataVencimento as string) < new Date() && parcela.status === 'PENDENTE'
+              const totalPagoParcela = (parcela.pagamentos as Record<string, unknown>[]).reduce((total: number, p: Record<string, unknown>) => total + Number(p.valorPago), 0)
+              const restanteParcela = Number(parcela.valor) - totalPagoParcela
+
               return (
-                <div 
-                  key={parcela.id} 
-                  className={`border rounded-lg p-4 ${
-                    parcela.status === 'paga' ? 'bg-green-50 border-green-200' :
+                <div
+                  key={parcela.id as string}
+                  className={`border rounded-lg p-4 ${parcela.status === 'PAGO' ? 'bg-green-50 border-green-200' :
                     isVencidaParcela ? 'bg-red-50 border-red-200' :
-                    'bg-gray-50'
-                  }`}
+                      'bg-gray-50'
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                        parcela.status === 'paga' ? 'bg-green-100 text-green-800' :
-                        isVencidaParcela ? 'bg-red-100 text-red-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                        {parcela.numero === 0 ? 'E' : parcela.numero}
-                      </span>
+                      {modoRegistrarPagamento && parcela.status === 'PENDENTE' && restanteParcela > 0 ? (
+                        <Checkbox
+                          checked={parcelasSelecionadas.has(parcela.id as string)}
+                          onCheckedChange={() => handleToggleParcela(parcela.id as string)}
+                          className="w-6 h-6 cursor-pointer"
+                        />
+                      ) : (
+                        <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${parcela.status === 'PAGO' ? 'bg-green-100 text-green-800' :
+                          isVencidaParcela ? 'bg-red-100 text-red-800' :
+                            'bg-blue-100 text-blue-800'
+                          }`}>
+                          {Number(parcela.numero) === 0 ? 'E' : parcela.numero as string}
+                        </span>
+                      )}
                       <div>
                         <p className="font-medium">
-                          {parcela.numero === 0 ? 'Entrada' : `Parcela ${parcela.numero} de ${accordoSerializado.numeroParcelas}`}
+                          {Number(parcela.numero) === 0 ? 'Entrada' : `Parcela ${parcela.numero as string} de ${acordo_data.numeroParcelas as string}`}
                         </p>
                         <p className="text-sm text-gray-600">
-                          Vencimento: {formatarData(parcela.dataVencimento)}
+                          Vencimento: {formatarData(parcela.dataVencimento as string)}
                         </p>
-                        {parcela.dataPagamento && (
+                        {(parcela.dataPagamento as string) && (
                           <p className="text-sm text-green-600">
-                            Paga em: {formatarData(parcela.dataPagamento!)}
+                            Paga em: {formatarData(parcela.dataPagamento as string)}
                           </p>
                         )}
                       </div>
                     </div>
                     <div className="text-right">
-                      <Badge className={getParcelaStatusColor(parcela.status)}>
-                        {getParcelaStatusLabel(parcela.status)}
-                      </Badge>
-                      <p className="text-sm font-medium mt-1">
-                        R$ {parcela.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      <div className="flex items-center gap-2 justify-end mb-2">
+                        <Badge className={getParcelaStatusColor(parcela.status as string)}>
+                          {getParcelaStatusLabel(parcela.status as string)}
+                        </Badge>
+                        {canEdit && !modoRegistrarPagamento && acordo_data.status !== 'cancelado' && acordo_data.status !== 'cumprido' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditarParcela(parcela as Record<string, unknown>)}
+                            className="cursor-pointer"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-sm font-medium">
+                        R$ {Number(parcela.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
-                      {parcela.status === 'pendente' && totalPagoParcela > 0 && (
+                      {parcela.status === 'PENDENTE' && totalPagoParcela > 0 && (
                         <p className="text-xs text-blue-600">
                           Pago: R$ {totalPagoParcela.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                       )}
-                      {canRegisterPayment && parcela.status === 'pendente' && restanteParcela > 0 && (
-                        <Link href={`/acordos/${accordoSerializado.id}/pagamentos/novo?parcela=${parcela.id}`}>
-                          <Button size="sm" variant="outline" className="mt-2">
-                            <DollarSign className="mr-1 h-3 w-3" />
-                            Pagar
-                          </Button>
-                        </Link>
-                      )}
                     </div>
                   </div>
-                  
+
                   {/* Pagamentos da parcela */}
-                  {parcela.pagamentos.length > 0 && (
+                  {(parcela.pagamentos as Record<string, unknown>[]).length > 0 && parcela.status !== 'PAGO' && parcelaEditando !== parcela.id && (
                     <div className="mt-3 pl-11 space-y-2">
                       <h5 className="text-sm font-medium">Pagamentos:</h5>
-                      {parcela.pagamentos.map((pagamento) => (
-                        <div key={pagamento.id} className="text-sm bg-white p-2 rounded border">
+                      {(parcela.pagamentos as Record<string, unknown>[]).map((pagamento: Record<string, unknown>) => (
+                        <div key={pagamento.id as string} className="text-sm bg-white p-2 rounded border">
                           <div className="flex justify-between items-center">
                             <span>
-                              {formatarData(pagamento.dataPagamento)} -
-                              {pagamento.formaPagamento.replace('_', ' ').toLowerCase()}
+                              {formatarData(pagamento.dataPagamento as string)} -
+                              {(pagamento.formaPagamento as string).replace('_', ' ').toLowerCase()}
                             </span>
                             <span className="font-medium">
-                              R$ {pagamento.valorPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              R$ {Number(pagamento.valorPago).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </span>
                           </div>
-                          {pagamento.numeroComprovante && (
+                          {(pagamento.numeroComprovante as string) && (
                             <p className="text-xs text-gray-500">
-                              Comprovante: {pagamento.numeroComprovante}
+                              Comprovante: {pagamento.numeroComprovante as string}
                             </p>
                           )}
                         </div>
@@ -474,39 +720,97 @@ export default async function AcordoPage({ params }: AcordoPageProps) {
         </CardContent>
       </Card>
 
-      {/* Histórico de Pagamentos */}
-      {todosPagamentos.length > 0 && (
+      {/* Origem do Acordo */}
+      {detalhesAcordo && Array.isArray((detalhesAcordo as Record<string, unknown>).detalhes) && ((detalhesAcordo as Record<string, unknown>).detalhes as Record<string, unknown>[]).length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Histórico de Pagamentos</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5" />
+              Origem do Acordo
+            </CardTitle>
             <CardDescription>
-              Todos os pagamentos registrados para este acordo
+              Inscrições e débitos que originaram este acordo
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {todosPagamentos.map((pagamento) => (
-                <div key={pagamento.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <CreditCard className="h-5 w-5 text-blue-600" />
-                    <div>
-                      <p className="font-medium">
-                        {pagamento.parcela.numero === 0 ? 'Entrada' : `Parcela ${pagamento.parcela.numero}`} - {formatarData(pagamento.dataPagamento)}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {pagamento.formaPagamento.replace('_', ' ').toLowerCase()}
-                        {pagamento.numeroComprovante && ` • ${pagamento.numeroComprovante}`}
-                      </p>
-                      {pagamento.observacoes && (
-                        <p className="text-sm text-gray-500">{pagamento.observacoes}</p>
-                      )}
+            <div className="space-y-4">
+              {((detalhesAcordo as Record<string, unknown>).detalhes as Record<string, unknown>[]).map((detalhe: Record<string, unknown>) => (
+                <div key={detalhe.id as string} className="border rounded-lg p-4">
+                  {/* Inscrições relacionadas */}
+                  {(detalhe.inscricoes as Record<string, unknown>) && Array.isArray(detalhe.inscricoes) && (detalhe.inscricoes as Record<string, unknown>[]).length > 0 && (
+                    <div className="mt-4">
+                      <h5 className="text-sm font-medium text-gray-700 mb-2">Inscrições Incluídas:</h5>
+                      <div className="space-y-3">
+                        {(detalhe.inscricoes as Record<string, unknown>[]).map((inscricao: Record<string, unknown>) => (
+                          <div key={inscricao.id as string} className="p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-3">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <div>
+                                  <p className="font-medium text-sm">{inscricao.numeroInscricao as string}</p>
+                                  <p className="text-xs text-gray-600 capitalize">
+                                    {(inscricao.tipoInscricao as string) === 'imobiliaria' ? 'Imobiliária' : 'Econômica'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Débitos da inscrição */}
+                            {(inscricao.descricaoDebitos as Record<string, unknown>) && Array.isArray(inscricao.descricaoDebitos) && (inscricao.descricaoDebitos as Record<string, unknown>[]).length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-gray-200">
+                                <h6 className="text-xs font-medium text-gray-600 mb-1">Débitos:</h6>
+                                <div className="space-y-1">
+                                  {(inscricao.descricaoDebitos as Record<string, unknown>[]).map((debito: Record<string, unknown>, idx: number) => (
+                                    <div key={(debito.id as string) || `debito-${idx}`} className="flex items-center justify-between text-xs">
+                                      <span className="text-gray-700">{debito.descricao as string}</span>
+                                      <div className="text-right">
+                                        <span className="font-medium">
+                                          R$ {Number(debito.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </span>
+                                        {(debito.dataVencimento as string) && (
+                                          <div className="text-gray-500">
+                                            Venc: {new Date(debito.dataVencimento as string).toLocaleDateString('pt-BR')}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium text-green-600">
-                      R$ {pagamento.valorPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
+                  )}
+
+                  {/* Imóvel relacionado (para dação) */}
+                  {(detalhe.imovel as Record<string, unknown>) && (
+                    <div className="mt-4">
+                      <h5 className="text-sm font-medium text-gray-700 mb-2">Imóvel:</h5>
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="font-medium text-sm">{(detalhe.imovel as Record<string, unknown>).matricula as string}</p>
+                        <p className="text-xs text-gray-600">{(detalhe.imovel as Record<string, unknown>).endereco as string}</p>
+                        <p className="text-sm font-medium mt-1">
+                          Valor Avaliado: R$ {Number((detalhe.imovel as Record<string, unknown>).valorAvaliado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Crédito relacionado (para compensação) */}
+                  {(detalhe.credito as Record<string, unknown>) && (
+                    <div className="mt-4">
+                      <h5 className="text-sm font-medium text-gray-700 mb-2">Crédito:</h5>
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="font-medium text-sm">{(detalhe.credito as Record<string, unknown>).numero as string}</p>
+                        <p className="text-xs text-gray-600 capitalize">{((detalhe.credito as Record<string, unknown>).tipo as string).replace('_', ' ')}</p>
+                        <p className="text-sm font-medium mt-1">
+                          Valor: R$ {Number((detalhe.credito as Record<string, unknown>).valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -514,67 +818,103 @@ export default async function AcordoPage({ params }: AcordoPageProps) {
         </Card>
       )}
 
-      {/* Observações e Cláusulas */}
-      {(accordoSerializado.observacoes || accordoSerializado.clausulasEspeciais) && (
-        <div className="grid gap-6 md:grid-cols-2">
-          {accordoSerializado.observacoes && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Observações</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-700 whitespace-pre-wrap">{accordoSerializado.observacoes}</p>
-              </CardContent>
-            </Card>
-          )}
-          
-          {accordoSerializado.clausulasEspeciais && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Cláusulas Especiais</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-700 whitespace-pre-wrap">{accordoSerializado.clausulasEspeciais}</p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+      {/* Cláusulas Especiais */}
+      {(acordo_data.clausulasEspeciais as string) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Cláusulas Especiais</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-700 whitespace-pre-wrap">{acordo_data.clausulasEspeciais as string}</p>
+          </CardContent>
+        </Card>
       )}
 
       {/* Detalhes Específicos do Acordo */}
       <CumprimentoWrapper
-        acordoId={accordoSerializado.id}
-        detalhes={accordoSerializado.detalhes || []}
+        acordoId={acordo_data.id as string}
+        detalhes={(acordo_data.detalhes as Record<string, unknown>[]) || []}
       />
 
-      {/* Informações do Processo */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Informações do Processo</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <span className="text-gray-600">Número:</span>
-                <p className="font-medium">{accordoSerializado.processo.numero}</p>
-              </div>
-              <div>
-                <span className="text-gray-600">Tipo:</span>
-                <p className="font-medium">
-                  {accordoSerializado.processo.tipo === 'COMPENSACAO' ? 'Compensação' :
-                   accordoSerializado.processo.tipo === 'DACAO_PAGAMENTO' ? 'Dação em Pagamento' :
-                   'Transação Excepcional'}
-                </p>
-              </div>
-              <div>
-                <span className="text-gray-600">Status:</span>
-                <p className="font-medium">{accordoSerializado.processo.status.replace('_', ' ')}</p>
-              </div>
+      {/* Modal de Edição de Parcela */}
+      <Dialog open={showEditModal} onOpenChange={handleCancelarEdicao}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5 text-blue-600" />
+              Editar Parcela
+            </DialogTitle>
+            <DialogDescription>
+              Edite as informações da parcela. O status será calculado automaticamente com base nas datas informadas.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSalvarEdicaoParcela} className="space-y-4">
+            {errorEdit && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{errorEdit}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="dataVencimento">Data de Vencimento <span className="text-red-500">*</span></Label>
+              <Input
+                id="dataVencimento"
+                type="date"
+                value={formEdicaoParcela.dataVencimento}
+                onChange={(e) => setFormEdicaoParcela(prev => ({ ...prev, dataVencimento: e.target.value }))}
+                disabled={processandoPagamento}
+                required
+              />
             </div>
-          </div>
-        </CardContent>
-      </Card>
+
+            <div className="space-y-2">
+              <Label htmlFor="dataPagamento">Data de Pagamento (opcional)</Label>
+              <Input
+                id="dataPagamento"
+                type="date"
+                value={formEdicaoParcela.dataPagamento}
+                onChange={(e) => setFormEdicaoParcela(prev => ({ ...prev, dataPagamento: e.target.value }))}
+                disabled={processandoPagamento}
+              />
+              <p className="text-xs text-gray-500">
+                Deixe em branco se a parcela não foi paga. O status será calculado automaticamente.
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancelarEdicao}
+                disabled={processandoPagamento}
+                className="cursor-pointer"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={processandoPagamento}
+                className="cursor-pointer"
+              >
+                {processandoPagamento ? (
+                  <>
+                    <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Salvar Alterações
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
     </div>
   )
 }

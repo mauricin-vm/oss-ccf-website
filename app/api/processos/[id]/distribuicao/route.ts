@@ -2,32 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const { id: processoId } = await params
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status') // Status atual do processo
-
     // Buscar processo com status atual
     const processo = await prisma.processo.findUnique({
       where: { id: processoId },
       select: { status: true, numero: true }
     })
-
     if (!processo) {
       return NextResponse.json({ error: 'Processo não encontrado' }, { status: 404 })
     }
-
     // Buscar última distribuição do processo
     const ultimaDistribuicao = await prisma.processoPauta.findFirst({
       where: { processoId },
@@ -41,7 +35,6 @@ export async function GET(
         }
       }
     })
-
     if (!ultimaDistribuicao) {
       return NextResponse.json({
         relator: null,
@@ -52,11 +45,9 @@ export async function GET(
         permitirAlteracao: true
       })
     }
-
     // Determinar sugestão baseada no status
     let sugestao = null
     const statusAtual = status || processo.status
-
     switch (statusAtual) {
       case 'SUSPENSO':
       case 'PEDIDO_DILIGENCIA':
@@ -66,7 +57,6 @@ export async function GET(
           : ultimaDistribuicao.relator
         sugestao = ultimoMembro
         break
-        
       case 'PEDIDO_VISTA':
         // Buscar quem pediu vista mais recentemente
         const ultimaVista = await prisma.decisao.findFirst({
@@ -76,7 +66,6 @@ export async function GET(
           },
           orderBy: { createdAt: 'desc' }
         })
-        
         // Por padrão, sugere o último revisor (quem pediu vista)
         if (ultimaVista && ultimaVista.conselheiroPedidoVista) {
           sugestao = ultimaVista.conselheiroPedidoVista
@@ -86,11 +75,9 @@ export async function GET(
           sugestao = ultimaDistribuicao.relator
         }
         break
-        
       default:
         sugestao = ultimaDistribuicao.relator
     }
-
     // Buscar conselheiros ativos para opções de redistribuição
     const conselheirosAtivos = await prisma.conselheiro.findMany({
       where: { ativo: true },
@@ -102,10 +89,8 @@ export async function GET(
         origem: true
       }
     })
-
     // Criar lista de opções para redistribuição
     const opcoes = []
-    
     // Relator original
     if (ultimaDistribuicao.relator) {
       opcoes.push({
@@ -115,7 +100,6 @@ export async function GET(
         isSugestao: sugestao === ultimaDistribuicao.relator
       })
     }
-
     // Revisores
     ultimaDistribuicao.revisores?.forEach((revisor, index) => {
       opcoes.push({
@@ -125,7 +109,6 @@ export async function GET(
         isSugestao: sugestao === revisor
       })
     })
-
     // Todos os conselheiros ativos como opção
     conselheirosAtivos.forEach(conselheiro => {
       // Não duplicar se já está na lista como relator ou revisor
@@ -140,7 +123,6 @@ export async function GET(
         })
       }
     })
-
     return NextResponse.json({
       relator: ultimaDistribuicao.relator,
       revisores: ultimaDistribuicao.revisores || [],
@@ -155,7 +137,6 @@ export async function GET(
       statusAtual,
       motivoSugestao: getMotiveSuggestion(statusAtual)
     })
-
     function getMotiveSuggestion(status: string): string {
       switch (status) {
         case 'SUSPENSO':

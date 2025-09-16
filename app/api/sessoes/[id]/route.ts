@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { SessionUser, SessaoUpdateData } from '@/types'
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -11,11 +10,9 @@ export async function GET(
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const sessao = await prisma.sessaoJulgamento.findUnique({
       where: { id },
       include: {
@@ -73,14 +70,12 @@ export async function GET(
         }
       }
     })
-
     if (!sessao) {
       return NextResponse.json(
         { error: 'Sessão não encontrada' },
         { status: 404 }
       )
     }
-
     // Converter valores Decimal para number antes de retornar
     const sessaoSerializada = {
       ...sessao,
@@ -90,8 +85,6 @@ export async function GET(
           ...processoPauta,
           processo: {
             ...processoPauta.processo,
-            valorOriginal: processoPauta.processo.valorOriginal ? Number(processoPauta.processo.valorOriginal) : null,
-            valorNegociado: processoPauta.processo.valorNegociado ? Number(processoPauta.processo.valorNegociado) : null
           }
         }))
       },
@@ -99,12 +92,9 @@ export async function GET(
         ...decisao,
         processo: {
           ...decisao.processo,
-          valorOriginal: decisao.processo.valorOriginal ? Number(decisao.processo.valorOriginal) : null,
-          valorNegociado: decisao.processo.valorNegociado ? Number(decisao.processo.valorNegociado) : null
         }
       }))
     }
-
     return NextResponse.json(sessaoSerializada)
   } catch (error) {
     console.error('Erro ao buscar sessão:', error)
@@ -114,7 +104,6 @@ export async function GET(
     )
   }
 }
-
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -122,13 +111,10 @@ export async function PUT(
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
-
     // Apenas Admin e Funcionário podem editar sessões
     if (user.role === 'VISUALIZADOR') {
       return NextResponse.json(
@@ -136,9 +122,7 @@ export async function PUT(
         { status: 403 }
       )
     }
-
     const body = await request.json()
-    
     // Buscar sessão atual
     const sessaoAtual = await prisma.sessaoJulgamento.findUnique({
       where: { id },
@@ -147,14 +131,12 @@ export async function PUT(
         conselheiros: true
       }
     })
-
     if (!sessaoAtual) {
       return NextResponse.json(
         { error: 'Sessão não encontrada' },
         { status: 404 }
       )
     }
-
     // Verificar se a sessão pode ser editada (apenas sessões não finalizadas)
     if (sessaoAtual.dataFim) {
       return NextResponse.json(
@@ -162,26 +144,21 @@ export async function PUT(
         { status: 400 }
       )
     }
-
     // Preparar dados de atualização
     const updateData: SessaoUpdateData = {
       updatedAt: new Date()
     }
-
     if (body.ata !== undefined) {
       updateData.ata = body.ata
     }
-
     if (body.dataFim) {
       updateData.dataFim = new Date(body.dataFim)
-      
       // Se está finalizando a sessão, atualizar status da pauta
       await prisma.pauta.update({
         where: { id: sessaoAtual.pautaId },
         data: { status: 'fechada' }
       })
     }
-
     if (body.conselheiros && Array.isArray(body.conselheiros)) {
       // Verificar se todos os conselheiros são elegíveis (ativos)
       const conselheiros = await prisma.conselheiro.findMany({
@@ -190,19 +167,16 @@ export async function PUT(
           ativo: true
         }
       })
-
       if (conselheiros.length !== body.conselheiros.length) {
         return NextResponse.json(
           { error: 'Um ou mais conselheiros não são elegíveis ou não estão ativos' },
           { status: 400 }
         )
       }
-
       updateData.conselheiros = {
         set: body.conselheiros.map((id: string) => ({ id }))
       }
     }
-
     const sessaoAtualizada = await prisma.sessaoJulgamento.update({
       where: { id },
       data: updateData,
@@ -240,7 +214,6 @@ export async function PUT(
         }
       }
     })
-
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
@@ -260,7 +233,6 @@ export async function PUT(
         }
       }
     })
-
     // Converter valores Decimal para number antes de retornar
     const sessaoAtualizadaSerializada = {
       ...sessaoAtualizada,
@@ -270,8 +242,6 @@ export async function PUT(
           ...processoPauta,
           processo: {
             ...processoPauta.processo,
-            valorOriginal: processoPauta.processo.valorOriginal ? Number(processoPauta.processo.valorOriginal) : null,
-            valorNegociado: processoPauta.processo.valorNegociado ? Number(processoPauta.processo.valorNegociado) : null
           }
         }))
       },
@@ -279,12 +249,9 @@ export async function PUT(
         ...decisao,
         processo: {
           ...decisao.processo,
-          valorOriginal: decisao.processo.valorOriginal ? Number(decisao.processo.valorOriginal) : null,
-          valorNegociado: decisao.processo.valorNegociado ? Number(decisao.processo.valorNegociado) : null
         }
       }))
     }
-
     return NextResponse.json(sessaoAtualizadaSerializada)
   } catch (error) {
     console.error('Erro ao atualizar sessão:', error)
@@ -294,7 +261,6 @@ export async function PUT(
     )
   }
 }
-
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -302,13 +268,10 @@ export async function PATCH(
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
-
     // Apenas Admin e Funcionário podem editar sessões
     if (user.role === 'VISUALIZADOR') {
       return NextResponse.json(
@@ -316,9 +279,7 @@ export async function PATCH(
         { status: 403 }
       )
     }
-
     const body = await request.json()
-    
     // Buscar sessão atual
     const sessaoAtual = await prisma.sessaoJulgamento.findUnique({
       where: { id },
@@ -327,14 +288,12 @@ export async function PATCH(
         conselheiros: true
       }
     })
-
     if (!sessaoAtual) {
       return NextResponse.json(
         { error: 'Sessão não encontrada' },
         { status: 404 }
       )
     }
-
     // Verificar se a sessão pode ser editada (apenas sessões não finalizadas)
     if (sessaoAtual.dataFim) {
       return NextResponse.json(
@@ -342,28 +301,22 @@ export async function PATCH(
         { status: 400 }
       )
     }
-
     // Preparar dados de atualização
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       updatedAt: new Date()
     }
-
     if (body.numeroAta !== undefined) {
       updateData.numeroAta = body.numeroAta
     }
-
     if (body.presidenteId !== undefined) {
       updateData.presidenteId = body.presidenteId
     }
-
     if (body.dataInicio) {
       updateData.dataInicio = new Date(body.dataInicio)
     }
-
     if (body.assuntosAdministrativos !== undefined) {
       updateData.assuntosAdministrativos = body.assuntosAdministrativos
     }
-
     const sessaoAtualizada = await prisma.sessaoJulgamento.update({
       where: { id },
       data: updateData,
@@ -401,7 +354,6 @@ export async function PATCH(
         }
       }
     })
-
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
@@ -423,7 +375,6 @@ export async function PATCH(
         }
       }
     })
-
     // Converter valores Decimal para number antes de retornar
     const sessaoAtualizadaSerializada = {
       ...sessaoAtualizada,
@@ -433,8 +384,6 @@ export async function PATCH(
           ...processoPauta,
           processo: {
             ...processoPauta.processo,
-            valorOriginal: processoPauta.processo.valorOriginal ? Number(processoPauta.processo.valorOriginal) : null,
-            valorNegociado: processoPauta.processo.valorNegociado ? Number(processoPauta.processo.valorNegociado) : null
           }
         }))
       },
@@ -442,12 +391,9 @@ export async function PATCH(
         ...decisao,
         processo: {
           ...decisao.processo,
-          valorOriginal: decisao.processo.valorOriginal ? Number(decisao.processo.valorOriginal) : null,
-          valorNegociado: decisao.processo.valorNegociado ? Number(decisao.processo.valorNegociado) : null
         }
       }))
     }
-
     return NextResponse.json(sessaoAtualizadaSerializada)
   } catch (error) {
     console.error('Erro ao atualizar sessão:', error)
@@ -457,7 +403,6 @@ export async function PATCH(
     )
   }
 }
-
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -465,13 +410,10 @@ export async function DELETE(
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
-
     // Apenas Admin pode deletar sessões
     if (user.role !== 'ADMIN') {
       return NextResponse.json(
@@ -479,7 +421,6 @@ export async function DELETE(
         { status: 403 }
       )
     }
-
     const sessao = await prisma.sessaoJulgamento.findUnique({
       where: { id },
       include: { 
@@ -487,14 +428,12 @@ export async function DELETE(
         decisoes: true
       }
     })
-
     if (!sessao) {
       return NextResponse.json(
         { error: 'Sessão não encontrada' },
         { status: 404 }
       )
     }
-
     // Verificar se pode ser deletada (apenas sessões sem decisões e não finalizadas)
     if (sessao.decisoes.length > 0 || sessao.dataFim) {
       return NextResponse.json(
@@ -502,17 +441,14 @@ export async function DELETE(
         { status: 400 }
       )
     }
-
     // Retornar pauta ao status aberta
     await prisma.pauta.update({
       where: { id: sessao.pautaId },
       data: { status: 'aberta' }
     })
-
     await prisma.sessaoJulgamento.delete({
       where: { id }
     })
-
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
@@ -527,7 +463,6 @@ export async function DELETE(
         }
       }
     })
-
     return NextResponse.json({ message: 'Sessão deletada com sucesso' })
   } catch (error) {
     console.error('Erro ao deletar sessão:', error)

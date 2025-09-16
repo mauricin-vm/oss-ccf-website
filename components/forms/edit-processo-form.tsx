@@ -40,6 +40,29 @@ export default function EditProcessoForm({ processo }: EditProcessoFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
+  const formatCpfCnpj = (value: string) => {
+    const numbers = value.replace(/\D/g, '')
+    if (numbers.length <= 11) {
+      return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+    } else {
+      return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+    }
+  }
+
+  const formatCep = (value: string) => {
+    return value.replace(/(\d{5})(\d{3})/, '$1-$2')
+  }
+
+  const formatTelefone = (value: string) => {
+    const numbers = value.replace(/\D/g, '')
+
+    if (numbers.length <= 10) {
+      return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
+    } else {
+      return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+    }
+  }
+
   const {
     register,
     handleSubmit,
@@ -52,14 +75,14 @@ export default function EditProcessoForm({ processo }: EditProcessoFormProps) {
       tipo: processo.tipo,
       observacoes: processo.observacoes || '',
       contribuinte: {
-        cpfCnpj: processo.contribuinte.cpfCnpj || '',
+        cpfCnpj: formatCpfCnpj(processo.contribuinte.cpfCnpj || ''),
         nome: processo.contribuinte.nome,
         email: processo.contribuinte.email || '',
-        telefone: processo.contribuinte.telefone || '',
+        telefone: formatTelefone(processo.contribuinte.telefone || ''),
         endereco: processo.contribuinte.endereco || '',
         cidade: processo.contribuinte.cidade || '',
         estado: processo.contribuinte.estado || '',
-        cep: processo.contribuinte.cep || ''
+        cep: formatCep((processo.contribuinte.cep || '').replace(/\D/g, ''))
       }
     }
   })
@@ -69,13 +92,23 @@ export default function EditProcessoForm({ processo }: EditProcessoFormProps) {
     setIsLoading(true)
     setError(null)
 
+    const processedData = {
+      ...data,
+      contribuinte: {
+        ...data.contribuinte,
+        cpfCnpj: data.contribuinte.cpfCnpj?.replace(/\D/g, '') || '',
+        telefone: data.contribuinte.telefone?.replace(/\D/g, '') || '',
+        cep: data.contribuinte.cep?.replace(/\D/g, '') || ''
+      }
+    }
+
     try {
       const response = await fetch(`/api/processos/${processo.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(processedData)
       })
 
       if (!response.ok) {
@@ -91,17 +124,19 @@ export default function EditProcessoForm({ processo }: EditProcessoFormProps) {
     }
   }
 
-  const formatCpfCnpj = (value: string) => {
-    const numbers = value.replace(/\D/g, '')
-    if (numbers.length <= 11) {
-      return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
-    } else {
-      return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
-    }
+  const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatTelefone(e.target.value)
+    setValue('contribuinte.telefone', formatted)
   }
 
-  const formatCep = (value: string) => {
-    return value.replace(/(\d{5})(\d{3})/, '$1-$2')
+  const handleTelefoneFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    const unformatted = e.target.value.replace(/\D/g, '')
+    setValue('contribuinte.telefone', unformatted)
+  }
+
+  const handleTelefoneBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const formatted = formatTelefone(e.target.value)
+    setValue('contribuinte.telefone', formatted)
   }
 
   return (
@@ -239,6 +274,9 @@ export default function EditProcessoForm({ processo }: EditProcessoFormProps) {
                 id="contribuinte.telefone"
                 placeholder="(11) 99999-9999"
                 {...register('contribuinte.telefone')}
+                onChange={handleTelefoneChange}
+                onFocus={handleTelefoneFocus}
+                onBlur={handleTelefoneBlur}
                 disabled={isLoading}
               />
               {errors.contribuinte?.telefone && (

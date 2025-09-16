@@ -1,30 +1,36 @@
-import { User, Processo, Contribuinte, Tramitacao, Acordo, Parcela, Pauta, Sessao, PautaProcesso } from '@prisma/client'
+import { User, Processo, Contribuinte, Tramitacao, Acordo, Parcela, Pauta, SessaoJulgamento, ProcessoPauta } from '@prisma/client'
 
 export type UserWithoutPassword = Omit<User, 'password'>
 
 export type ProcessoWithRelations = Processo & {
   contribuinte: Contribuinte
-  tramitacoes?: Tramitacao[]
+  tramitacoes?: (Tramitacao & {
+    usuario?: { name: string }
+  })[]
   acordo?: Acordo & {
     parcelas: Parcela[]
-    detalhes?: any[]
+    detalhes?: Record<string, unknown>[]
   }
-  imoveis?: any[]
-  creditos?: any[]
+  decisoes?: Record<string, unknown>[]
+  acordos?: Record<string, unknown>[]
+  documentos?: Record<string, unknown>[]
+  pautas?: Record<string, unknown>[]
+  imoveis?: Record<string, unknown>[]
+  creditos?: Record<string, unknown>[]
   valoresEspecificos?: {
     id: string
     creditos?: Array<{
       id: string
       valor: number
-      credito: any
+      credito: Record<string, unknown>
     }>
     inscricoes?: Array<{
       id: string
-      inscricao: any
+      inscricao: Record<string, unknown>
       debitos?: Array<{
         id: string
         valor: number
-        debito: any
+        debito: Record<string, unknown>
       }>
     }>
     imoveis?: Array<{
@@ -34,29 +40,35 @@ export type ProcessoWithRelations = Processo & {
         id: string
         endereco: string
         valorAvaliacao?: number
-        [key: string]: any
+        [key: string]: unknown
       }
     }>
     debitos?: Array<{
       id: string
       valor: number
-      debito: any
+      debito: Record<string, unknown>
     }>
     valorOriginal?: number
     valorNegociado?: number
     valorEntrada?: number | null
+    transacao?: Record<string, unknown>
   }
 }
 
 export type PautaWithRelations = Pauta & {
-  processos: (PautaProcesso & {
+  processos: (ProcessoPauta & {
     processo: ProcessoWithRelations
   })[]
-  sessoes?: Sessao[]
+  sessao?: SessaoJulgamento & {
+    presidente?: Record<string, unknown>
+    conselheiros?: Record<string, unknown>[]
+    decisoes?: Record<string, unknown>[]
+  }
   conselheiros?: User[]
+  historicos?: Record<string, unknown>[]
 }
 
-export type SessaoWithRelations = Sessao & {
+export type SessaoWithRelations = SessaoJulgamento & {
   pauta: Pauta
   conselheiros: User[]
 }

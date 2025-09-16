@@ -10,23 +10,16 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   MoreHorizontal,
-  Edit,
   X,
   Trash2,
   Loader2,
-  RefreshCw
+  AlertCircle
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -47,18 +40,31 @@ export default function AcordoActions({ acordo }: AcordoActionsProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [motivoCancelamento, setMotivoCancelamento] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
-  // Calcular total de pagamentos através das parcelas
-  const totalPagamentos = acordo.parcelas.reduce((total, parcela) => {
-    return total + (parcela.pagamentos || []).length
+
+  // Verificar se há algum valor pago
+  const valorTotalPago = acordo.parcelas.reduce((total, parcela) => {
+    return total + (parcela.pagamentos || []).reduce((subtotal, pagamento) => {
+      return subtotal + pagamento.valorPago
+    }, 0)
   }, 0)
 
   const canCancel = acordo.status === 'ativo'
-  const canDelete = totalPagamentos === 0 && acordo.status !== 'cumprido'
-  const canRenegotiate = acordo.status === 'ativo' && totalPagamentos > 0
+  const canDelete = valorTotalPago === 0 && acordo.status !== 'cumprido'
 
-  const handleCancel = async () => {
+  const handleCancel = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!motivoCancelamento.trim()) {
+      setError('Motivo do cancelamento é obrigatório')
+      return
+    }
+
     setIsLoading(true)
+    setError(null)
+
     try {
       const response = await fetch(`/api/acordos/${acordo.id}`, {
         method: 'PUT',
@@ -66,56 +72,70 @@ export default function AcordoActions({ acordo }: AcordoActionsProps) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          status: 'cancelado'
+          status: 'cancelado',
+          motivoCancelamento: motivoCancelamento.trim()
         })
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Erro ao cancelar acordo')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao cancelar acordo')
       }
 
       toast.success('Acordo cancelado com sucesso!')
+      handleCloseCancelDialog()
       router.refresh()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Erro inesperado')
+      console.error('Erro ao cancelar acordo:', error)
+      setError(error instanceof Error ? error.message : 'Erro ao cancelar acordo')
     } finally {
       setIsLoading(false)
-      setShowCancelDialog(false)
     }
   }
 
-  const handleDelete = async () => {
+  const handleCloseCancelDialog = () => {
+    setMotivoCancelamento('')
+    setError(null)
+    setShowCancelDialog(false)
+  }
+
+  const handleDelete = async (e: React.FormEvent) => {
+    e.preventDefault()
     setIsLoading(true)
+    setError(null)
+
     try {
       const response = await fetch(`/api/acordos/${acordo.id}`, {
         method: 'DELETE'
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Erro ao deletar acordo')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao deletar acordo')
       }
 
       toast.success('Acordo deletado com sucesso!')
       router.push('/acordos')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Erro inesperado')
+      console.error('Erro ao deletar acordo:', error)
+      setError(error instanceof Error ? error.message : 'Erro ao deletar acordo')
     } finally {
       setIsLoading(false)
       setShowDeleteDialog(false)
     }
   }
 
-  const handleRenegotiate = () => {
-    router.push(`/acordos/${acordo.id}/renegociar`)
+  const handleCloseDeleteDialog = () => {
+    setError(null)
+    setShowDeleteDialog(false)
   }
+
 
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" disabled={isLoading}>
+          <Button variant="outline" size="icon" disabled={isLoading} className="cursor-pointer">
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
@@ -124,22 +144,15 @@ export default function AcordoActions({ acordo }: AcordoActionsProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => router.push(`/acordos/${acordo.id}/editar`)}>
-            <Edit className="mr-2 h-4 w-4" />
-            Editar Acordo
-          </DropdownMenuItem>
 
-          {canRenegotiate && (
-            <DropdownMenuItem onClick={handleRenegotiate}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Renegociar
-            </DropdownMenuItem>
-          )}
 
           {canCancel && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setShowCancelDialog(true)}>
+              <DropdownMenuItem onClick={() => {
+                setError(null)
+                setShowCancelDialog(true)
+              }} className="cursor-pointer">
                 <X className="mr-2 h-4 w-4" />
                 Cancelar Acordo
               </DropdownMenuItem>
@@ -150,8 +163,11 @@ export default function AcordoActions({ acordo }: AcordoActionsProps) {
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => setShowDeleteDialog(true)}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={() => {
+                  setError(null)
+                  setShowDeleteDialog(true)
+                }}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Deletar Acordo
@@ -162,72 +178,129 @@ export default function AcordoActions({ acordo }: AcordoActionsProps) {
       </DropdownMenu>
 
       {/* Dialog de Cancelar */}
-      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancelar Acordo de Pagamento</AlertDialogTitle>
-            <AlertDialogDescription>
+      <Dialog open={showCancelDialog} onOpenChange={handleCloseCancelDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <X className="h-5 w-5 text-yellow-600" />
+              Cancelar Acordo de Pagamento
+            </DialogTitle>
+            <DialogDescription>
               Tem certeza que deseja cancelar este acordo? O processo voltará ao status anterior
               e todas as parcelas pendentes serão canceladas.
               <br /><br />
               <strong>Esta ação não pode ser desfeita.</strong>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancel}
-              disabled={isLoading}
-              className="bg-yellow-600 hover:bg-yellow-700"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Cancelando...
-                </>
-              ) : (
-                'Cancelar Acordo'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCancel} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="motivo">Motivo do cancelamento <span className="text-red-500">*</span></Label>
+              <Textarea
+                id="motivo"
+                value={motivoCancelamento}
+                onChange={(e) => setMotivoCancelamento(e.target.value)}
+                placeholder="Descreva o motivo do cancelamento do acordo..."
+                disabled={isLoading}
+                rows={3}
+                required
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCloseCancelDialog}
+                disabled={isLoading}
+                className="cursor-pointer"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="bg-yellow-600 hover:bg-yellow-700 cursor-pointer"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Cancelando...
+                  </>
+                ) : (
+                  <>
+                    <X className="mr-2 h-4 w-4" />
+                    Cancelar Acordo
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de Deletar */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Deletar Acordo de Pagamento</AlertDialogTitle>
-            <AlertDialogDescription>
+      <Dialog open={showDeleteDialog} onOpenChange={handleCloseDeleteDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              Deletar Acordo de Pagamento
+            </DialogTitle>
+            <DialogDescription>
               Tem certeza que deseja deletar este acordo? O processo voltará ao status anterior.
               Esta ação só é possível porque o acordo ainda não tem pagamentos registrados.
               <br /><br />
               <strong>Esta ação não pode ser desfeita.</strong>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isLoading}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deletando...
-                </>
-              ) : (
-                'Deletar Acordo'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleDelete} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCloseDeleteDialog}
+                disabled={isLoading}
+                className="cursor-pointer"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="bg-red-600 hover:bg-red-700 cursor-pointer"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deletando...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Deletar Acordo
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

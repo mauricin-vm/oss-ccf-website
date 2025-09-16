@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import { notFound } from 'next/navigation'
 import EditPautaModal from '@/components/modals/edit-pauta-modal'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -24,7 +23,6 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  DollarSign,
   Trash2,
   Plus,
   Check
@@ -41,7 +39,6 @@ export default function PautaDetalhesPage({
   params: Promise<{ id: string }>
 }) {
   const { data: session } = useSession()
-  const router = useRouter()
   const [pauta, setPauta] = useState<PautaWithRelations | null>(null)
   const [loading, setLoading] = useState(true)
   const [id, setId] = useState<string>('')
@@ -52,7 +49,7 @@ export default function PautaDetalhesPage({
   const [selectedProcess, setSelectedProcess] = useState<ProcessoWithRelations | null>(null)
   const [conselheiro, setConselheiro] = useState('')
   const [conselheiros, setConselheiros] = useState<PrismaUser[]>([])
-  const [distribuicaoInfo, setDistribuicaoInfo] = useState<any>(null)
+  const [distribuicaoInfo, setDistribuicaoInfo] = useState<Record<string, unknown> | null>(null)
 
   useEffect(() => {
     params.then(p => setId(p.id))
@@ -136,7 +133,7 @@ export default function PautaDetalhesPage({
       if (response.ok) {
         const data = await response.json()
         // Filtrar processos que já não estão na pauta
-        const processosNaPauta = pauta.processos.map((p) => p.processo.id)
+        const processosNaPauta = pauta?.processos.map((p) => p.processo.id) || []
         const processosDisponiveis = data.processos.filter((p: ProcessoWithRelations) => !processosNaPauta.includes(p.id))
         setAvailableProcesses(processosDisponiveis)
       }
@@ -151,7 +148,7 @@ export default function PautaDetalhesPage({
       if (response.ok) {
         const data = await response.json()
         setDistribuicaoInfo(data)
-        
+
         // Definir sugestão automaticamente se existir
         if (data.sugestao) {
           setConselheiro(data.sugestao)
@@ -166,32 +163,34 @@ export default function PautaDetalhesPage({
   const handleSelectProcess = async (processo: ProcessoWithRelations) => {
     setSelectedProcess(processo)
     setDistribuicaoInfo(null)
-    
+
     // Preencher automaticamente com conselheiro correto para distribuição
     const conselheiroParaDistribuicao = getConselheiroParaDistribuicao(processo)
     setConselheiro(conselheiroParaDistribuicao)
-    
+
     // Ainda buscar informações de distribuição para contexto
     await fetchDistribuicaoInfo(processo.id, processo.status)
   }
 
   // Funções iguais às da criação de pauta
-  const getUltimaPautaInfo = (processo: any) => {
-    if (!processo.pautas || processo.pautas.length === 0) return null
-    return processo.pautas[0] // Já vem ordenado por data desc na API
+  const getUltimaPautaInfo = (processo: Record<string, unknown>) => {
+    const pautas = processo.pautas as Record<string, unknown>[] | undefined
+    if (!pautas || pautas.length === 0) return null
+    return pautas[0] // Já vem ordenado por data desc na API
   }
 
-  const getConselheiroParaDistribuicao = (processo: any) => {
+  const getConselheiroParaDistribuicao = (processo: Record<string, unknown>) => {
     const ultimaPauta = getUltimaPautaInfo(processo)
     if (!ultimaPauta) return ''
 
     // Regra: Se houver revisores, pegar o último; senão pegar o relator
-    if (ultimaPauta.revisores && ultimaPauta.revisores.length > 0) {
-      return ultimaPauta.revisores[ultimaPauta.revisores.length - 1]
+    const revisores = ultimaPauta.revisores as string[] | undefined
+    if (revisores && revisores.length > 0) {
+      return revisores[revisores.length - 1]
     }
 
     // Se não houver revisor, pegar o relator
-    return ultimaPauta.relator || ''
+    return (ultimaPauta.relator as string) || ''
   }
 
   const handleAddProcesso = async () => {
@@ -272,20 +271,8 @@ export default function PautaDetalhesPage({
     ARQUIVADO: { label: 'Arquivado', color: 'bg-gray-100 text-gray-800' }
   }
 
-  const decisaoMap = {
-    deferido: { label: 'Deferido', color: 'bg-green-100 text-green-800' },
-    indeferido: { label: 'Indeferido', color: 'bg-red-100 text-red-800' },
-    parcial: { label: 'Parcialmente Deferido', color: 'bg-yellow-100 text-yellow-800' }
-  }
 
-  const tipoResultadoMap = {
-    SUSPENSO: { label: 'Suspenso', color: 'bg-yellow-100 text-yellow-800' },
-    PEDIDO_VISTA: { label: 'Pedido de vista', color: 'bg-blue-100 text-blue-800' },
-    PEDIDO_DILIGENCIA: { label: 'Pedido de diligência', color: 'bg-orange-100 text-orange-800' },
-    JULGADO: { label: 'Julgado', color: 'bg-green-100 text-green-800' }
-  }
-
-  const getResultadoBadge = (decisao: any) => {
+  const getResultadoBadge = (decisao: Record<string, unknown>) => {
     if (!decisao) return null
 
     switch (decisao.tipoResultado) {
@@ -301,13 +288,13 @@ export default function PautaDetalhesPage({
           <Badge
             className={
               tipoDecisao === 'DEFERIDO' ? 'bg-green-100 text-green-800' :
-              tipoDecisao === 'INDEFERIDO' ? 'bg-red-100 text-red-800' :
-              'bg-yellow-100 text-yellow-800'
+                tipoDecisao === 'INDEFERIDO' ? 'bg-red-100 text-red-800' :
+                  'bg-yellow-100 text-yellow-800'
             }
           >
             {tipoDecisao === 'DEFERIDO' ? 'Deferido' :
-             tipoDecisao === 'INDEFERIDO' ? 'Indeferido' :
-             'Parcial'}
+              tipoDecisao === 'INDEFERIDO' ? 'Indeferido' :
+                'Parcial'}
           </Badge>
         )
       default:
@@ -315,7 +302,7 @@ export default function PautaDetalhesPage({
     }
   }
 
-  const getCardBackground = (decisao: any) => {
+  const getCardBackground = (decisao: Record<string, unknown>) => {
     if (!decisao) return 'bg-gray-50'
 
     switch (decisao.tipoResultado) {
@@ -332,50 +319,6 @@ export default function PautaDetalhesPage({
     }
   }
 
-  const getResultadoDetails = (decisao: any) => {
-    if (!decisao) return null
-
-    const details = []
-
-    switch (decisao.tipoResultado) {
-      case 'SUSPENSO':
-        if (decisao.motivoSuspensao) {
-          details.push(`Motivo: ${decisao.motivoSuspensao}`)
-        }
-        break
-      case 'PEDIDO_VISTA':
-        if (decisao.conselheiroPedidoVista) {
-          details.push(`Solicitado por: ${decisao.conselheiroPedidoVista}`)
-        }
-        if (decisao.prazoVista) {
-          details.push(`Prazo: ${new Date(decisao.prazoVista).toLocaleDateString('pt-BR')}`)
-        }
-        break
-      case 'PEDIDO_DILIGENCIA':
-        if (decisao.especificacaoDiligencia) {
-          details.push(`Especificação: ${decisao.especificacaoDiligencia}`)
-        }
-        if (decisao.prazoDiligencia) {
-          details.push(`Prazo: ${new Date(decisao.prazoDiligencia).toLocaleDateString('pt-BR')}`)
-        }
-        break
-      case 'JULGADO':
-        if (decisao.definirAcordo) {
-          details.push('Processo seguirá para análise de acordo')
-          if (decisao.tipoAcordo) {
-            const tiposAcordo = {
-              'aceita_proposta': 'Aceita proposta da prefeitura',
-              'contra_proposta': 'Fará contra-proposta',
-              'sem_acordo': 'Não há possibilidade de acordo'
-            }
-            details.push(`Tipo: ${tiposAcordo[decisao.tipoAcordo] || decisao.tipoAcordo}`)
-          }
-        }
-        break
-    }
-
-    return details
-  }
 
   const formatarListaNomes = (nomes: string[]): string => {
     if (nomes.length === 0) return ''
@@ -423,7 +366,7 @@ export default function PautaDetalhesPage({
   const StatusIcon = statusMap[pauta.status as keyof typeof statusMap].icon
 
   const totalProcessos = pauta.processos.length
-  const processosJulgados = pauta.sessao?.decisoes?.length || 0
+  const processosJulgados = (pauta.sessao as Record<string, unknown>)?.decisoes ? ((pauta.sessao as Record<string, unknown>).decisoes as Record<string, unknown>[]).length : 0
   const processosPendentes = totalProcessos - processosJulgados
 
   const getDataStatus = (dataPauta: Date) => {
@@ -485,8 +428,14 @@ export default function PautaDetalhesPage({
             </Link>
           )}
 
-          <PautaActions 
-            pauta={pauta}
+          <PautaActions
+            pauta={{
+              id: pauta.id,
+              numero: pauta.numero,
+              status: pauta.status,
+              dataPauta: pauta.dataPauta.toISOString(),
+              processos: pauta.processos as Record<string, unknown>[]
+            }}
             userRole={user.role}
             onEdit={() => setIsEditModalOpen(true)}
           />
@@ -558,9 +507,9 @@ export default function PautaDetalhesPage({
         <TabsContent value="processos">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle>Processos na Pauta</CardTitle>
+                  <CardTitle className="mb-[0.3rem]">Processos na Pauta</CardTitle>
                   <CardDescription>
                     Lista ordenada dos processos para julgamento
                   </CardDescription>
@@ -581,7 +530,7 @@ export default function PautaDetalhesPage({
               <div className="space-y-4">
                 {pauta.processos.map((processoPauta) => {
                   const processo = processoPauta.processo
-                  const foiJulgado = pauta.sessao?.decisoes?.some(d => d.processoId === processo.id)
+                  const foiJulgado = (pauta.sessao as Record<string, unknown>)?.decisoes ? ((pauta.sessao as Record<string, unknown>).decisoes as Record<string, unknown>[]).some((d: Record<string, unknown>) => d.processoId === processo.id) : false
 
                   return (
                     <div key={processoPauta.id} className="border rounded-lg p-4">
@@ -611,24 +560,20 @@ export default function PautaDetalhesPage({
                               <FileText className="h-4 w-4" />
                               <span>{tipoProcessoMap[processo.tipo as keyof typeof tipoProcessoMap]}</span>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <DollarSign className="h-4 w-4 text-muted-foreground" />
-                              <span>{new Date(processo.dataAbertura).toLocaleDateString('pt-BR')}</span>
-                            </div>
                           </div>
 
-                          {processoPauta.distribuidoPara && (
+                          {(processoPauta.distribuidoPara as string) && (
                             <div className="text-sm">
-                              <strong>Distribuição:</strong> {processoPauta.distribuidoPara}
+                              <strong>Distribuição:</strong> {processoPauta.distribuidoPara as string}
                             </div>
                           )}
 
                           {/* Última tramitação */}
-                          {processo.tramitacoes.length > 0 && (
+                          {processo.tramitacoes && processo.tramitacoes.length > 0 && (
                             <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
                               <strong>Última tramitação:</strong> {processo.tramitacoes[0].setorOrigem} → {processo.tramitacoes[0].setorDestino}
-                              {processo.tramitacoes[0].usuario && (
-                                <span> (por {processo.tramitacoes[0].usuario.name})</span>
+                              {((processo.tramitacoes[0] as Record<string, unknown>).usuario as Record<string, unknown>) && (
+                                <span> (por {((processo.tramitacoes[0] as Record<string, unknown>).usuario as Record<string, unknown>).name as string})</span>
                               )}
                             </div>
                           )}
@@ -668,20 +613,14 @@ export default function PautaDetalhesPage({
             <CardContent>
               {!pauta.sessao ? (
                 <div className="text-center py-8">
-                  <Gavel className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  <Gavel className="mx-auto h-12 w-12 text-gray-400" />
+                  <p className="mt-2 text-gray-500">
                     Nenhuma sessão iniciada
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    Esta pauta ainda não teve sua sessão de julgamento iniciada.
                   </p>
                   {pauta.status === 'aberta' && canEdit && (
-                    <Link href={`/sessoes/nova?pauta=${pauta.id}`}>
-                      <Button className="cursor-pointer">
-                        <Gavel className="mr-2 h-4 w-4" />
-                        Iniciar Sessão
-                      </Button>
-                    </Link>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Esta pauta ainda não teve sua sessão de julgamento iniciada
+                    </p>
                   )}
                 </div>
               ) : (
@@ -697,25 +636,25 @@ export default function PautaDetalhesPage({
                         <p>{new Date(pauta.sessao.dataFim).toLocaleString('pt-BR')}</p>
                       </div>
                     )}
-                    {pauta.sessao.presidente && (
+                    {((pauta.sessao as Record<string, unknown>).presidente as Record<string, unknown>) ? (
                       <div>
                         <h4 className="font-medium mb-2">Presidente</h4>
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-gray-500" />
-                          <span>{pauta.sessao.presidente.nome}</span>
+                          <span>{String(((pauta.sessao as Record<string, unknown>).presidente as Record<string, unknown>).nome)}</span>
                         </div>
                       </div>
-                    )}
+                    ) : null}
                   </div>
 
-                  {pauta.sessao.conselheiros.length > 0 && (
+                  {((pauta.sessao as Record<string, unknown>).conselheiros as Record<string, unknown>[]) && ((pauta.sessao as Record<string, unknown>).conselheiros as Record<string, unknown>[]).length > 0 && (
                     <div>
                       <h4 className="font-medium mb-2">Conselheiros Participantes</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {pauta.sessao.conselheiros.map((conselheiro) => (
-                          <div key={conselheiro.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                        {((pauta.sessao as Record<string, unknown>).conselheiros as Record<string, unknown>[]).map((conselheiro: Record<string, unknown>) => (
+                          <div key={conselheiro.id as string} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
                             <Users className="h-4 w-4 text-gray-500" />
-                            <span>{conselheiro.nome}</span>
+                            <span>{conselheiro.nome as string}</span>
                           </div>
                         ))}
                       </div>
@@ -745,204 +684,199 @@ export default function PautaDetalhesPage({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {!pauta.sessao?.decisoes || pauta.sessao.decisoes.length === 0 ? (
+              {!(pauta.sessao as Record<string, unknown>)?.decisoes || ((pauta.sessao as Record<string, unknown>).decisoes as Record<string, unknown>[]).length === 0 ? (
                 <div className="text-center py-8">
-                  <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
+                  <p className="mt-2 text-gray-500">
                     Nenhuma decisão registrada
-                  </h3>
-                  <p className="text-gray-600">
-                    As decisões aparecerão aqui conforme forem tomadas durante a sessão.
+                  </p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    As decisões aparecerão aqui conforme forem tomadas durante a sessão
                   </p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {pauta.sessao.decisoes
-                    .sort((a, b) => {
+                  {((pauta.sessao as Record<string, unknown>).decisoes as Record<string, unknown>[])
+                    .sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
                       const ordemA = pauta.processos.find(p => p.processo.id === a.processoId)?.ordem || 999
                       const ordemB = pauta.processos.find(p => p.processo.id === b.processoId)?.ordem || 999
                       return ordemA - ordemB
                     })
-                    .map((decisao) => {
-                    const processoPauta = pauta.processos.find(p => p.processo.id === decisao.processoId)
-                    const cardBackground = getCardBackground(decisao)
-                    const resultadoDetails = getResultadoDetails(decisao)
+                    .map((decisao: Record<string, unknown>) => {
+                      const processoPauta = pauta.processos.find(p => p.processo.id === decisao.processoId)
+                      const cardBackground = getCardBackground(decisao)
 
-                    return (
-                      <div
-                        key={decisao.id}
-                        className={`border rounded-lg p-4 ${cardBackground}`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                              decisao.tipoResultado === 'JULGADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {processoPauta?.ordem || '?'}
-                            </span>
-                            <div>
-                              <Link
-                                href={`/processos/${decisao.processo.id}`}
-                                className="font-medium hover:text-blue-600"
-                              >
-                                {decisao.processo.numero}
-                              </Link>
-                              <p className="text-sm text-gray-600">{decisao.processo.contribuinte.nome}</p>
-                              {processoPauta?.relator && (
-                                <p className="text-sm text-blue-600">Relator: {processoPauta.relator}</p>
-                              )}
+                      return (
+                        <div
+                          key={decisao.id as string}
+                          className={`border rounded-lg p-4 ${cardBackground}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${decisao.tipoResultado === 'JULGADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                {processoPauta?.ordem || '?'}
+                              </span>
+                              <div>
+                                <Link
+                                  href={`/processos/${(decisao.processo as Record<string, unknown>).id as string}`}
+                                  className="font-medium hover:text-blue-600"
+                                >
+                                  {(decisao.processo as Record<string, unknown>).numero as string}
+                                </Link>
+                                <p className="text-sm text-gray-600">{((decisao.processo as Record<string, unknown>).contribuinte as Record<string, unknown>).nome as string}</p>
+                                {processoPauta?.relator && (
+                                  <p className="text-sm text-blue-600">Relator: {processoPauta.relator}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right space-y-2">
+                              <div className="space-y-2">
+                                {getResultadoBadge(decisao)}
+                              </div>
                             </div>
                           </div>
-                          <div className="text-right space-y-2">
-                            <div className="space-y-2">
-                              {getResultadoBadge(decisao)}
-                            </div>
-                          </div>
-                        </div>
 
-                        <div className="mt-3 space-y-2">
-                          <div className="p-3 bg-white rounded border">
-                            <h5 className="text-sm font-medium mb-2">Ata:</h5>
-                            <p className="text-sm text-gray-700">{processoPauta?.ataTexto || 'Texto da ata não informado'}</p>
+                          <div className="mt-3 space-y-2">
+                            <div className="p-3 bg-white rounded border">
+                              <h5 className="text-sm font-medium mb-2">Ata:</h5>
+                              <p className="text-sm text-gray-700">{processoPauta?.ataTexto || 'Texto da ata não informado'}</p>
 
-                            {decisao.votos && decisao.votos.length > 0 && (
-                              <div className="mt-3 pt-2 border-t">
-                                <h6 className="text-xs font-medium text-gray-600 mb-3">Votos registrados:</h6>
+                              {(decisao.votos as Record<string, unknown>[]) && (decisao.votos as Record<string, unknown>[]).length > 0 && (
+                                <div className="mt-3 pt-2 border-t">
+                                  <h6 className="text-xs font-medium text-gray-600 mb-3">Votos registrados:</h6>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  {/* Relatores/Revisores */}
-                                  {decisao.votos.filter((voto: any) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto)).length > 0 && (
-                                    <Card className="p-3">
-                                      <div className="font-medium text-gray-800 mb-2 text-sm">Relatores/Revisores</div>
-                                      <div className="space-y-1">
-                                        {decisao.votos
-                                          .filter((voto: any) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto))
-                                          .map((voto: any, index: number) => (
-                                            <div key={index} className="flex items-center justify-between text-xs">
-                                              <div className="flex items-center gap-2">
-                                                <Badge variant={voto.tipoVoto === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
-                                                  {voto.tipoVoto === 'RELATOR' ? 'Relator' : 'Revisor'}
-                                                </Badge>
-                                                <span className="truncate font-medium">{voto.nomeVotante}</span>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Relatores/Revisores */}
+                                    {(decisao.votos as Record<string, unknown>[]).filter((voto: Record<string, unknown>) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto as string)).length > 0 && (
+                                      <Card className="p-3">
+                                        <div className="font-medium text-gray-800 mb-2 text-sm">Relatores/Revisores</div>
+                                        <div className="space-y-1">
+                                          {(decisao.votos as Record<string, unknown>[])
+                                            .filter((voto: Record<string, unknown>) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto as string))
+                                            .map((voto: Record<string, unknown>, index: number) => (
+                                              <div key={index} className="flex items-center justify-between text-xs">
+                                                <div className="flex items-center gap-2">
+                                                  <Badge variant={voto.tipoVoto === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
+                                                    {voto.tipoVoto === 'RELATOR' ? 'Relator' : 'Revisor'}
+                                                  </Badge>
+                                                  <span className="truncate font-medium">{voto.nomeVotante as string}</span>
+                                                </div>
+                                                <span className={`font-medium text-xs ${voto.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
+                                                  voto.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
+                                                    voto.posicaoVoto === 'PARCIAL' ? 'text-yellow-600' :
+                                                      'text-blue-600'
+                                                  }`}>
+                                                  {voto.acompanhaVoto
+                                                    ? `Acomp. ${String(voto.acompanhaVoto).split(' ')[0]}`
+                                                    : String(voto.posicaoVoto)}
+                                                </span>
                                               </div>
-                                              <span className={`font-medium text-xs ${
-                                                voto.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
-                                                voto.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
-                                                voto.posicaoVoto === 'PARCIAL' ? 'text-yellow-600' :
-                                                'text-blue-600'
-                                              }`}>
-                                                {voto.acompanhaVoto
-                                                  ? `Acomp. ${voto.acompanhaVoto?.split(' ')[0]}`
-                                                  : voto.posicaoVoto}
+                                            ))}
+                                        </div>
+                                      </Card>
+                                    )}
+
+                                    {/* Conselheiros */}
+                                    <Card className="p-3">
+                                      <div className="font-medium text-gray-800 mb-3 text-sm">Conselheiros</div>
+                                      <div className="max-h-24 overflow-y-auto space-y-1">
+                                        {/* Votos válidos agrupados */}
+                                        {['DEFERIDO', 'INDEFERIDO', 'PARCIAL'].map(posicao => {
+                                          const conselheirosComEssePosicao = (decisao.votos as Record<string, unknown>[])
+                                            .filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                            .map((voto: Record<string, unknown>) => voto.nomeVotante as string)
+
+                                          if (conselheirosComEssePosicao.length === 0) return null
+
+                                          return (
+                                            <div key={posicao} className="text-xs">
+                                              <span className={`font-medium ${posicao === 'DEFERIDO' ? 'text-green-600' :
+                                                posicao === 'INDEFERIDO' ? 'text-red-600' :
+                                                  'text-yellow-600'
+                                                }`}>
+                                                {posicao}:
+                                              </span>
+                                              <span className="ml-1 text-gray-700">
+                                                {formatarListaNomes(conselheirosComEssePosicao)}
                                               </span>
                                             </div>
-                                          ))}
+                                          )
+                                        })}
+
+                                        {/* Abstenções agrupadas */}
+                                        {(decisao.votos as Record<string, unknown>[]).filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(String(voto.posicaoVoto))).length > 0 && (
+                                          <div className="border-t pt-1 mt-1">
+                                            {['AUSENTE', 'IMPEDIDO', 'ABSTENCAO'].map(posicao => {
+                                              const conselheirosComEssePosicao = (decisao.votos as Record<string, unknown>[])
+                                                .filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                                .map((voto: Record<string, unknown>) => String(voto.nomeVotante))
+
+                                              if (conselheirosComEssePosicao.length === 0) return null
+
+                                              return (
+                                                <div key={posicao} className="text-xs">
+                                                  <span className="font-medium text-gray-600">
+                                                    {posicao === 'ABSTENCAO' ? 'ABSTENÇÃO' :
+                                                      posicao === 'AUSENTE' ? 'AUSENTE' : 'IMPEDIDO'}:
+                                                  </span>
+                                                  <span className="ml-1 text-gray-600">
+                                                    {formatarListaNomes(conselheirosComEssePosicao)}
+                                                  </span>
+                                                </div>
+                                              )
+                                            })}
+                                          </div>
+                                        )}
                                       </div>
                                     </Card>
-                                  )}
+                                  </div>
+                                </div>
+                              )}
 
-                                  {/* Conselheiros */}
-                                  <Card className="p-3">
-                                    <div className="font-medium text-gray-800 mb-3 text-sm">Conselheiros</div>
-                                    <div className="max-h-24 overflow-y-auto space-y-1">
-                                      {/* Votos válidos agrupados */}
-                                      {['DEFERIDO', 'INDEFERIDO', 'PARCIAL'].map(posicao => {
-                                        const conselheirosComEssePosicao = decisao.votos
-                                          .filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
-                                          .map((voto: any) => voto.nomeVotante)
-
-                                        if (conselheirosComEssePosicao.length === 0) return null
-
-                                        return (
-                                          <div key={posicao} className="text-xs">
-                                            <span className={`font-medium ${
-                                              posicao === 'DEFERIDO' ? 'text-green-600' :
-                                              posicao === 'INDEFERIDO' ? 'text-red-600' :
-                                              'text-yellow-600'
-                                            }`}>
-                                              {posicao}:
-                                            </span>
-                                            <span className="ml-1 text-gray-700">
-                                              {formatarListaNomes(conselheirosComEssePosicao)}
-                                            </span>
-                                          </div>
-                                        )
-                                      })}
-
-                                      {/* Abstenções agrupadas */}
-                                      {decisao.votos.filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(voto.posicaoVoto)).length > 0 && (
-                                        <div className="border-t pt-1 mt-1">
-                                          {['AUSENTE', 'IMPEDIDO', 'ABSTENCAO'].map(posicao => {
-                                            const conselheirosComEssePosicao = decisao.votos
-                                              .filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
-                                              .map((voto: any) => voto.nomeVotante)
-
-                                            if (conselheirosComEssePosicao.length === 0) return null
-
-                                            return (
-                                              <div key={posicao} className="text-xs">
-                                                <span className="font-medium text-gray-600">
-                                                  {posicao === 'ABSTENCAO' ? 'ABSTENÇÃO' :
-                                                   posicao === 'AUSENTE' ? 'AUSENTE' : 'IMPEDIDO'}:
-                                                </span>
-                                                <span className="ml-1 text-gray-600">
-                                                  {formatarListaNomes(conselheirosComEssePosicao)}
-                                                </span>
-                                              </div>
-                                            )
-                                          })}
-                                        </div>
-                                      )}
+                              {/* Voto do Presidente se houve empate */}
+                              {(pauta.sessao as Record<string, unknown>)?.presidenteId && (decisao.votos as Record<string, unknown>[]).find((voto: Record<string, unknown>) =>
+                                voto.conselheiroId === (pauta.sessao as Record<string, unknown>).presidenteId ||
+                                voto.nomeVotante === 'Presidente'
+                              ) ? (
+                                  <Card className="p-3 mt-4 border-yellow-300 bg-yellow-50">
+                                    <div className="font-medium text-gray-800 mb-2 text-sm flex items-center gap-2">
+                                      ⚖️ Voto de Desempate - Presidente
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs">
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700">
+                                          Presidente
+                                        </Badge>
+                                        <span className="truncate font-medium">Presidente</span>
+                                      </div>
+                                      <span className={`font-medium text-xs ${(decisao.votos as Record<string, unknown>[]).find((voto: Record<string, unknown>) =>
+                                        voto.conselheiroId === (pauta.sessao as Record<string, unknown>).presidenteId ||
+                                        voto.nomeVotante === 'Presidente'
+                                      )?.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
+                                        (decisao.votos as Record<string, unknown>[]).find((voto: Record<string, unknown>) =>
+                                          voto.conselheiroId === (pauta.sessao as Record<string, unknown>).presidenteId ||
+                                          voto.nomeVotante === 'Presidente'
+                                        )?.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
+                                          'text-yellow-600'
+                                        }`}>
+                                        {String((decisao.votos as Record<string, unknown>[]).find((voto: Record<string, unknown>) =>
+                                          voto.conselheiroId === (pauta.sessao as Record<string, unknown>)?.presidenteId ||
+                                          voto.nomeVotante === (pauta.sessao as Record<string, unknown>)?.presidenteId
+                                        )?.posicaoVoto || 'N/A')}
+                                      </span>
                                     </div>
                                   </Card>
-                                </div>
-                              </div>
-                            )}
+                                ) : null}
 
-                            {/* Voto do Presidente se houve empate */}
-                            {pauta.sessao?.presidente && decisao.votos.find((voto: any) =>
-                              voto.conselheiroId === pauta.sessao?.presidente?.id ||
-                              voto.nomeVotante === pauta.sessao?.presidente?.nome
-                            ) && (
-                              <Card className="p-3 mt-4 border-yellow-300 bg-yellow-50">
-                                <div className="font-medium text-gray-800 mb-2 text-sm flex items-center gap-2">
-                                  ⚖️ Voto de Desempate - Presidente
-                                </div>
-                                <div className="flex items-center justify-between text-xs">
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700">
-                                      Presidente
-                                    </Badge>
-                                    <span className="truncate font-medium">{pauta.sessao?.presidente?.nome}</span>
-                                  </div>
-                                  <span className={`font-medium text-xs ${
-                                    decisao.votos.find((voto: any) =>
-                                      voto.conselheiroId === pauta.sessao?.presidente?.id ||
-                                      voto.nomeVotante === pauta.sessao?.presidente?.nome
-                                    )?.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
-                                    decisao.votos.find((voto: any) =>
-                                      voto.conselheiroId === pauta.sessao?.presidente?.id ||
-                                      voto.nomeVotante === pauta.sessao?.presidente?.nome
-                                    )?.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
-                                    'text-yellow-600'
-                                  }`}>
-                                    {decisao.votos.find((voto: any) =>
-                                      voto.conselheiroId === pauta.sessao?.presidente?.id ||
-                                      voto.nomeVotante === pauta.sessao?.presidente?.nome
-                                    )?.posicaoVoto}
-                                  </span>
-                                </div>
-                              </Card>
-                            )}
-
-                            <p className="text-xs text-gray-500 mt-2">
-                              Registrada em {new Date(decisao.dataDecisao).toLocaleString('pt-BR')}
-                            </p>
+                              <p className="text-xs text-gray-500 mt-2">
+                                Registrada em {new Date(String(decisao.dataDecisao)).toLocaleString('pt-BR')}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
                 </div>
               )}
             </CardContent>
@@ -960,8 +894,8 @@ export default function PautaDetalhesPage({
             <CardContent>
               <div className="space-y-4">
                 {pauta.historicos && pauta.historicos.length > 0 ? (
-                  pauta.historicos.map((historico: { id: string; tipo: string; titulo: string; descricao: string; createdAt: string; usuario: { name: string } }, index: number) => {
-                    const isLast = index === pauta.historicos.length - 1
+                  pauta.historicos.map((historico: Record<string, unknown>, index: number) => {
+                    const isLast = index === (pauta.historicos?.length || 0) - 1
 
                     // Definir ícone e cor baseado no tipo
                     const tipoConfig = {
@@ -973,24 +907,24 @@ export default function PautaDetalhesPage({
                       'EVENTO': { icon: FileText, color: 'gray' }
                     }
 
-                    const config = tipoConfig[historico.tipo as keyof typeof tipoConfig] || tipoConfig.EVENTO
+                    const config = tipoConfig[String(historico.tipo) as keyof typeof tipoConfig] || tipoConfig.EVENTO
                     const IconComponent = config.icon
 
                     return (
-                      <div key={historico.id} className={`flex gap-4 ${!isLast ? 'pb-4 border-b' : ''}`}>
+                      <div key={String(historico.id)} className={`flex gap-4 ${!isLast ? 'pb-4 border-b' : ''}`}>
                         <div className={`flex-shrink-0 w-8 h-8 bg-${config.color}-100 rounded-full flex items-center justify-center`}>
                           <IconComponent className={`h-4 w-4 text-${config.color}-600`} />
                         </div>
                         <div className="flex-1">
-                          <h4 className="font-medium">{historico.titulo}</h4>
-                          <p className="text-sm text-gray-600">{historico.descricao}</p>
+                          <h4 className="font-medium">{String(historico.titulo)}</h4>
+                          <p className="text-sm text-gray-600">{String(historico.descricao)}</p>
                           <div className="flex items-center gap-2 mt-1">
                             <p className="text-xs text-gray-500">
-                              {new Date(historico.createdAt).toLocaleString('pt-BR')}
+                              {new Date(String(historico.createdAt)).toLocaleString('pt-BR')}
                             </p>
                             <span className="text-xs text-gray-400">•</span>
                             <p className="text-xs text-gray-500">
-                              por {historico.usuario.name}
+                              por {String((historico.usuario as Record<string, unknown>)?.name || 'Usuário')}
                             </p>
                           </div>
                         </div>
@@ -1018,8 +952,8 @@ export default function PautaDetalhesPage({
           pauta={{
             id: pauta.id,
             numero: pauta.numero,
-            dataPauta: pauta.dataPauta,
-            observacoes: pauta.observacoes
+            dataPauta: pauta.dataPauta.toISOString().split('T')[0],
+            observacoes: pauta.observacoes || undefined
           }}
         />
       )}
@@ -1070,22 +1004,22 @@ export default function PautaDetalhesPage({
                           <p className="text-sm text-gray-600">{processo.contribuinte.nome}</p>
                           <p className="text-xs text-gray-500 mb-1">
                             {tipoProcessoMap[processo.tipo as keyof typeof tipoProcessoMap]} -
-{new Date(processo.dataAbertura).toLocaleDateString('pt-BR')}
+                            {new Date(processo.dataAbertura).toLocaleDateString('pt-BR')}
                           </p>
-                          
+
                           {/* Informações da última pauta - EXATAMENTE igual ao pauta-form */}
                           {(() => {
                             const ultimaPauta = getUltimaPautaInfo(processo)
                             if (ultimaPauta) {
                               return (
                                 <div className="text-xs text-blue-600 bg-blue-50 p-1 rounded mt-1">
-                                  <p className="font-medium">Já pautado em: {new Date(ultimaPauta.pauta.dataPauta).toLocaleDateString('pt-BR')}</p>
-                                  {ultimaPauta.relator && (
-                                    <p>Relator: {ultimaPauta.relator}</p>
-                                  )}
-                                  {ultimaPauta.revisores && ultimaPauta.revisores.length > 0 && (
-                                    <p>Revisor{ultimaPauta.revisores.length > 1 ? 'es' : ''}: {ultimaPauta.revisores.join(', ')}</p>
-                                  )}
+                                  <p className="font-medium">Já pautado em: {new Date(String(((ultimaPauta as Record<string, unknown>).pauta as Record<string, unknown>)?.dataPauta || '')).toLocaleDateString('pt-BR')}</p>
+                                  {(ultimaPauta as Record<string, unknown>).relator ? (
+                                    <p>Relator: {String((ultimaPauta as Record<string, unknown>).relator)}</p>
+                                  ) : null}
+                                  {(ultimaPauta as Record<string, unknown>).revisores && Array.isArray((ultimaPauta as Record<string, unknown>).revisores) && ((ultimaPauta as Record<string, unknown>).revisores as unknown[]).length > 0 ? (
+                                    <p>Revisor{((ultimaPauta as Record<string, unknown>).revisores as unknown[]).length > 1 ? 'es' : ''}: {((ultimaPauta as Record<string, unknown>).revisores as string[]).join(', ')}</p>
+                                  ) : null}
                                 </div>
                               )
                             }
@@ -1117,22 +1051,22 @@ export default function PautaDetalhesPage({
                   <p className="text-sm text-gray-600">{selectedProcess.contribuinte.nome}</p>
                   <p className="text-xs text-gray-500">
                     {tipoProcessoMap[selectedProcess.tipo as keyof typeof tipoProcessoMap]} -
-{new Date(selectedProcess.dataAbertura).toLocaleDateString('pt-BR')}
+                    {new Date(selectedProcess.dataAbertura).toLocaleDateString('pt-BR')}
                   </p>
-                  
+
                   {/* Informações da última pauta - igual ao pauta-form */}
                   {(() => {
                     const ultimaPauta = getUltimaPautaInfo(selectedProcess)
                     if (ultimaPauta) {
                       return (
                         <div className="text-xs text-blue-600 bg-blue-50 p-1 rounded mt-1">
-                          <p className="font-medium">Já pautado em: {new Date(ultimaPauta.pauta.dataPauta).toLocaleDateString('pt-BR')}</p>
-                          {ultimaPauta.relator && (
-                            <p>Relator: {ultimaPauta.relator}</p>
-                          )}
-                          {ultimaPauta.revisores && ultimaPauta.revisores.length > 0 && (
-                            <p>Revisor{ultimaPauta.revisores.length > 1 ? 'es' : ''}: {ultimaPauta.revisores.join(', ')}</p>
-                          )}
+                          <p className="font-medium">Já pautado em: {new Date(String(((ultimaPauta as Record<string, unknown>).pauta as Record<string, unknown>)?.dataPauta || '')).toLocaleDateString('pt-BR')}</p>
+                          {(ultimaPauta as Record<string, unknown>).relator ? (
+                            <p>Relator: {String((ultimaPauta as Record<string, unknown>).relator)}</p>
+                          ) : null}
+                          {(ultimaPauta as Record<string, unknown>).revisores && Array.isArray((ultimaPauta as Record<string, unknown>).revisores) && ((ultimaPauta as Record<string, unknown>).revisores as unknown[]).length > 0 ? (
+                            <p>Revisor{((ultimaPauta as Record<string, unknown>).revisores as unknown[]).length > 1 ? 'es' : ''}: {((ultimaPauta as Record<string, unknown>).revisores as string[]).join(', ')}</p>
+                          ) : null}
                         </div>
                       )
                     }
@@ -1150,8 +1084,8 @@ export default function PautaDetalhesPage({
                 </SelectTrigger>
                 <SelectContent>
                   {conselheiros.map((c) => (
-                    <SelectItem key={c.id} value={c.nome}>
-                      {c.nome} {c.cargo && `- ${c.cargo}`}
+                    <SelectItem key={c.id} value={String((c as Record<string, unknown>).nome || c.name)}>
+                      {String((c as Record<string, unknown>).nome || c.name)} {(c as Record<string, unknown>).cargo ? `- ${(c as Record<string, unknown>).cargo}` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

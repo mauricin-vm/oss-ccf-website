@@ -10,9 +10,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Loader2, AlertCircle, Plus, Trash2, CreditCard, FileText, Calculator, Edit, DollarSign, BadgeIcon } from 'lucide-react'
+import { Loader2, AlertCircle, Plus, Trash2, FileText, Calculator, Edit, DollarSign } from 'lucide-react'
 import { toast } from 'sonner'
 
 const creditoSchema = z.object({
@@ -20,14 +19,60 @@ const creditoSchema = z.object({
     required_error: 'Tipo de crédito é obrigatório'
   }),
   numero: z.string().min(1, 'Número do crédito é obrigatório'),
-  valor: z.number().min(0.01, 'Valor deve ser maior que zero'),
+  valor: z.union([
+    z.string(),
+    z.number()
+  ])
+    .refine((val) => {
+      if (typeof val === 'number') return val > 0
+      if (typeof val === 'string') {
+        if (val === '') return false
+        const cleanValue = val.replace(/[^\d,]/g, '')
+        const numericValue = cleanValue.replace(',', '.')
+        const num = parseFloat(numericValue)
+        return !isNaN(num) && num >= 0.01
+      }
+      return false
+    }, 'Valor é obrigatório e deve ser maior que zero')
+    .transform((val) => {
+      if (typeof val === 'number') return val
+      if (typeof val === 'string') {
+        const cleanValue = val.replace(/[^\d,]/g, '')
+        const numericValue = cleanValue.replace(',', '.')
+        return parseFloat(numericValue)
+      }
+      return 0
+    }),
   dataVencimento: z.string().optional(),
   descricao: z.string().optional()
 })
 
 const debitoSchema = z.object({
   descricao: z.string().min(1, 'Descrição do débito é obrigatória'),
-  valor: z.number().min(0.01, 'Valor deve ser maior que zero'),
+  valor: z.union([
+    z.string(),
+    z.number()
+  ])
+    .refine((val) => {
+      if (typeof val === 'number') return val > 0
+      if (typeof val === 'string') {
+        if (val === '') return false
+        const cleanValue = val.replace(/[^\d,]/g, '')
+        const numericValue = cleanValue.replace(',', '.')
+        const num = parseFloat(numericValue)
+        return !isNaN(num) && num >= 0.01
+      }
+      return false
+    }, 'Valor é obrigatório e deve ser maior que zero')
+    .transform((val) => {
+      if (typeof val === 'number') return val
+      if (typeof val === 'string') {
+        const cleanValue = val.replace(/[^\d,]/g, '')
+        const numericValue = cleanValue.replace(',', '.')
+        return parseFloat(numericValue)
+      }
+      return 0
+    }),
   dataVencimento: z.string().min(1, 'Data de vencimento é obrigatória')
 })
 
@@ -57,8 +102,8 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
   const [error, setError] = useState<string | null>(null)
   const [showCreditoModal, setShowCreditoModal] = useState(false)
   const [showInscricaoModal, setShowInscricaoModal] = useState(false)
-  const [editingCredito, setEditingCredito] = useState<{ index: number, credito: any } | null>(null)
-  const [editingInscricao, setEditingInscricao] = useState<{ index: number, inscricao: any } | null>(null)
+  const [editingCredito, setEditingCredito] = useState<{ index: number, credito: Record<string, unknown> } | null>(null)
+  const [editingInscricao, setEditingInscricao] = useState<{ index: number, inscricao: Record<string, unknown> } | null>(null)
 
   // Estados para formulários dos modais
   const [creditoForm, setCreditoForm] = useState({
@@ -76,12 +121,10 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
   })
 
   const {
-    register,
     control,
     handleSubmit,
     watch,
-    setValue,
-    formState: { errors }
+    setValue
   } = useForm<ValoresCompensacaoInput>({
     resolver: zodResolver(valoresCompensacaoSchema),
     defaultValues: {
@@ -89,6 +132,37 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
       inscricoes: []
     }
   })
+
+  // Funções de formatação de moeda (igual ao dacao-form)
+  const formatCurrency = (value: string) => {
+    // Remove tudo que não for número
+    const numericValue = value.replace(/\D/g, '')
+
+    // Se não há número, retorna vazio
+    if (!numericValue) return ''
+
+    // Converte para centavos
+    const cents = parseInt(numericValue, 10)
+
+    // Divide por 100 para ter o valor em reais
+    const reais = cents / 100
+
+    // Formata no padrão brasileiro
+    return reais.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })
+  }
+
+  const parseCurrencyToNumber = (value: string): number => {
+    // Remove tudo que não for número ou vírgula
+    const cleanValue = value.replace(/[^\d,]/g, '')
+
+    // Substitui vírgula por ponto para parseFloat
+    const numericValue = cleanValue.replace(',', '.')
+
+    return parseFloat(numericValue) || 0
+  }
 
   const { fields: creditosFields, append: appendCredito, remove: removeCredito } = useFieldArray({
     control,
@@ -115,11 +189,16 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
 
           // Carregar créditos
           if (data.creditos && data.creditos.length > 0) {
-            data.creditos.forEach((credito: any) => {
+            data.creditos.forEach((credito: Record<string, unknown>) => {
+              // Formatar valor monetário ao carregar
+              const valorFormatado = credito.valor
+                ? (credito.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                : ''
+
               appendCredito({
                 tipo: credito.tipo,
                 numero: credito.numero,
-                valor: credito.valor,
+                valor: valorFormatado,
                 dataVencimento: credito.dataVencimento || '',
                 descricao: credito.descricao || ''
               })
@@ -128,11 +207,19 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
 
           // Carregar inscrições
           if (data.inscricoes && data.inscricoes.length > 0) {
-            data.inscricoes.forEach((inscricao: any) => {
+            data.inscricoes.forEach((inscricao: Record<string, unknown>) => {
+              const debitosFormatados = (inscricao.debitos as Record<string, unknown>[])?.map((debito: Record<string, unknown>) => ({
+                descricao: debito.descricao,
+                valor: debito.valor
+                  ? (debito.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                  : '',
+                dataVencimento: debito.dataVencimento || ''
+              })) || []
+
               appendInscricao({
                 numeroInscricao: inscricao.numeroInscricao,
                 tipoInscricao: inscricao.tipoInscricao,
-                debitos: inscricao.debitos || []
+                debitos: debitosFormatados
               })
             })
           }
@@ -229,10 +316,16 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
   }
 
   const handleSaveCredito = () => {
+    const valor = parseCurrencyToNumber(creditoForm.valor)
+    if (!creditoForm.numero || valor <= 0) {
+      toast.error('Preencha todos os campos obrigatórios')
+      return
+    }
+
     const creditoData = {
       tipo: creditoForm.tipo,
       numero: creditoForm.numero,
-      valor: parseFloat(creditoForm.valor) || 0,
+      valor: creditoForm.valor, // Manter formato de string para o form
       dataVencimento: creditoForm.dataVencimento,
       descricao: creditoForm.descricao
     }
@@ -249,15 +342,31 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
     }
 
     setShowCreditoModal(false)
+    toast.success(editingCredito ? 'Crédito atualizado' : 'Crédito adicionado')
   }
 
   const handleSaveInscricao = () => {
+    if (!inscricaoForm.numeroInscricao) {
+      toast.error('Número da inscrição é obrigatório')
+      return
+    }
+
+    // Validar débitos
+    const debitosValidos = inscricaoForm.debitos.filter(d =>
+      d.descricao && d.valor && d.dataVencimento
+    )
+
+    if (debitosValidos.length === 0) {
+      toast.error('Pelo menos um débito deve ser informado')
+      return
+    }
+
     const inscricaoData = {
       numeroInscricao: inscricaoForm.numeroInscricao,
       tipoInscricao: inscricaoForm.tipoInscricao,
-      debitos: inscricaoForm.debitos.map(d => ({
+      debitos: debitosValidos.map(d => ({
         descricao: d.descricao,
-        valor: parseFloat(d.valor) || 0,
+        valor: d.valor, // Manter formato de string para o form
         dataVencimento: d.dataVencimento
       }))
     }
@@ -274,6 +383,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
     }
 
     setShowInscricaoModal(false)
+    toast.success(editingInscricao ? 'Inscrição atualizada' : 'Inscrição adicionada')
   }
 
   const addDebito = () => {
@@ -316,14 +426,18 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
 
   const calcularTotalCreditos = () => {
     const creditos = watch('creditos') || []
-    return creditos.reduce((total, credito) => total + (credito.valor || 0), 0)
+    return creditos.reduce((total, credito) => {
+      const valor = typeof credito.valor === 'string' ? parseCurrencyToNumber(credito.valor) : (credito.valor || 0)
+      return total + valor
+    }, 0)
   }
 
   const calcularTotalDebitos = () => {
     const inscricoes = watch('inscricoes') || []
     return inscricoes.reduce((total, inscricao) => {
       const totalInscricao = (inscricao.debitos || []).reduce((subtotal, debito) => {
-        return subtotal + (debito.valor || 0)
+        const valor = typeof debito.valor === 'string' ? parseCurrencyToNumber(debito.valor) : (debito.valor || 0)
+        return subtotal + valor
       }, 0)
       return total + totalInscricao
     }, 0)
@@ -372,7 +486,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-green-50 rounded-lg border border-green-200">
               <div className="flex items-center gap-2 mb-1">
                 <DollarSign className="h-4 w-4 text-green-600" />
@@ -411,19 +525,6 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
                 {totalCreditos >= totalDebitos ? 'Superávit' : 'Déficit'}
               </p>
             </div>
-
-            <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <div className="flex items-center gap-2 mb-1">
-                <BadgeIcon className="h-4 w-4 text-purple-600" />
-                <span className="text-sm font-medium text-purple-800">Status</span>
-              </div>
-              <p className={`text-sm font-medium ${totalCreditos >= totalDebitos ? 'text-green-600' : 'text-orange-600'}`}>
-                {totalCreditos >= totalDebitos ? 'Viável' : 'Insuficiente'}
-              </p>
-              <p className="text-xs text-purple-600">
-                {Math.abs(((totalCreditos / totalDebitos) * 100) || 0).toFixed(1)}% cobertura
-              </p>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -460,7 +561,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
                 Nenhum crédito adicionado ainda
               </p>
               <p className="text-sm text-gray-400 mt-1">
-                Clique em "Adicionar Crédito" para começar
+                Clique em &quot;Adicionar Crédito&quot; para começar
               </p>
             </div>
           ) : (
@@ -504,7 +605,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
 
                     <div className="space-y-1">
                       <p className="text-lg font-bold text-green-700">
-                        R$ {(credito.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(typeof credito.valor === 'string' ? parseCurrencyToNumber(credito.valor) : (credito.valor || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                       {credito.dataVencimento && (
                         <p className="text-xs text-green-600">
@@ -557,14 +658,17 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
                 Nenhuma inscrição adicionada ainda
               </p>
               <p className="text-sm text-gray-400 mt-1">
-                Clique em "Adicionar Inscrição" para começar
+                Clique em &quot;Adicionar Inscrição&quot; para começar
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {inscricoesFields.map((inscricaoField, inscricaoIndex) => {
                 const inscricao = watch(`inscricoes.${inscricaoIndex}`)
-                const totalDebitos = (inscricao.debitos || []).reduce((total, debito) => total + (debito.valor || 0), 0)
+                const totalDebitos = (inscricao.debitos || []).reduce((total, debito) => {
+                  const valor = typeof debito.valor === 'string' ? parseCurrencyToNumber(debito.valor) : (debito.valor || 0)
+                  return total + valor
+                }, 0)
 
                 return (
                   <div key={inscricaoField.id} className="p-4 border rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors">
@@ -694,7 +798,10 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
                 id="modal-valor"
                 type="text"
                 value={creditoForm.valor}
-                onChange={(e) => setCreditoForm({ ...creditoForm, valor: e.target.value })}
+                onChange={(e) => {
+                  const formatted = formatCurrency(e.target.value)
+                  setCreditoForm({ ...creditoForm, valor: formatted })
+                }}
                 placeholder="Ex: 50.000,00"
               />
             </div>
@@ -831,7 +938,10 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
                           id={`debito-valor-${index}`}
                           type="text"
                           value={debito.valor}
-                          onChange={(e) => updateDebito(index, 'valor', e.target.value)}
+                          onChange={(e) => {
+                            const formatted = formatCurrency(e.target.value)
+                            updateDebito(index, 'valor', formatted)
+                          }}
                           placeholder="Ex: 1.500,00"
                         />
                       </div>
@@ -854,7 +964,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
                 <div className="flex justify-between items-center">
                   <span className="font-medium text-blue-800">Total dos Débitos:</span>
                   <span className="text-lg font-bold text-blue-700">
-                    R$ {inscricaoForm.debitos.reduce((total, d) => total + (parseFloat(d.valor) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {inscricaoForm.debitos.reduce((total, d) => total + parseCurrencyToNumber(d.valor), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>

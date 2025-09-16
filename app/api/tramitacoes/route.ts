@@ -4,24 +4,19 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { tramitacaoSchema } from '@/lib/validations/processo'
 import { SessionUser, PrismaWhereFilter } from '@/types'
-
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const setor = searchParams.get('setor')
     const status = searchParams.get('status') // 'pendente', 'recebida', 'atrasada'
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
-    
     const where: PrismaWhereFilter = {}
-    
     if (search) {
       where.OR = [
         { processo: { numero: { contains: search, mode: 'insensitive' } } },
@@ -30,14 +25,12 @@ export async function GET(request: NextRequest) {
         { setorDestino: { contains: search, mode: 'insensitive' } }
       ]
     }
-    
     if (setor) {
       where.OR = [
         { setorOrigem: setor },
         { setorDestino: setor }
       ]
     }
-    
     if (status) {
       switch (status) {
         case 'pendente':
@@ -56,7 +49,6 @@ export async function GET(request: NextRequest) {
           break
       }
     }
-
     const [tramitacoes, total, setores] = await Promise.all([
       prisma.tramitacao.findMany({
         where,
@@ -85,7 +77,6 @@ export async function GET(request: NextRequest) {
         orderBy: { nome: 'asc' }
       })
     ])
-
     return NextResponse.json({
       tramitacoes,
       setores,
@@ -104,17 +95,13 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
-
     // Apenas Admin e Funcionário podem criar tramitações
     if (user.role === 'VISUALIZADOR') {
       return NextResponse.json(
@@ -122,40 +109,33 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       )
     }
-
     const body = await request.json()
-    
     // Note: não converter prazoResposta aqui pois o schema já faz isso
     const validationResult = tramitacaoSchema.safeParse(body)
-
     if (!validationResult.success) {
-      console.error('Validation error:', validationResult.error.errors)
+      console.error('Validation error:', validationResult.error.issues)
       console.error('Request body:', body)
       return NextResponse.json(
         { 
           error: 'Dados inválidos',
-          details: validationResult.error.errors,
+          details: validationResult.error.issues,
           received: body
         },
         { status: 400 }
       )
     }
-
     const data = validationResult.data
-
     // Verificar se o processo existe
     const processo = await prisma.processo.findUnique({
       where: { id: data.processoId },
       include: { contribuinte: true }
     })
-
     if (!processo) {
       return NextResponse.json(
         { error: 'Processo não encontrado' },
         { status: 404 }
       )
     }
-
     // Verificar se o setor de origem é válido
     if (data.setorOrigem === data.setorDestino) {
       return NextResponse.json(
@@ -163,7 +143,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
     // Verificar se há tramitação pendente para este processo
     const tramitacaoPendente = await prisma.tramitacao.findFirst({
       where: {
@@ -171,14 +150,12 @@ export async function POST(request: NextRequest) {
         dataRecebimento: null
       }
     })
-
     if (tramitacaoPendente) {
       return NextResponse.json(
         { error: 'Já existe uma tramitação pendente para este processo' },
         { status: 400 }
       )
     }
-
     // Criar a tramitação
     const tramitacao = await prisma.tramitacao.create({
       data: {
@@ -205,21 +182,28 @@ export async function POST(request: NextRequest) {
         }
       }
     })
-
     // Atualizar status do processo para EM_ANALISE se houver tramitação
     // (exceto se já estiver em pauta ou julgado)
     let novoStatus = processo.status
     if (['RECEPCIONADO'].includes(processo.status)) {
       novoStatus = 'EM_ANALISE'
     }
-
     if (novoStatus !== processo.status) {
       await prisma.processo.update({
         where: { id: data.processoId },
         data: { status: novoStatus }
       })
     }
-
+    // Criar histórico do processo
+    await prisma.historicoProcesso.create({
+      data: {
+        processoId: data.processoId,
+        tipo: 'TRAMITACAO',
+        titulo: `Tramitação para ${data.setorDestino}`,
+        descricao: `Processo tramitado de ${data.setorOrigem} para ${data.setorDestino}${data.observacoes ? `. Observações: ${data.observacoes}` : ''}${data.prazoResposta ? `. Prazo: ${new Date(data.prazoResposta).toLocaleDateString('pt-BR')}` : ''}`,
+        usuarioId: user.id
+      }
+    })
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
@@ -236,7 +220,6 @@ export async function POST(request: NextRequest) {
         }
       }
     })
-
     return NextResponse.json(tramitacao, { status: 201 })
   } catch (error) {
     console.error('Erro ao criar tramitação:', error)

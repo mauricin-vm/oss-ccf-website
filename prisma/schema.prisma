@@ -134,7 +134,7 @@ model Processo {
   documentos        Documento[]
   pautas            ProcessoPauta[]
   decisoes          Decisao[]
-  acordo            Acordo?
+  acordos           Acordo[]
   imoveis           ProcessoImovel[]
   creditos          ProcessoCredito[]
   inscricoes        ProcessoInscricao[] @relation("ProcessoInscricoes")
@@ -362,7 +362,7 @@ model Decisao {
 model Acordo {
   id                String          @id @default(cuid())
   
-  processoId        String          @unique
+  processoId        String
   processo          Processo        @relation(fields: [processoId], references: [id])
   
   numeroTermo       String          @unique
@@ -459,17 +459,18 @@ model AcordoDetalhes {
 
 model AcordoInscricao {
   id                String          @id @default(cuid())
-  
+
   acordoDetalheId   String
   acordoDetalhe     AcordoDetalhes  @relation(fields: [acordoDetalheId], references: [id], onDelete: Cascade)
-  
+
   numeroInscricao   String
   tipoInscricao     String          // 'imobiliaria', 'economica'
   valorDebito       Decimal         @db.Decimal(15, 2)
   valorAbatido      Decimal         @db.Decimal(15, 2)
   percentualAbatido Decimal         @db.Decimal(5, 2)
   situacao          String          // 'pendente', 'abatido', 'quitado'
-  
+  descricaoDebitos  Json?           // Lista dos débitos desta inscrição
+
   @@index([acordoDetalheId])
   @@index([numeroInscricao])
 }

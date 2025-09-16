@@ -41,13 +41,23 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
     setIsLoading(true)
     setError(null)
 
+    const processedData = {
+      ...data,
+      contribuinte: {
+        ...data.contribuinte,
+        cpfCnpj: data.contribuinte.cpfCnpj?.replace(/\D/g, '') || '',
+        telefone: data.contribuinte.telefone?.replace(/\D/g, '') || '',
+        cep: data.contribuinte.cep?.replace(/\D/g, '') || ''
+      }
+    }
+
     try {
       const response = await fetch('/api/processos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(processedData)
       })
 
       if (!response.ok) {
@@ -80,6 +90,31 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
 
   const formatCep = (value: string) => {
     return value.replace(/(\d{5})(\d{3})/, '$1-$2')
+  }
+
+  const formatTelefone = (value: string) => {
+    const numbers = value.replace(/\D/g, '')
+
+    if (numbers.length <= 10) {
+      return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
+    } else {
+      return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+    }
+  }
+
+  const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatTelefone(e.target.value)
+    setValue('contribuinte.telefone', formatted)
+  }
+
+  const handleTelefoneFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    const unformatted = e.target.value.replace(/\D/g, '')
+    setValue('contribuinte.telefone', unformatted)
+  }
+
+  const handleTelefoneBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const formatted = formatTelefone(e.target.value)
+    setValue('contribuinte.telefone', formatted)
   }
 
   return (
@@ -217,6 +252,9 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
                 id="contribuinte.telefone"
                 placeholder="(11) 99999-9999"
                 {...register('contribuinte.telefone')}
+                onChange={handleTelefoneChange}
+                onFocus={handleTelefoneFocus}
+                onBlur={handleTelefoneBlur}
                 disabled={isLoading}
               />
               {errors.contribuinte?.telefone && (

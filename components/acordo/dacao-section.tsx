@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Calculator, FileText, DollarSign, Building, Check, Home, ArrowRightLeft } from 'lucide-react'
+import { Calculator, FileText, DollarSign, Check, Home, ArrowRightLeft } from 'lucide-react'
 
 interface InscricaoOferecida {
   id: string
@@ -36,7 +36,7 @@ interface ValoresDacao {
 
 interface DacaoSectionProps {
   valoresDacao: ValoresDacao
-  onSelectionChange: (dadosSelecionados: any) => void
+  onSelectionChange: (dadosSelecionados: Record<string, unknown>) => void
 }
 
 export default function DacaoSection({
@@ -73,7 +73,7 @@ export default function DacaoSection({
     }
 
     onSelectionChange(dadosSelecionados)
-  }, [inscricoesOferecidasSelecionadas, inscricoesCompensarSelecionadas, valoresDacao])
+  }, [inscricoesOferecidasSelecionadas, inscricoesCompensarSelecionadas, valoresDacao, onSelectionChange])
 
   const handleInscricaoOferecidaChange = (inscricaoId: string, checked: boolean) => {
     setInscricoesOferecidasSelecionadas(prev =>

@@ -343,7 +343,7 @@ export default function PautasPage() {
             const dataStatus = getDataStatus(pauta.dataPauta)
             const StatusIcon = status.icon
             const totalProcessos = pauta.processos.length
-            const processosJulgados = pauta.sessao?.decisoes?.length || 0
+            const processosJulgados = (pauta.sessao as Record<string, unknown>)?.decisoes ? ((pauta.sessao as Record<string, unknown>).decisoes as Record<string, unknown>[]).length : 0
 
             return (
               <Card key={pauta.id} className="hover:shadow-md transition-shadow">

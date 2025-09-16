@@ -215,12 +215,7 @@ export default function EditarInformacoesSessaoForm({
                   <SelectItem value="none" className="cursor-pointer">Nenhum presidente</SelectItem>
                   {conselheiros.map((conselheiro) => (
                     <SelectItem key={conselheiro.id} value={conselheiro.id} className="cursor-pointer">
-                      <div className="flex flex-col text-left">
-                        <span className="font-medium">{conselheiro.nome}</span>
-                        {conselheiro.cargo && (
-                          <span className="text-xs text-gray-500">{conselheiro.cargo}</span>
-                        )}
-                      </div>
+                      {conselheiro.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>

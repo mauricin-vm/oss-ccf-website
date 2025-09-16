@@ -1,8 +1,6 @@
 'use client'
 
-import { useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ValoresDacaoForm from '@/components/forms/valores-dacao-form'
 import ValoresCompensacaoForm from '@/components/forms/valores-compensacao-form'
 import ValoresTransacaoForm from '@/components/forms/valores-transacao-form'

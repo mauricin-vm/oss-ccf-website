@@ -26,12 +26,10 @@ export const processoSchema = z.object({
 export const tramitacaoSchema = z.object({
   processoId: z.string().min(1, 'Processo é obrigatório'),
   setorOrigem: z.string({
-    required_error: 'Selecione o setor de origem',
-    invalid_type_error: 'Selecione o setor de origem'
+    message: 'Selecione o setor de origem'
   }).min(1, 'Selecione o setor de origem'),
   setorDestino: z.string({
-    required_error: 'Selecione o setor de destino',
-    invalid_type_error: 'Selecione o setor de destino'
+    message: 'Selecione o setor de destino'
   }).min(1, 'Selecione o setor de destino'),
   prazoResposta: z.string()
     .optional()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { signIn, useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
@@ -35,10 +35,10 @@ export default function LoginPage() {
   const [showRegisterDialog, setShowRegisterDialog] = useState(false)
 
   // Função para obter a URL de redirecionamento
-  const getRedirectUrl = () => {
+  const getRedirectUrl = useCallback(() => {
     const callbackUrl = searchParams.get('callbackUrl')
     return callbackUrl || '/dashboard'
-  }
+  }, [searchParams])
 
   // Redirecionar se já estiver autenticado
   useEffect(() => {
@@ -47,7 +47,7 @@ export default function LoginPage() {
     if (session) {
       router.replace(getRedirectUrl())
     }
-  }, [session, status, router, searchParams])
+  }, [session, status, router, searchParams, getRedirectUrl])
 
   const {
     register,

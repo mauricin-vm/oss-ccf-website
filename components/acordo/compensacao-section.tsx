@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Calculator, FileText, DollarSign, CreditCard, Check, Plus, Minus } from 'lucide-react'
+import { Calculator, FileText, DollarSign, Check, Plus, Minus } from 'lucide-react'
 
 interface Credito {
   id: string
@@ -36,7 +36,7 @@ interface ValoresCompensacao {
 
 interface CompensacaoSectionProps {
   valoresCompensacao: ValoresCompensacao
-  onSelectionChange: (dadosSelecionados: any) => void
+  onSelectionChange: (dadosSelecionados: Record<string, unknown>) => void
 }
 
 export default function CompensacaoSection({
@@ -73,7 +73,7 @@ export default function CompensacaoSection({
     }
 
     onSelectionChange(dadosSelecionados)
-  }, [creditosSelecionados, inscricoesSelecionadas, valoresCompensacao])
+  }, [creditosSelecionados, inscricoesSelecionadas, valoresCompensacao, onSelectionChange])
 
   const handleCreditoChange = (creditoId: string, checked: boolean) => {
     setCreditosSelecionados(prev =>

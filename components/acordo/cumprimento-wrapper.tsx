@@ -5,7 +5,7 @@ import CumprimentoDetalhes from './cumprimento-detalhes'
 
 interface CumprimentoWrapperProps {
   acordoId: string
-  detalhes: any[]
+  detalhes: Record<string, unknown>[]
 }
 
 export default function CumprimentoWrapper({ acordoId, detalhes }: CumprimentoWrapperProps) {
@@ -48,7 +48,7 @@ export default function CumprimentoWrapper({ acordoId, detalhes }: CumprimentoWr
   return (
     <CumprimentoDetalhes
       acordoId={acordoId}
-      detalhes={detalhesAtualizados}
+      detalhes={detalhesAtualizados as AcordoDetalhe[]}
       onStatusUpdate={handleStatusUpdate}
     />
   )

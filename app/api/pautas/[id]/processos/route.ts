@@ -3,37 +3,30 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { SessionUser } from '@/types'
-
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
-
     if (user.role === 'VISUALIZADOR') {
       return NextResponse.json(
         { error: 'Sem permissão para modificar pautas' },
         { status: 403 }
       )
     }
-
     const { id: pautaId } = await params
     const { processoId, relator } = await request.json()
-
     if (!processoId) {
       return NextResponse.json(
         { error: 'ID do processo é obrigatório' },
         { status: 400 }
       )
     }
-
     // Verificar se a pauta existe e está aberta
     const pauta = await prisma.pauta.findUnique({
       where: { id: pautaId },
@@ -41,18 +34,15 @@ export async function POST(
         processos: true
       }
     })
-
     if (!pauta) {
       return NextResponse.json({ error: 'Pauta não encontrada' }, { status: 404 })
     }
-
     if (pauta.status !== 'aberta') {
       return NextResponse.json(
         { error: 'Apenas pautas abertas podem ser modificadas' },
         { status: 400 }
       )
     }
-
     // Verificar se o processo existe
     const processo = await prisma.processo.findUnique({
       where: { id: processoId },
@@ -60,11 +50,9 @@ export async function POST(
         contribuinte: true
       }
     })
-
     if (!processo) {
       return NextResponse.json({ error: 'Processo não encontrado' }, { status: 404 })
     }
-
     // Verificar se o processo já está na pauta
     const processoJaNaPauta = pauta.processos.find(p => p.processoId === processoId)
     if (processoJaNaPauta) {
@@ -73,21 +61,17 @@ export async function POST(
         { status: 400 }
       )
     }
-
     // Verificar se o processo pode ser incluído
     const statusPermitidos = ['EM_ANALISE', 'SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA']
     const statusJulgados = ['JULGADO', 'ACORDO_FIRMADO', 'EM_CUMPRIMENTO', 'ARQUIVADO']
-    
     if (!statusPermitidos.includes(processo.status) && !statusJulgados.includes(processo.status)) {
       return NextResponse.json(
         { error: 'Processo não pode ser incluído em pauta com este status' },
         { status: 400 }
       )
     }
-
     // Verificar se é repautamento de processo já julgado
     const isRepautamentoJulgado = statusJulgados.includes(processo.status)
-    
     // Buscar distribuição anterior do processo
     const ultimaDistribuicao = await prisma.processoPauta.findFirst({
       where: { processoId },
@@ -100,12 +84,10 @@ export async function POST(
         }
       }
     })
-
     // Obter a próxima ordem na pauta
     const proximaOrdem = pauta.processos.length > 0 
       ? Math.max(...pauta.processos.map(p => p.ordem)) + 1 
       : 1
-
     // Validar se o relator informado é um conselheiro ativo (se especificado)
     if (relator && relator.trim()) {
       const conselheiroValido = await prisma.conselheiro.findFirst({
@@ -114,7 +96,6 @@ export async function POST(
           ativo: true 
         }
       })
-      
       if (!conselheiroValido) {
         return NextResponse.json(
           { error: 'Relator deve ser um conselheiro ativo cadastrado no sistema' },
@@ -122,18 +103,15 @@ export async function POST(
         )
       }
     }
-
     // Definir distribuição baseada no histórico
     let novoRelator = null
     let distribuidoPara = null
     let novosRevisores: string[] = []
     let observacaoDistribuicao = ''
-
     if (ultimaDistribuicao) {
       // Se existe histórico, manter o relator original
       novoRelator = ultimaDistribuicao.relator
       novosRevisores = [...(ultimaDistribuicao.revisores || [])]
-      
       // Para PEDIDO_VISTA, incluir novos revisores das decisões de vista
       if (processo.status === 'PEDIDO_VISTA') {
         const decisoesVista = await prisma.decisao.findMany({
@@ -143,29 +121,23 @@ export async function POST(
           },
           orderBy: { createdAt: 'asc' }
         })
-        
         const novosRevisoresVista = decisoesVista
           .map(d => d.conselheiroPedidoVista)
           .filter(conselheiro => conselheiro && !novosRevisores.includes(conselheiro))
-        
         novosRevisores = [...novosRevisores, ...novosRevisoresVista]
       }
-      
       // Definir distribuição padrão
       const ultimoRevisor = novosRevisores.length > 0 
         ? novosRevisores[novosRevisores.length - 1] 
         : null
-      
       if (relator && relator.trim()) {
         // Distribuição manual especificada
         const conselheiroEscolhido = relator.trim()
         distribuidoPara = conselheiroEscolhido
-        
         // Se escolheu um terceiro conselheiro (não é relator nem revisor existente)
         if (conselheiroEscolhido !== novoRelator && !novosRevisores.includes(conselheiroEscolhido)) {
           novosRevisores = [...novosRevisores, conselheiroEscolhido]
         }
-        
         observacaoDistribuicao = ` - Distribuído para: ${conselheiroEscolhido}`
       } else {
         // Distribuição automática: último revisor se existe, senão relator
@@ -180,7 +152,6 @@ export async function POST(
       distribuidoPara = relator?.trim() || null
       observacaoDistribuicao = relator ? ` - Distribuído para: ${relator}` : ''
     }
-
     await prisma.$transaction(async (tx) => {
       // Incluir processo na pauta
       await tx.processoPauta.create({
@@ -193,22 +164,18 @@ export async function POST(
           revisores: novosRevisores
         }
       })
-
       // Atualizar status do processo
       await tx.processo.update({
         where: { id: processoId },
         data: { status: 'EM_PAUTA' }
       })
-
       // Criar histórico no processo
       let tituloHistorico = 'Processo incluído em pauta'
       let tipoHistorico = 'PAUTA'
-      
       if (isRepautamentoJulgado) {
         tituloHistorico = 'Processo repautado'
         tipoHistorico = 'REPAUTAMENTO'
       }
-      
       await tx.historicoProcesso.create({
         data: {
           processoId,
@@ -218,7 +185,6 @@ export async function POST(
           tipo: tipoHistorico
         }
       })
-
       // Criar tramitação para o processo (apenas se houver distribuição)
       if (distribuidoPara) {
         await tx.tramitacao.create({
@@ -231,7 +197,6 @@ export async function POST(
           }
         })
       }
-
       // Criar histórico na pauta
       const pautaDistribucaoInfo = distribuidoPara ? ` - Distribuído para: ${distribuidoPara}` : ''
       await tx.historicoPauta.create({
@@ -244,7 +209,6 @@ export async function POST(
         }
       })
     })
-
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
@@ -262,7 +226,6 @@ export async function POST(
         }
       }
     })
-
     return NextResponse.json({ 
       message: 'Processo incluído na pauta com sucesso',
       processoPauta: {
@@ -279,15 +242,12 @@ export async function POST(
     )
   }
 }
-
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     // Buscar processos disponíveis (EM_ANALISE e não estão em nenhuma pauta)
     const processosDisponiveis = await prisma.processo.findMany({
       where: {
@@ -307,14 +267,11 @@ export async function GET() {
         createdAt: 'desc'
       }
     })
-
     // Converter valores Decimal para number antes de retornar
     const processosDisponiveisSerializados = processosDisponiveis.map(processo => ({
       ...processo,
-      valorOriginal: processo.valorOriginal ? Number(processo.valorOriginal) : null,
-      valorNegociado: processo.valorNegociado ? Number(processo.valorNegociado) : null
+      valorOriginal: 0 ? Number(0) : null,
     }))
-
     return NextResponse.json(processosDisponiveisSerializados)
   } catch (error) {
     console.error('Erro ao buscar processos disponíveis:', error)

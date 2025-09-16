@@ -84,7 +84,7 @@ export default function UsuariosAdminPage() {
     name: '',
     email: '',
     password: '',
-    role: 'FUNCIONARIO' as const,
+    role: 'FUNCIONARIO' as 'ADMIN' | 'FUNCIONARIO' | 'VISUALIZADOR',
     active: true
   })
 
@@ -174,7 +174,7 @@ export default function UsuariosAdminPage() {
     try {
       const updateData = { ...formData }
       if (!updateData.password) {
-        delete updateData.password
+        delete (updateData as Record<string, unknown>).password
       }
 
       const response = await fetch(`/api/users/${selectedUser.id}`, {
@@ -232,7 +232,7 @@ export default function UsuariosAdminPage() {
       name: user.name,
       email: user.email,
       password: '',
-      role: user.role,
+      role: user.role as 'ADMIN' | 'FUNCIONARIO' | 'VISUALIZADOR',
       active: user.active
     })
     setShowEditDialog(true)

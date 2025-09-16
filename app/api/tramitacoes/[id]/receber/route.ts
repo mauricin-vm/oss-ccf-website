@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { SessionUser } from '@/types'
-
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -11,13 +10,10 @@ export async function PUT(
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
-
     // Apenas Admin e Funcionário podem marcar como recebida
     if (user.role === 'VISUALIZADOR') {
       return NextResponse.json(
@@ -25,7 +21,6 @@ export async function PUT(
         { status: 403 }
       )
     }
-
     // Buscar tramitação
     const tramitacao = await prisma.tramitacao.findUnique({
       where: { id },
@@ -37,14 +32,12 @@ export async function PUT(
         }
       }
     })
-
     if (!tramitacao) {
       return NextResponse.json(
         { error: 'Tramitação não encontrada' },
         { status: 404 }
       )
     }
-
     // Verificar se já foi recebida
     if (tramitacao.dataRecebimento) {
       return NextResponse.json(
@@ -52,7 +45,6 @@ export async function PUT(
         { status: 400 }
       )
     }
-
     // Marcar como recebida
     const tramitacaoAtualizada = await prisma.tramitacao.update({
       where: { id },
@@ -76,7 +68,6 @@ export async function PUT(
         }
       }
     })
-
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
@@ -93,7 +84,16 @@ export async function PUT(
         }
       }
     })
-
+    // Criar histórico do processo indicando que retornou à CCF
+    await prisma.historicoProcesso.create({
+      data: {
+        processoId: tramitacao.processoId,
+        usuarioId: user.id,
+        titulo: 'Processo retornou à CCF',
+        descricao: `Tramitação do ${tramitacao.setorOrigem} para ${tramitacao.setorDestino} foi marcada como entregue. O processo retornou à CCF.`,
+        tipo: 'TRAMITACAO_ENTREGUE'
+      }
+    })
     return NextResponse.json({
       message: 'Tramitação marcada como recebida com sucesso',
       tramitacao: tramitacaoAtualizada

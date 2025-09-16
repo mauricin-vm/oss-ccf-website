@@ -6,23 +6,18 @@ import { SessionUser } from '@/types'
 import { readFile } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
-
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads/documentos'
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; documentoId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
     const { id: processoId, documentoId } = await params
-
     // Buscar o documento
     const documento = await prisma.documento.findUnique({
       where: { 
@@ -37,18 +32,15 @@ export async function GET(
         }
       }
     })
-
     if (!documento) {
       return NextResponse.json(
         { error: 'Documento não encontrado' },
         { status: 404 }
       )
     }
-
     // Montar caminho do arquivo (substituir '/' por '-' no nome da pasta)
     const processoDirName = documento.processo.numero.replace(/\//g, '-')
     const filePath = join(process.cwd(), UPLOAD_DIR, processoDirName, documento.url.split('/').pop()!)
-
     // Verificar se arquivo existe
     if (!existsSync(filePath)) {
       return NextResponse.json(
@@ -56,16 +48,13 @@ export async function GET(
         { status: 404 }
       )
     }
-
     try {
       // Ler arquivo
       const fileBuffer = await readFile(filePath)
-
       // Log de auditoria
       const userExists = await prisma.user.findUnique({
         where: { id: user.id }
       })
-      
       if (userExists) {
         await prisma.logAuditoria.create({
           data: {
@@ -81,7 +70,6 @@ export async function GET(
           }
         })
       }
-
       // Determinar Content-Type baseado no tipo do arquivo
       let contentType = documento.tipo
       if (!contentType || contentType === 'application/octet-stream') {
@@ -119,10 +107,8 @@ export async function GET(
             contentType = 'application/octet-stream'
         }
       }
-
       // Preparar nome do arquivo para download (sanitizar)
       const sanitizedFileName = documento.nome.replace(/[^a-zA-Z0-9.-]/g, '_')
-      
       // Retornar arquivo
       return new NextResponse(fileBuffer, {
         status: 200,

@@ -14,11 +14,10 @@ import {
   FileText,
   Calendar,
   DollarSign,
-  MapPin,
-  Phone,
   Mail,
   Clock,
   AlertCircle,
+  AlertTriangle,
   CheckCircle,
   XCircle,
   Plus,
@@ -33,7 +32,6 @@ import {
   Calculator,
   Home,
   CreditCard,
-  Settings
 } from 'lucide-react'
 import Link from 'next/link'
 import { SessionUser, ProcessoWithRelations } from '@/types'
@@ -58,6 +56,32 @@ export default function ProcessoDetalhesPage({ params }: Props) {
   const [showHistoricoModal, setShowHistoricoModal] = useState(false)
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [showValoresModal, setShowValoresModal] = useState(false)
+
+  const formatCpfCnpj = (value: string) => {
+    if (!value) return ''
+    const numbers = value.replace(/\D/g, '')
+    if (numbers.length <= 11) {
+      return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+    } else {
+      return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+    }
+  }
+
+  const formatTelefone = (value: string) => {
+    if (!value) return ''
+    const numbers = value.replace(/\D/g, '')
+    if (numbers.length <= 10) {
+      return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
+    } else {
+      return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+    }
+  }
+
+  const formatCep = (value: string) => {
+    if (!value) return ''
+    const numbers = value.replace(/\D/g, '')
+    return numbers.replace(/(\d{5})(\d{3})/, '$1-$2')
+  }
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -159,18 +183,12 @@ export default function ProcessoDetalhesPage({ params }: Props) {
     ARQUIVADO: { label: 'Arquivado', color: 'bg-gray-100 text-gray-800', icon: XCircle }
   }
 
-  const statusParcelaMap = {
-    PENDENTE: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-800' },
-    PAGO: { label: 'Pago', color: 'bg-green-100 text-green-800' },
-    ATRASADO: { label: 'Atrasado', color: 'bg-red-100 text-red-800' },
-    CANCELADO: { label: 'Cancelado', color: 'bg-gray-100 text-gray-800' }
-  }
 
   const canEdit = user.role === 'ADMIN' || user.role === 'FUNCIONARIO'
   const statusInfo = statusMap[processo.status] || { label: processo.status, color: 'bg-gray-100 text-gray-800', icon: AlertCircle }
   const StatusIcon = statusInfo.icon
 
-  const getResultadoBadge = (decisao: any) => {
+  const getResultadoBadge = (decisao: Record<string, unknown>) => {
     if (!decisao) return null
 
     switch (decisao.tipoResultado) {
@@ -200,7 +218,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
     }
   }
 
-  const getCardBackground = (decisao: any) => {
+  const getCardBackground = (decisao: Record<string, unknown>) => {
     if (!decisao) return 'bg-gray-50'
 
     switch (decisao.tipoResultado) {
@@ -349,7 +367,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                   </div>
                   <div>
                     <Label>Criado por</Label>
-                    <p className="font-medium">{processo.createdBy.name}</p>
+                    <p className="font-medium">{(processo as Record<string, unknown>).createdBy ? ((processo as Record<string, unknown>).createdBy as Record<string, unknown>).name as string : 'N/A'}</p>
                   </div>
                 </div>
 
@@ -377,11 +395,10 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                   </div>
                   <div>
                     <Label>CPF/CNPJ</Label>
-                    <p className="font-medium">{processo.contribuinte.cpfCnpj}</p>
+                    <p className="font-medium">{processo.contribuinte.cpfCnpj ? formatCpfCnpj(processo.contribuinte.cpfCnpj) : 'N/A'}</p>
                   </div>
                   {processo.contribuinte.email && (
                     <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-500" />
                       <div>
                         <Label>Email</Label>
                         <p className="font-medium">{processo.contribuinte.email}</p>
@@ -390,10 +407,9 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                   )}
                   {processo.contribuinte.telefone && (
                     <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-gray-500" />
                       <div>
                         <Label>Telefone</Label>
-                        <p className="font-medium">{processo.contribuinte.telefone}</p>
+                        <p className="font-medium">{formatTelefone(processo.contribuinte.telefone)}</p>
                       </div>
                     </div>
                   )}
@@ -401,13 +417,12 @@ export default function ProcessoDetalhesPage({ params }: Props) {
 
                 {processo.contribuinte.endereco && (
                   <div className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 text-gray-500 mt-1" />
                     <div className="space-y-1">
                       <Label>Endereço</Label>
                       <p className="font-medium">{processo.contribuinte.endereco}</p>
                       {(processo.contribuinte.cidade || processo.contribuinte.estado || processo.contribuinte.cep) && (
                         <p className="text-sm text-gray-600">
-                          {processo.contribuinte.cidade}, {processo.contribuinte.estado} - {processo.contribuinte.cep}
+                          {processo.contribuinte.cidade}, {processo.contribuinte.estado} - {processo.contribuinte.cep ? formatCep(processo.contribuinte.cep) : 'N/A'}
                         </p>
                       )}
                     </div>
@@ -443,7 +458,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                 {!processo.valoresEspecificos || (
                   (processo.tipo === 'COMPENSACAO' && (processo.valoresEspecificos.creditos?.length === 0 && processo.valoresEspecificos.inscricoes?.length === 0)) ||
                   (processo.tipo === 'DACAO_PAGAMENTO' && (processo.valoresEspecificos.imoveis?.length === 0 && processo.valoresEspecificos.inscricoes?.length === 0)) ||
-                  (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && (!processo.valoresEspecificos.transacao || processo.valoresEspecificos.inscricoes?.length === 0))
+                  (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && (!(processo.valoresEspecificos as Record<string, unknown>).transacao || processo.valoresEspecificos.inscricoes?.length === 0))
                 ) ? (
                   <div className="text-center py-8">
                     <Calculator className="mx-auto h-12 w-12 text-gray-400" />
@@ -467,7 +482,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                             <span className="text-sm font-medium text-green-800">Créditos</span>
                           </div>
                           <p className="text-lg font-bold text-green-700">
-                            R$ {processo.valoresEspecificos.creditos.reduce((total: number, credito: any) => total + credito.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            R$ {processo.valoresEspecificos.creditos.reduce((total: number, credito: Record<string, unknown>) => total + Number(credito.valor), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </p>
                           <p className="text-xs text-green-600">
                             {processo.valoresEspecificos.creditos.length} {processo.valoresEspecificos.creditos.length === 1 ? 'crédito' : 'créditos'}
@@ -480,8 +495,8 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                             <span className="text-sm font-medium text-blue-800">A Compensar</span>
                           </div>
                           <p className="text-lg font-bold text-blue-700">
-                            R$ {processo.valoresEspecificos.inscricoes.reduce((total: number, inscricao: any) =>
-                              total + (inscricao.debitos?.reduce((subtotal: number, debito: any) => subtotal + debito.valor, 0) || 0), 0
+                            R$ {processo.valoresEspecificos.inscricoes.reduce((total: number, inscricao: Record<string, unknown>) =>
+                              total + ((inscricao.debitos as Record<string, unknown>[])?.reduce((subtotal: number, debito: Record<string, unknown>) => subtotal + Number(debito.valor), 0) || 0), 0
                             ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </p>
                           <p className="text-xs text-blue-600">
@@ -495,9 +510,9 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                             <span className="text-sm font-medium text-gray-800">Saldo</span>
                           </div>
                           {(() => {
-                            const totalCreditos = processo.valoresEspecificos.creditos.reduce((total: number, credito: any) => total + credito.valor, 0)
-                            const totalDebitos = processo.valoresEspecificos.inscricoes.reduce((total: number, inscricao: any) =>
-                              total + (inscricao.debitos?.reduce((subtotal: number, debito: any) => subtotal + debito.valor, 0) || 0), 0
+                            const totalCreditos = processo.valoresEspecificos.creditos.reduce((total: number, credito: Record<string, unknown>) => total + Number(credito.valor), 0)
+                            const totalDebitos = processo.valoresEspecificos.inscricoes.reduce((total: number, inscricao: Record<string, unknown>) =>
+                              total + ((inscricao.debitos as Record<string, unknown>[])?.reduce((subtotal: number, debito: Record<string, unknown>) => subtotal + Number(debito.valor), 0) || 0), 0
                             )
                             const saldo = totalCreditos - totalDebitos
                             return (
@@ -516,7 +531,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     )}
 
                     {/* Para Dação em Pagamento, mostrar resumo similar à compensação */}
-                    {processo.tipo === 'DACAO_PAGAMENTO' && processo.valoresEspecificos.imoveis && processo.valoresEspecificos.inscricoes && (
+                    {processo.tipo === 'DACAO_PAGAMENTO' && processo.valoresEspecificos?.imoveis && processo.valoresEspecificos?.inscricoes ? (
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="p-3 bg-green-50 rounded-lg border border-green-200">
                           <div className="flex items-center gap-2 mb-1">
@@ -525,12 +540,11 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                           </div>
                           <p className="text-lg font-bold text-green-700">
                             R$ {(() => {
-                              const total = processo.valoresEspecificos.imoveis.reduce((total: number, imovel: any) => {
-                                const valor = Number(imovel.imovel?.valorAvaliado || imovel.valorAvaliacao || 0);
-                                console.log('Imovel debug:', { imovel, valor, valorAvaliado: imovel.imovel?.valorAvaliado, valorAvaliacao: imovel.valorAvaliacao });
+                              const total = processo.valoresEspecificos.imoveis.reduce((total: number, imovel: Record<string, unknown>) => {
+                                const valor = Number((imovel.imovel as Record<string, unknown>)?.valorAvaliado || imovel.valorAvaliacao || 0);
+                                console.log('Imovel debug:', { imovel, valor, valorAvaliado: (imovel.imovel as Record<string, unknown>)?.valorAvaliado, valorAvaliacao: imovel.valorAvaliacao });
                                 return total + valor;
                               }, 0);
-                              console.log('Total imóveis:', total);
                               return total.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
                             })()}
                           </p>
@@ -545,8 +559,8 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                             <span className="text-sm font-medium text-blue-800">A Compensar</span>
                           </div>
                           <p className="text-lg font-bold text-blue-700">
-                            R$ {processo.valoresEspecificos.inscricoes.reduce((total: number, inscricao: any) =>
-                              total + (inscricao.debitos?.reduce((subtotal: number, debito: any) => subtotal + debito.valor, 0) || 0), 0
+                            R$ {processo.valoresEspecificos.inscricoes.reduce((total: number, inscricao: Record<string, unknown>) =>
+                              total + ((inscricao.debitos as Record<string, unknown>[])?.reduce((subtotal: number, debito: Record<string, unknown>) => subtotal + Number(debito.valor), 0) || 0), 0
                             ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </p>
                           <p className="text-xs text-blue-600">
@@ -560,9 +574,9 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                             <span className="text-sm font-medium text-gray-800">Saldo</span>
                           </div>
                           {(() => {
-                            const totalImoveis = processo.valoresEspecificos.imoveis.reduce((total: number, imovel: any) => total + imovel.valorAvaliacao, 0)
-                            const totalDebitos = processo.valoresEspecificos.inscricoes.reduce((total: number, inscricao: any) =>
-                              total + (inscricao.debitos?.reduce((subtotal: number, debito: any) => subtotal + debito.valor, 0) || 0), 0
+                            const totalImoveis = processo.valoresEspecificos.imoveis.reduce((total: number, imovel: Record<string, unknown>) => total + Number(imovel.valorAvaliacao), 0)
+                            const totalDebitos = processo.valoresEspecificos.inscricoes.reduce((total: number, inscricao: Record<string, unknown>) =>
+                              total + ((inscricao.debitos as Record<string, unknown>[])?.reduce((subtotal: number, debito: Record<string, unknown>) => subtotal + Number(debito.valor), 0) || 0), 0
                             )
                             const saldo = totalImoveis - totalDebitos
                             return (
@@ -581,15 +595,15 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     )}
 
                     {/* Para Transação Excepcional, mostrar resumo específico */}
-                    {processo.tipo === 'TRANSACAO_EXCEPCIONAL' && processo.valoresEspecificos.transacao && processo.valoresEspecificos.inscricoes && (
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {processo.tipo === 'TRANSACAO_EXCEPCIONAL' && (processo.valoresEspecificos as Record<string, unknown>).transacao && processo.valoresEspecificos?.inscricoes ? (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="p-3 bg-green-50 rounded-lg border border-green-200">
                           <div className="flex items-center gap-2 mb-1">
                             <FileText className="h-4 w-4 text-green-600" />
                             <span className="text-sm font-medium text-green-800">Total a Negociar</span>
                           </div>
                           <p className="text-lg font-bold text-green-700">
-                            R$ {processo.valoresEspecificos.transacao.valorTotalInscricoes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            R$ {((processo.valoresEspecificos as Record<string, unknown>)?.transacao as Record<string, unknown>)?.valorTotalInscricoes ? Number(((processo.valoresEspecificos as Record<string, unknown>).transacao as Record<string, unknown>).valorTotalInscricoes).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}
                           </p>
                           <p className="text-xs text-green-600">
                             {processo.valoresEspecificos.inscricoes.length} {processo.valoresEspecificos.inscricoes.length === 1 ? 'inscrição' : 'inscrições'}
@@ -602,10 +616,10 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                             <span className="text-sm font-medium text-blue-800">Valor Proposto</span>
                           </div>
                           <p className="text-lg font-bold text-blue-700">
-                            R$ {processo.valoresEspecificos.transacao.valorTotalProposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            R$ {((processo.valoresEspecificos as Record<string, unknown>)?.transacao as Record<string, unknown>)?.valorTotalProposto ? Number(((processo.valoresEspecificos as Record<string, unknown>).transacao as Record<string, unknown>).valorTotalProposto).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}
                           </p>
                           <p className="text-xs text-blue-600">
-                            {processo.valoresEspecificos.transacao.proposta?.metodoPagamento === 'a_vista' ? 'À vista' : `${processo.valoresEspecificos.transacao.proposta?.quantidadeParcelas || 1}x parcelas`}
+                            {((processo.valoresEspecificos as Record<string, unknown>)?.transacao as Record<string, unknown>)?.proposta ? (((processo.valoresEspecificos as Record<string, unknown>).transacao as Record<string, unknown>).proposta as Record<string, unknown>)?.metodoPagamento === 'a_vista' ? 'À vista' : `${((((processo.valoresEspecificos as Record<string, unknown>).transacao as Record<string, unknown>).proposta as Record<string, unknown>)?.quantidadeParcelas || 1)}x parcelas` : 'N/A'}
                           </p>
                         </div>
 
@@ -615,20 +629,10 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                             <span className="text-sm font-medium text-gray-800">Desconto</span>
                           </div>
                           <p className="text-lg font-bold text-gray-700">
-                            R$ {processo.valoresEspecificos.transacao.valorDesconto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            R$ {((processo.valoresEspecificos as Record<string, unknown>)?.transacao as Record<string, unknown>)?.valorDesconto ? Number(((processo.valoresEspecificos as Record<string, unknown>).transacao as Record<string, unknown>).valorDesconto).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}
                           </p>
                           <p className="text-xs text-gray-600">
-                            {processo.valoresEspecificos.transacao.percentualDesconto.toFixed(1)}% de desconto
-                          </p>
-                        </div>
-
-                        <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Settings className="h-4 w-4 text-purple-600" />
-                            <span className="text-sm font-medium text-purple-800">Status</span>
-                          </div>
-                          <p className="text-sm font-medium text-green-600">
-                            Negociável
+                            {((processo.valoresEspecificos as Record<string, unknown>)?.transacao as Record<string, unknown>)?.percentualDesconto ? Number(((processo.valoresEspecificos as Record<string, unknown>).transacao as Record<string, unknown>).percentualDesconto).toFixed(1) : '0.0'}% de desconto
                           </p>
                         </div>
                       </div>
@@ -642,12 +646,12 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                           <span className="text-gray-500">Valores configurados</span>
                         </div>
                         <p className="text-sm text-gray-600">
-                          Clique em "Configurar Valores" para visualizar ou editar
+                          Clique em &quot;Configurar Valores&quot; para visualizar ou editar
                         </p>
                       </div>
                     )}
                   </div>
-                )}
+                ) : null}
               </CardContent>
             </Card>
           </div>
@@ -662,7 +666,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {processo.tramitacoes.length === 0 ? (
+              {(processo.tramitacoes?.length || 0) === 0 ? (
                 <div className="text-center py-8">
                   <ArrowRight className="mx-auto h-12 w-12 text-gray-400" />
                   <p className="mt-2 text-gray-500">
@@ -671,11 +675,11 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {processo.tramitacoes.map((tramitacao, index) => (
+                  {processo.tramitacoes?.map((tramitacao, index) => (
                     <div key={tramitacao.id} className="flex gap-4 pb-4 border-b last:border-b-0">
                       <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                         <span className="text-sm font-medium text-blue-600">
-                          {processo.tramitacoes.length - index}
+                          {(processo.tramitacoes?.length || 0) - index}
                         </span>
                       </div>
                       <div className="flex-1 space-y-2">
@@ -726,7 +730,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                         )}
 
                         <div className="flex justify-between text-xs text-gray-500">
-                          <span>Por: {tramitacao.usuario.name}</span>
+                          <span>Por: {tramitacao.usuario?.name || 'Sistema'}</span>
                           {tramitacao.prazoResposta && (
                             <span className="text-orange-600">
                               Prazo: {new Date(tramitacao.prazoResposta).toLocaleDateString('pt-BR')}
@@ -761,40 +765,40 @@ export default function ProcessoDetalhesPage({ params }: Props) {
               ) : (
                 <div className="space-y-3">
                   {processo.decisoes
-                    .sort((a, b) => {
-                      return new Date(a.dataDecisao).getTime() - new Date(b.dataDecisao).getTime()
+                    .sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+                      return new Date(String(a.dataDecisao)).getTime() - new Date(String(b.dataDecisao)).getTime()
                     })
-                    .map((decisao, index) => {
-                      const processoPauta = processo.pautas.find(p => p.pauta.id === decisao.sessao?.pauta?.id)
+                    .map((decisao: Record<string, unknown>, index: number) => {
+                      const processoPauta = processo.pautas?.find((p: Record<string, unknown>) => (p as Record<string, unknown>).pauta?.id === (decisao.sessao as Record<string, unknown>)?.pauta?.id)
                       const cardBackground = getCardBackground(decisao)
 
                       return (
                         <div
-                          key={decisao.id}
+                          key={String(decisao.id)}
                           className={`border rounded-lg p-4 ${cardBackground}`}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${decisao.tipoResultado === 'JULGADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                              <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${String(decisao.tipoResultado) === 'JULGADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
                                 }`}>
                                 {index + 1}
                               </span>
                               <div>
                                 <Link
-                                  href={`/sessoes/${decisao.sessao?.id}`}
+                                  href={`/sessoes/${(decisao.sessao as Record<string, unknown>)?.id}`}
                                   className="font-medium hover:text-blue-600"
                                 >
-                                  Sessão de {decisao.sessao?.pauta ? new Date(decisao.sessao.pauta.dataPauta).toLocaleDateString('pt-BR') : new Date(decisao.dataDecisao).toLocaleDateString('pt-BR')}
+                                  Sessão de {(decisao.sessao as Record<string, unknown>)?.pauta ? new Date(String(((decisao.sessao as Record<string, unknown>).pauta as Record<string, unknown>).dataPauta)).toLocaleDateString('pt-BR') : new Date(String(decisao.dataDecisao)).toLocaleDateString('pt-BR')}
                                 </Link>
                                 <p className="text-sm text-gray-600">
-                                  Pauta: {decisao.sessao?.pauta?.numero || 'N/A'}
+                                  Pauta: {((decisao.sessao as Record<string, unknown>)?.pauta as Record<string, unknown>)?.numero || 'N/A'}
                                 </p>
-                                {processoPauta?.relator && (
-                                  <p className="text-sm text-blue-600">Relator: {processoPauta.relator}</p>
+                                {(processoPauta as Record<string, unknown>)?.relator && (
+                                  <p className="text-sm text-blue-600">Relator: {String((processoPauta as Record<string, unknown>).relator)}</p>
                                 )}
-                                {processoPauta?.revisores && processoPauta.revisores.length > 0 && (
+                                {(processoPauta as Record<string, unknown>)?.revisores && Array.isArray((processoPauta as Record<string, unknown>).revisores) && ((processoPauta as Record<string, unknown>).revisores as unknown[]).length > 0 && (
                                   <p className="text-sm text-blue-600">
-                                    Revisor{processoPauta.revisores.length > 1 ? 'es' : ''}: {processoPauta.revisores.join(', ')}
+                                    Revisor{((processoPauta as Record<string, unknown>).revisores as unknown[]).length > 1 ? 'es' : ''}: {((processoPauta as Record<string, unknown>).revisores as string[]).join(', ')}
                                   </p>
                                 )}
                               </div>
@@ -809,21 +813,21 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                           <div className="mt-3 space-y-2">
                             <div className="p-3 bg-white rounded border">
                               <h5 className="text-sm font-medium mb-2">Ata:</h5>
-                              <p className="text-sm text-gray-700">{processoPauta?.ataTexto || 'Texto da ata não informado'}</p>
+                              <p className="text-sm text-gray-700">{String((processoPauta as Record<string, unknown>)?.ataTexto) || 'Texto da ata não informado'}</p>
 
-                              {decisao.votos && decisao.votos.length > 0 && (
+                              {(decisao.votos as Record<string, unknown>[]) && (decisao.votos as Record<string, unknown>[]).length > 0 && (
                                 <div className="mt-3 pt-2 border-t">
                                   <h6 className="text-xs font-medium text-gray-600 mb-3">Votos registrados:</h6>
 
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Relatores/Revisores */}
-                                    {decisao.votos.filter((voto: any) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto)).length > 0 && (
+                                    {(decisao.votos as Record<string, unknown>[]).filter((voto: Record<string, unknown>) => ['RELATOR', 'REVISOR'].includes(String(voto.tipoVoto))).length > 0 && (
                                       <Card className="p-3">
                                         <div className="font-medium text-gray-800 mb-2 text-sm">Relatores/Revisores</div>
                                         <div className="space-y-1">
                                           {decisao.votos
-                                            .filter((voto: any) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto))
-                                            .map((voto: any, index: number) => (
+                                            .filter((voto: Record<string, unknown>) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto as string))
+                                            .map((voto: Record<string, unknown>, index: number) => (
                                               <div key={index} className="flex items-center justify-between text-xs">
                                                 <div className="flex items-center gap-2">
                                                   <Badge variant={voto.tipoVoto === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
@@ -854,8 +858,8 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                         {/* Votos válidos agrupados */}
                                         {['DEFERIDO', 'INDEFERIDO', 'PARCIAL'].map(posicao => {
                                           const conselheirosComEssePosicao = decisao.votos
-                                            .filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
-                                            .map((voto: any) => voto.nomeVotante)
+                                            .filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                            .map((voto: Record<string, unknown>) => voto.nomeVotante)
 
                                           if (conselheirosComEssePosicao.length === 0) return null
 
@@ -875,12 +879,12 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                         })}
 
                                         {/* Abstenções agrupadas */}
-                                        {decisao.votos.filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(voto.posicaoVoto)).length > 0 && (
+                                        {decisao.votos.filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(voto.posicaoVoto as string)).length > 0 && (
                                           <div className="border-t pt-1 mt-1">
                                             {['AUSENTE', 'IMPEDIDO', 'ABSTENCAO'].map(posicao => {
                                               const conselheirosComEssePosicao = decisao.votos
-                                                .filter((voto: any) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
-                                                .map((voto: any) => voto.nomeVotante)
+                                                .filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                                .map((voto: Record<string, unknown>) => voto.nomeVotante)
 
                                               if (conselheirosComEssePosicao.length === 0) return null
 
@@ -905,7 +909,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                               )}
 
                               {/* Voto do Presidente se houve empate */}
-                              {decisao.sessao?.presidente && decisao.votos.find((voto: any) =>
+                              {decisao.sessao?.presidente && decisao.votos.find((voto: Record<string, unknown>) =>
                                 voto.conselheiroId === decisao.sessao?.presidente?.id ||
                                 voto.nomeVotante === decisao.sessao?.presidente?.nome
                               ) && (
@@ -920,17 +924,17 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                         </Badge>
                                         <span className="truncate font-medium">{decisao.sessao.presidente.nome}</span>
                                       </div>
-                                      <span className={`font-medium text-xs ${decisao.votos.find((voto: any) =>
+                                      <span className={`font-medium text-xs ${decisao.votos.find((voto: Record<string, unknown>) =>
                                         voto.conselheiroId === decisao.sessao?.presidente?.id ||
                                         voto.nomeVotante === decisao.sessao?.presidente?.nome
                                       )?.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
-                                        decisao.votos.find((voto: any) =>
+                                        decisao.votos.find((voto: Record<string, unknown>) =>
                                           voto.conselheiroId === decisao.sessao?.presidente?.id ||
                                           voto.nomeVotante === decisao.sessao?.presidente?.nome
                                         )?.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
                                           'text-yellow-600'
                                         }`}>
-                                        {decisao.votos.find((voto: any) =>
+                                        {decisao.votos.find((voto: Record<string, unknown>) =>
                                           voto.conselheiroId === decisao.sessao?.presidente?.id ||
                                           voto.nomeVotante === decisao.sessao?.presidente?.nome
                                         )?.posicaoVoto}
@@ -958,14 +962,14 @@ export default function ProcessoDetalhesPage({ params }: Props) {
             processo={{
               id: processo.id,
               numero: processo.numero,
-              documentos: processo.documentos.map(doc => ({
-                id: doc.id,
-                nome: doc.nome,
-                tipo: doc.tipo,
-                url: doc.url,
-                tamanho: doc.tamanho,
-                createdAt: doc.createdAt
-              }))
+              documentos: processo.documentos?.map((doc: Record<string, unknown>) => ({
+                id: String(doc.id),
+                nome: String(doc.nome),
+                tipo: String(doc.tipo),
+                url: String(doc.url),
+                tamanho: Number(doc.tamanho),
+                createdAt: String(doc.createdAt)
+              })) || []
             }}
             canEdit={canEdit}
           />
@@ -983,7 +987,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
               {!processo.acordo ? (
                 (() => {
                   // Verificar se há decisão que define acordo
-                  const decisaoComAcordo = processo.decisoes?.find(d => d.definirAcordo === true)
+                  const decisaoComAcordo = processo.decisoes?.find((d: Record<string, unknown>) => d.definirAcordo === true)
 
                   if (decisaoComAcordo) {
                     return (
@@ -1004,8 +1008,8 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                 <div className="text-sm text-gray-600 mb-1">Tipo de Acordo</div>
                                 <p className="font-medium">
                                   {decisaoComAcordo.tipoAcordo === 'aceita_proposta' ? 'Aceita Proposta do Contribuinte' :
-                                   decisaoComAcordo.tipoAcordo === 'contra_proposta' ? 'Contra-proposta do CCF' :
-                                   'Sem Acordo'}
+                                    decisaoComAcordo.tipoAcordo === 'contra_proposta' ? 'Contra-proposta do CCF' :
+                                      'Sem Acordo'}
                                 </p>
                               </div>
 
@@ -1016,13 +1020,13 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                       <div className="p-3 bg-white rounded-lg border">
                                         <div className="text-sm text-gray-600 mb-1">Valor Original</div>
                                         <p className="font-medium text-lg">
-                                          R$ {processo.valoresEspecificos.transacao.valorTotalInscricoes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                          R$ {((processo.valoresEspecificos as Record<string, unknown>)?.transacao as Record<string, unknown>)?.valorTotalInscricoes ? Number(((processo.valoresEspecificos as Record<string, unknown>).transacao as Record<string, unknown>).valorTotalInscricoes).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}
                                         </p>
                                       </div>
                                       <div className="p-3 bg-white rounded-lg border">
                                         <div className="text-sm text-gray-600 mb-1">Valor Proposto</div>
                                         <p className="font-medium text-lg text-green-600">
-                                          R$ {processo.valoresEspecificos.transacao.valorTotalProposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                          R$ {((processo.valoresEspecificos as Record<string, unknown>)?.transacao as Record<string, unknown>)?.valorTotalProposto ? Number(((processo.valoresEspecificos as Record<string, unknown>).transacao as Record<string, unknown>).valorTotalProposto).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}
                                         </p>
                                       </div>
                                     </>
@@ -1105,49 +1109,172 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                   )
                 })()
               ) : (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label>Número do Termo</Label>
-                      <p className="font-medium">{processo.acordo.numeroTermo}</p>
-                    </div>
-                    <div>
-                      <Label>Data de Assinatura</Label>
-                      <p className="font-medium">
-                        {new Date(processo.acordo.dataAssinatura).toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
-                    <div>
-                      <Label>Valor Total</Label>
-                      <p className="font-medium">
-                        R$ {Number(processo.acordo.valorTotal).toLocaleString('pt-BR')}
-                      </p>
-                    </div>
-                  </div>
+                <div className="space-y-4">
+                  {processo.acordos.map((acordo) => {
+                    // Calcular progresso do pagamento
+                    const valorTotal = Number(acordo.valorFinal) || 0
+                    const valorPago = acordo.parcelas.reduce((total, parcela) => {
+                      return total + (parcela.pagamentos || []).reduce((subtotal, pagamento) => {
+                        return subtotal + (Number(pagamento.valorPago) || 0)
+                      }, 0)
+                    }, 0)
+                    const percentual = valorTotal > 0 ? Math.round((valorPago / valorTotal) * 100) : 0
+                    const progresso = {
+                      valorTotal,
+                      valorPago,
+                      valorPendente: valorTotal - valorPago,
+                      percentual
+                    }
 
-                  <div>
-                    <h4 className="font-medium mb-3">Parcelas ({processo.acordo.parcelas.length})</h4>
-                    <div className="space-y-2">
-                      {processo.acordo.parcelas.map((parcela) => (
-                        <div key={parcela.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-4">
-                            <span className="font-medium">#{parcela.numero}</span>
-                            <div>
-                              <p className="font-medium">
-                                R$ {Number(parcela.valor).toLocaleString('pt-BR')}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                Vencimento: {new Date(parcela.dataVencimento).toLocaleDateString('pt-BR')}
-                              </p>
+                    const vencido = new Date(acordo.dataVencimento) < new Date() && acordo.status === 'ativo'
+
+                    // Função para mostrar informações das parcelas
+                    const getDisplayParcelasInfo = () => {
+                      const totalParcelas = acordo.parcelas.length
+                      if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && acordo.modalidadePagamento === 'parcelado' && totalParcelas > 1) {
+                        const parcelasRestantes = totalParcelas - 1
+                        return `Entrada + ${parcelasRestantes} parcela${parcelasRestantes !== 1 ? 's' : ''}`
+                      }
+                      return `${totalParcelas} parcela${totalParcelas !== 1 ? 's' : ''}`
+                    }
+
+                    return (
+                      <Card key={acordo.id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-3 flex-1">
+                              {/* Cabeçalho do Acordo */}
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <span className="font-semibold text-lg">
+                                  {acordo.numeroTermo}
+                                </span>
+                                <Badge className={acordo.status === 'ativo' ? 'bg-green-100 text-green-800' : acordo.status === 'cancelado' ? 'bg-orange-100 text-orange-800' : acordo.status === 'cumprido' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}>
+                                  {acordo.status === 'ativo' ? 'Ativo' : acordo.status === 'cancelado' ? 'Cancelado' : acordo.status === 'cumprido' ? 'Cumprido' : acordo.status}
+                                </Badge>
+                                {vencido && (
+                                  <Badge className="bg-red-100 text-red-800">
+                                    <AlertTriangle className="mr-1 h-3 w-3" />
+                                    Vencido
+                                  </Badge>
+                                )}
+                                <Badge variant="outline">
+                                  {acordo.modalidadePagamento === 'avista' ? 'À Vista' : `${acordo.numeroParcelas}x`}
+                                </Badge>
+                                {/* Badge para tipo de processo */}
+                                {processo.tipo === 'TRANSACAO_EXCEPCIONAL' && (
+                                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                                    Transação Excepcional
+                                  </Badge>
+                                )}
+                                {processo.tipo === 'DACAO_PAGAMENTO' && (
+                                  <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                                    Dação em Pagamento
+                                  </Badge>
+                                )}
+                                {processo.tipo === 'COMPENSACAO' && (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                    Compensação
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {/* Valores e Progresso */}
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-gray-600">Progresso do Pagamento</span>
+                                  <span className="font-medium">{progresso.percentual}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                    style={{ width: `${progresso.percentual}%` }}
+                                  />
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                  <div>
+                                    <span className="text-gray-500">Total:</span>
+                                    <p className="font-medium">
+                                      R$ {progresso.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">Pago:</span>
+                                    <p className="font-medium text-green-600">
+                                      R$ {progresso.valorPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">Pendente:</span>
+                                    <p className="font-medium text-yellow-600">
+                                      R$ {progresso.valorPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Informações do Acordo */}
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4" />
+                                  <span>Assinado: {new Date(acordo.dataAssinatura).toLocaleDateString('pt-BR')}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4" />
+                                  <span>Vence: {new Date(acordo.dataVencimento).toLocaleDateString('pt-BR')}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <FileText className="h-4 w-4" />
+                                  <span>{getDisplayParcelasInfo()}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <DollarSign className="h-4 w-4" />
+                                  <span>{acordo.parcelas.reduce((total, p) => total + (p.pagamentos?.length || 0), 0)} pagamento{acordo.parcelas.reduce((total, p) => total + (p.pagamentos?.length || 0), 0) !== 1 ? 's' : ''}</span>
+                                </div>
+                              </div>
+
+                              {/* Próximas Parcelas */}
+                              {acordo.parcelas.filter(p => p.status === 'PENDENTE').length > 0 && (
+                                <div className="border-t pt-3">
+                                  <h4 className="text-sm font-medium text-gray-900 mb-2">
+                                    Próximas Parcelas:
+                                  </h4>
+                                  <div className="space-y-1">
+                                    {acordo.parcelas
+                                      .filter(p => p.status === 'PENDENTE')
+                                      .slice(0, 2)
+                                      .map((parcela) => (
+                                        <div key={parcela.id} className="text-sm flex items-center justify-between">
+                                          <span>
+                                            {parcela.numero === 0 ? 'Entrada' : `Parcela ${parcela.numero}`} - {new Date(parcela.dataVencimento).toLocaleDateString('pt-BR')}
+                                          </span>
+                                          <span className="font-medium">
+                                            R$ {Number(parcela.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    {acordo.parcelas.filter(p => p.status === 'PENDENTE').length > 2 && (
+                                      <div className="text-xs text-gray-500">
+                                        ... e mais {acordo.parcelas.filter(p => p.status === 'PENDENTE').length - 2} parcela{acordo.parcelas.filter(p => p.status === 'PENDENTE').length - 2 !== 1 ? 's' : ''}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Ações */}
+                            <div className="flex flex-col gap-2 ml-4">
+                              <Link href={`/acordos/${acordo.id}`}>
+                                <Button variant="outline" size="sm" className="w-full cursor-pointer">
+                                  Ver Detalhes
+                                </Button>
+                              </Link>
                             </div>
                           </div>
-                          <Badge className={statusParcelaMap[parcela.status].color}>
-                            {statusParcelaMap[parcela.status].label}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
                 </div>
               )}
             </CardContent>
@@ -1196,7 +1323,10 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     'DECISAO': historico.tipo === 'DECISAO' ? getDecisaoIcon(historico.titulo) : XCircle,
                     'SISTEMA': CheckCircle,
                     'PAUTA': Calendar,
-                    'REPAUTAMENTO': Calendar
+                    'REPAUTAMENTO': Calendar,
+                    'TRAMITACAO': ArrowRight,
+                    'TRAMITACAO_ENTREGUE': ArrowRight,
+                    'ACORDO': CreditCard
                   }[historico.tipo] || History
 
                   const tipoLabel = {
@@ -1207,7 +1337,10 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     'DECISAO': 'Decisão',
                     'SISTEMA': 'Sistema',
                     'PAUTA': 'Pauta',
-                    'REPAUTAMENTO': 'Repautamento'
+                    'REPAUTAMENTO': 'Repautamento',
+                    'TRAMITACAO': 'Tramitação',
+                    'TRAMITACAO_ENTREGUE': 'Tramitação',
+                    'ACORDO': 'Acordo'
                   }[historico.tipo] || historico.tipo
 
                   const Icon = tipoIcon
@@ -1226,12 +1359,16 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                       <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${historico.tipo === 'SISTEMA' ? 'bg-green-100' :
                         historico.tipo === 'PAUTA' || historico.tipo === 'REPAUTAMENTO' ? 'bg-purple-100' :
                           historico.tipo === 'DECISAO' ? getDecisaoCor(historico.titulo).bg :
-                            'bg-blue-100'
+                            historico.tipo === 'TRAMITACAO' || historico.tipo === 'TRAMITACAO_ENTREGUE' ? 'bg-orange-100' :
+                              historico.tipo === 'ACORDO' ? 'bg-green-100' :
+                              'bg-blue-100'
                         }`}>
                         <Icon className={`h-4 w-4 ${historico.tipo === 'SISTEMA' ? 'text-green-600' :
                           historico.tipo === 'PAUTA' || historico.tipo === 'REPAUTAMENTO' ? 'text-purple-600' :
                             historico.tipo === 'DECISAO' ? getDecisaoCor(historico.titulo).text :
-                              'text-blue-600'
+                              historico.tipo === 'TRAMITACAO' || historico.tipo === 'TRAMITACAO_ENTREGUE' ? 'text-orange-600' :
+                                historico.tipo === 'ACORDO' ? 'text-green-600' :
+                                'text-blue-600'
                           }`} />
                       </div>
                       <div className="flex-1">

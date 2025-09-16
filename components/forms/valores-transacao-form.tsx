@@ -7,12 +7,10 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Loader2, AlertCircle, Plus, Trash2, FileText, Calculator, DollarSign, Edit, CreditCard, Settings, BadgeIcon } from 'lucide-react'
+import { Loader2, AlertCircle, Plus, Trash2, FileText, Calculator, DollarSign, Edit, CreditCard, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 
 const debitoSchema = z.object({
@@ -30,12 +28,64 @@ const inscricaoSchema = z.object({
 })
 
 const propostaSchema = z.object({
-  valorTotalProposto: z.number().min(0.01, 'Valor total proposto deve ser maior que zero'),
+  valorTotalProposto: z.union([
+    z.string(),
+    z.number()
+  ])
+    .refine((val) => {
+      if (typeof val === 'number') return val > 0
+      if (typeof val === 'string') {
+        if (val === '') return false
+        const cleanValue = val.replace(/[^\d,]/g, '')
+        const numericValue = cleanValue.replace(',', '.')
+        const num = parseFloat(numericValue)
+        return !isNaN(num) && num >= 0.01
+      }
+      return false
+    }, 'Valor total proposto é obrigatório e deve ser maior que zero')
+    .transform((val) => {
+      if (typeof val === 'number') return val
+      if (typeof val === 'string') {
+        const cleanValue = val.replace(/[^\d,]/g, '')
+        const numericValue = cleanValue.replace(',', '.')
+        return parseFloat(numericValue)
+      }
+      return 0
+    }),
   metodoPagamento: z.enum(['a_vista', 'parcelado'], {
     required_error: 'Método de pagamento é obrigatório'
   }),
-  valorEntrada: z.number().min(0, 'Valor de entrada deve ser maior ou igual a zero'),
-  quantidadeParcelas: z.number().min(1).max(120, 'Quantidade de parcelas deve ser entre 1 e 120').optional()
+  valorEntrada: z.union([
+    z.string(),
+    z.number()
+  ])
+    .optional()
+    .transform((val) => {
+      if (!val || val === '') return 0
+      if (typeof val === 'number') return val
+      if (typeof val === 'string') {
+        const cleanValue = val.replace(/[^\d,]/g, '')
+        const numericValue = cleanValue.replace(',', '.')
+        const num = parseFloat(numericValue)
+        return isNaN(num) ? 0 : num
+      }
+      return 0
+    }),
+  quantidadeParcelas: z.union([
+    z.string(),
+    z.number()
+  ])
+    .optional()
+    .transform((val) => {
+      if (!val || val === '') return 1
+      if (typeof val === 'number') return val
+      if (typeof val === 'string') {
+        const num = parseInt(val)
+        return isNaN(num) ? 1 : num
+      }
+      return 1
+    })
+    .refine((val) => val >= 1 && val <= 120, 'Quantidade de parcelas deve ser entre 1 e 120')
 })
 
 const valoresTransacaoSchema = z.object({
@@ -55,8 +105,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
   const [isLoadingData, setIsLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showInscricaoModal, setShowInscricaoModal] = useState(false)
-  const [editingInscricao, setEditingInscricao] = useState<{ index: number, inscricao: any } | null>(null)
-  const [resumoData, setResumoData] = useState<any>(null)
+  const [editingInscricao, setEditingInscricao] = useState<{ index: number, inscricao: Record<string, unknown> } | null>(null)
 
   // Estados para formulários dos modais
   const [inscricaoForm, setInscricaoForm] = useState({
@@ -104,7 +153,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
 
           // Carregar inscrições
           if (data.inscricoes && data.inscricoes.length > 0) {
-            data.inscricoes.forEach((inscricao: any) => {
+            data.inscricoes.forEach((inscricao: Record<string, unknown>) => {
               appendInscricao({
                 numeroInscricao: inscricao.numeroInscricao,
                 tipoInscricao: inscricao.tipoInscricao,
@@ -115,10 +164,18 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
 
           // Carregar proposta
           if (data.proposta) {
-            setValue('proposta.valorTotalProposto', data.proposta.valorTotalProposto || 0)
+            // Formatar valores monetários ao carregar
+            const valorTotalFormatado = data.proposta.valorTotalProposto
+              ? (data.proposta.valorTotalProposto).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              : ''
+            const valorEntradaFormatado = data.proposta.valorEntrada
+              ? (data.proposta.valorEntrada).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              : ''
+
+            setValue('proposta.valorTotalProposto', valorTotalFormatado)
             setValue('proposta.metodoPagamento', data.proposta.metodoPagamento || 'parcelado')
-            setValue('proposta.valorEntrada', data.proposta.valorEntrada || 0)
-            setValue('proposta.quantidadeParcelas', data.proposta.quantidadeParcelas || 1)
+            setValue('proposta.valorEntrada', valorEntradaFormatado)
+            setValue('proposta.quantidadeParcelas', (data.proposta.quantidadeParcelas || 1).toString())
           }
 
           // Carregar resumo (se disponível da nova estrutura do banco)
@@ -179,12 +236,21 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
   const openEditInscricaoModal = (index: number) => {
     const inscricao = watch(`inscricoes.${index}`)
     setEditingInscricao({ index, inscricao })
+
+    // Aplicar formatação usando a própria função formatCurrency
+    const formatValue = (valor: number) => {
+      if (!valor || valor === 0) return ''
+      // Converter para string de centavos e aplicar formatação
+      const centavos = Math.round(valor * 100).toString()
+      return formatCurrency(centavos)
+    }
+
     setInscricaoForm({
       numeroInscricao: inscricao.numeroInscricao,
       tipoInscricao: inscricao.tipoInscricao,
-      debitos: inscricao.debitos?.map((d: any) => ({
+      debitos: (inscricao.debitos as Record<string, unknown>[])?.map((d: Record<string, unknown>) => ({
         descricao: d.descricao,
-        valor: d.valor?.toString() || '',
+        valor: formatValue(d.valor),
         dataVencimento: d.dataVencimento || ''
       })) || [{ descricao: '', valor: '', dataVencimento: '' }]
     })
@@ -197,7 +263,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
       tipoInscricao: inscricaoForm.tipoInscricao,
       debitos: inscricaoForm.debitos.map(d => ({
         descricao: d.descricao,
-        valor: parseFloat(d.valor) || 0,
+        valor: parseCurrencyToNumber(d.valor),
         dataVencimento: d.dataVencimento
       }))
     }
@@ -241,10 +307,55 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
     }
   }
 
+  const formatCurrency = (value: string) => {
+    // Remove tudo que não for número
+    const numericValue = value.replace(/\D/g, '')
+
+    // Se não há número, retorna vazio
+    if (!numericValue) return ''
+
+    // Converte para centavos
+    const cents = parseInt(numericValue, 10)
+
+    // Divide por 100 para ter o valor em reais
+    const reais = cents / 100
+
+    // Formata no padrão brasileiro
+    return reais.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })
+  }
+
+  const parseCurrencyToNumber = (value: string): number => {
+    // Remove tudo que não for número ou vírgula
+    const cleanValue = value.replace(/[^\d,]/g, '')
+
+    // Substitui vírgula por ponto para parseFloat
+    const numericValue = cleanValue.replace(',', '.')
+
+    return parseFloat(numericValue) || 0
+  }
+
+
   const updateDebito = (index: number, field: string, value: string) => {
     const updatedDebitos = [...inscricaoForm.debitos]
-    updatedDebitos[index] = { ...updatedDebitos[index], [field]: value }
+
+    if (field === 'valor') {
+      // Aplica nova formatação mais simples
+      const formattedValue = formatCurrency(value)
+      updatedDebitos[index] = { ...updatedDebitos[index], [field]: formattedValue }
+    } else {
+      updatedDebitos[index] = { ...updatedDebitos[index], [field]: value }
+    }
+
     setInscricaoForm({ ...inscricaoForm, debitos: updatedDebitos })
+  }
+
+  // Função para formatar campos de valor da proposta
+  const handlePropostaValueChange = (field: string, value: string) => {
+    const formattedValue = formatCurrency(value)
+    setValue(`proposta.${field}` as keyof typeof defaultValues.proposta, formattedValue)
   }
 
   const calcularTotalDebitos = () => {
@@ -261,7 +372,8 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
   const calcularDesconto = () => {
     // Sempre calcular baseado nos valores atuais do formulário
     const totalDebitos = calcularTotalDebitos()
-    const valorProposto = watch('proposta.valorTotalProposto') || 0
+    const valorPropostoStr = watch('proposta.valorTotalProposto') || ''
+    const valorProposto = parseCurrencyToNumber(valorPropostoStr.toString())
     return totalDebitos - valorProposto
   }
 
@@ -273,10 +385,14 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
   }
 
   const calcularValorParcela = () => {
-    const valorProposto = watch('proposta.valorTotalProposto') || 0
-    const valorEntrada = watch('proposta.valorEntrada') || 0
-    const quantidadeParcelas = watch('proposta.quantidadeParcelas') || 1
+    const valorPropostoStr = watch('proposta.valorTotalProposto') || ''
+    const valorEntradaStr = watch('proposta.valorEntrada') || ''
+    const quantidadeParcelas = parseInt(watch('proposta.quantidadeParcelas') || '1')
     const metodoPagamento = watch('proposta.metodoPagamento')
+
+    // Converter valores formatados para números
+    const valorProposto = parseCurrencyToNumber(valorPropostoStr.toString())
+    const valorEntrada = parseCurrencyToNumber(valorEntradaStr.toString())
 
     if (metodoPagamento === 'parcelado' && quantidadeParcelas > 0 && valorProposto > 0) {
       const valorParcelado = valorProposto - valorEntrada
@@ -286,7 +402,8 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
   }
 
   const totalDebitos = calcularTotalDebitos()
-  const valorProposto = watch('proposta.valorTotalProposto') || 0
+  const valorPropostoStr = watch('proposta.valorTotalProposto') || ''
+  const valorProposto = parseCurrencyToNumber(valorPropostoStr.toString())
   const desconto = calcularDesconto()
   const percentualDesconto = calcularPercentualDesconto()
   const metodoPagamento = watch('proposta.metodoPagamento')
@@ -330,7 +447,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 bg-green-50 rounded-lg border border-green-200">
                 <div className="flex items-center gap-2 mb-1">
                   <FileText className="h-4 w-4 text-green-600" />
@@ -369,19 +486,6 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
                   {percentualDesconto.toFixed(1)}% de desconto
                 </p>
               </div>
-
-              <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <BadgeIcon className="h-4 w-4 text-purple-600" />
-                  <span className="text-sm font-medium text-purple-800">Status</span>
-                </div>
-                <p className={`text-sm font-medium ${valorProposto > 0 ? 'text-green-600' : 'text-orange-600'}`}>
-                  {valorProposto > 0 ? 'Negociável' : 'Pendente'}
-                </p>
-                <p className="text-xs text-purple-600">
-                  {valorProposto > 0 ? 'Proposta definida' : 'Definir proposta'}
-                </p>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -418,7 +522,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
                   Nenhuma inscrição adicionada ainda
                 </p>
                 <p className="text-sm text-gray-400 mt-1">
-                  Clique em "Adicionar Inscrição" para começar
+                  Clique em &quot;Adicionar Inscrição&quot; para começar
                 </p>
               </div>
             ) : (
@@ -506,8 +610,9 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
                 <Input
                   id="valorTotalProposto"
                   type="text"
-                  {...register('proposta.valorTotalProposto', { valueAsNumber: true })}
-                  placeholder="Ex: 120000.00"
+                  value={watch('proposta.valorTotalProposto') || ''}
+                  onChange={(e) => handlePropostaValueChange('valorTotalProposto', e.target.value)}
+                  placeholder="Ex: 120.000,00"
                 />
                 {errors.proposta?.valorTotalProposto && (
                   <p className="text-sm text-red-600">{errors.proposta.valorTotalProposto.message}</p>
@@ -537,8 +642,9 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
                 <Input
                   id="valorEntrada"
                   type="text"
-                  {...register('proposta.valorEntrada', { valueAsNumber: true })}
-                  placeholder="Ex: 20000.00"
+                  value={watch('proposta.valorEntrada') || ''}
+                  onChange={(e) => handlePropostaValueChange('valorEntrada', e.target.value)}
+                  placeholder="Ex: 20.000,00"
                 />
                 {errors.proposta?.valorEntrada && (
                   <p className="text-sm text-red-600">{errors.proposta.valorEntrada.message}</p>
@@ -552,7 +658,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
                     <Input
                       id="quantidadeParcelas"
                       type="text"
-                      {...register('proposta.quantidadeParcelas', { valueAsNumber: true })}
+                      {...register('proposta.quantidadeParcelas')}
                       placeholder="Ex: 12"
                     />
                     {errors.proposta?.quantidadeParcelas && (
@@ -586,7 +692,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
                   <div>
                     <span className="text-blue-600">Valor de Entrada:</span>
                     <p className="font-medium text-blue-700">
-                      R$ {(watch('proposta.valorEntrada') || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {parseCurrencyToNumber((watch('proposta.valorEntrada') || '').toString()).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div>
@@ -746,7 +852,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
                 <div className="flex justify-between items-center">
                   <span className="font-medium text-green-800">Total dos Débitos:</span>
                   <span className="text-lg font-bold text-green-700">
-                    R$ {inscricaoForm.debitos.reduce((total, d) => total + (parseFloat(d.valor) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {inscricaoForm.debitos.reduce((total, d) => total + parseCurrencyToNumber(d.valor), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>

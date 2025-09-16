@@ -4,13 +4,11 @@ import { prisma } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { SessionUser } from '@/types'
 import { z } from 'zod'
-
 const debitoSchema = z.object({
   descricao: z.string().min(1),
   valor: z.number().min(0.01),
   dataVencimento: z.string().min(1)
 })
-
 const inscricaoOferecidaSchema = z.object({
   numeroInscricao: z.string().min(1),
   tipoInscricao: z.enum(['imobiliaria', 'economica']),
@@ -18,18 +16,15 @@ const inscricaoOferecidaSchema = z.object({
   dataVencimento: z.string().optional(),
   descricao: z.string().optional()
 })
-
 const inscricaoCompensarSchema = z.object({
   numeroInscricao: z.string().min(1),
   tipoInscricao: z.enum(['imobiliaria', 'economica']),
   debitos: z.array(debitoSchema).min(1, 'Pelo menos um débito deve ser informado')
 })
-
 const valoresDacaoSchema = z.object({
   inscricoesOferecidas: z.array(inscricaoOferecidaSchema),
   inscricoesCompensar: z.array(inscricaoCompensarSchema)
 })
-
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -39,15 +34,12 @@ export async function POST(
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
     if (user.role !== 'ADMIN' && user.role !== 'FUNCIONARIO') {
       return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
     }
-
     const { id } = await params
     const body = await req.json()
-
     // Validar dados de entrada
     const validationResult = valoresDacaoSchema.safeParse(body)
     if (!validationResult.success) {
@@ -56,42 +48,34 @@ export async function POST(
         { status: 400 }
       )
     }
-
     const { inscricoesOferecidas, inscricoesCompensar } = validationResult.data
-
     // Verificar se o processo existe e é do tipo correto
     const processo = await prisma.processo.findUnique({
       where: { id },
       include: { contribuinte: true }
     })
-
     if (!processo) {
       return NextResponse.json({ error: 'Processo não encontrado' }, { status: 404 })
     }
-
     if (processo.tipo !== 'DACAO_PAGAMENTO') {
       return NextResponse.json({ error: 'Processo não é do tipo Dação em Pagamento' }, { status: 400 })
     }
-
     // Iniciar transação para salvar os dados
     const result = await prisma.$transaction(async (tx) => {
       // Primeiro, remover valores existentes para este processo
       await tx.processoImovel.deleteMany({
         where: { processoId: id }
       })
-
       // Remover inscrições existentes
       await tx.processoInscricao.deleteMany({
         where: { processoId: id }
       })
-
       // Processar cada inscrição oferecida (como imóveis para dação)
       for (const inscricaoData of inscricoesOferecidas) {
         // Verificar se o imóvel já existe ou criar um novo
         let imovel = await tx.imovel.findUnique({
           where: { matricula: inscricaoData.numeroInscricao }
         })
-
         if (!imovel) {
           // Criar novo imóvel usando o número da inscrição como matrícula
           imovel = await tx.imovel.create({
@@ -115,7 +99,6 @@ export async function POST(
             }
           })
         }
-
         // Criar relação processo-imóvel
         await tx.processoImovel.create({
           data: {
@@ -125,7 +108,6 @@ export async function POST(
           }
         })
       }
-
       // Processar cada inscrição a compensar
       for (const inscricaoData of inscricoesCompensar) {
         // Criar a inscrição
@@ -136,7 +118,6 @@ export async function POST(
             tipoInscricao: inscricaoData.tipoInscricao
           }
         })
-
         // Criar os débitos da inscrição
         for (const debitoData of inscricaoData.debitos) {
           await tx.processoDebito.create({
@@ -149,12 +130,9 @@ export async function POST(
           })
         }
       }
-
       return { success: true }
     })
-
     return NextResponse.json(result)
-
   } catch (error) {
     console.error('Erro ao salvar valores de dação:', error)
     return NextResponse.json(
@@ -163,7 +141,6 @@ export async function POST(
     )
   }
 }
-
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -173,9 +150,7 @@ export async function GET(
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const { id } = await params
-
     // Buscar valores de dação para o processo
     const processo = await prisma.processo.findUnique({
       where: { id },
@@ -192,15 +167,12 @@ export async function GET(
         }
       }
     })
-
     if (!processo) {
       return NextResponse.json({ error: 'Processo não encontrado' }, { status: 404 })
     }
-
     if (processo.tipo !== 'DACAO_PAGAMENTO') {
       return NextResponse.json({ error: 'Processo não é do tipo Dação em Pagamento' }, { status: 400 })
     }
-
     // Formatar dados para retorno
     const valoresDacao = {
       inscricoesOferecidas: processo.imoveis.map(pi => ({
@@ -223,9 +195,7 @@ export async function GET(
         }))
       }))
     }
-
     return NextResponse.json(valoresDacao)
-
   } catch (error) {
     console.error('Erro ao buscar valores de dação:', error)
     return NextResponse.json(

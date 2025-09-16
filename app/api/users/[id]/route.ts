@@ -5,7 +5,6 @@ import { prisma } from '@/lib/db'
 import { hash } from 'bcryptjs'
 import { z } from 'zod'
 import { SessionUser, UserUpdateData } from '@/types'
-
 const updateUserSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres').optional(),
   email: z.string().email('Email inválido').optional(),
@@ -13,21 +12,17 @@ const updateUserSchema = z.object({
   role: z.enum(['ADMIN', 'FUNCIONARIO', 'VISUALIZADOR']).optional(),
   active: z.boolean().optional()
 })
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
     const { id } = await params
-
     // Apenas Admin pode visualizar detalhes de usuários
     if (user.role !== 'ADMIN') {
       return NextResponse.json(
@@ -35,7 +30,6 @@ export async function GET(
         { status: 403 }
       )
     }
-
     const userDetails = await prisma.user.findUnique({
       where: { id },
       select: {
@@ -56,14 +50,12 @@ export async function GET(
         }
       }
     })
-
     if (!userDetails) {
       return NextResponse.json(
         { error: 'Usuário não encontrado' },
         { status: 404 }
       )
     }
-
     return NextResponse.json(userDetails)
   } catch (error) {
     console.error('Erro ao buscar usuário:', error)
@@ -73,21 +65,17 @@ export async function GET(
     )
   }
 }
-
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
     const { id } = await params
-
     // Apenas Admin pode editar usuários
     if (user.role !== 'ADMIN') {
       return NextResponse.json(
@@ -95,22 +83,18 @@ export async function PUT(
         { status: 403 }
       )
     }
-
     const body = await request.json()
     const validationResult = updateUserSchema.safeParse(body)
-
     if (!validationResult.success) {
       return NextResponse.json(
         { 
           error: 'Dados inválidos',
-          details: validationResult.error.errors
+          details: validationResult.error.issues
         },
         { status: 400 }
       )
     }
-
     const updateData = validationResult.data
-
     // Buscar usuário atual
     const currentUser = await prisma.user.findUnique({
       where: { id },
@@ -122,20 +106,17 @@ export async function PUT(
         active: true
       }
     })
-
     if (!currentUser) {
       return NextResponse.json(
         { error: 'Usuário não encontrado' },
         { status: 404 }
       )
     }
-
     // Verificar se email já existe (apenas se estiver sendo alterado)
     if (updateData.email && updateData.email !== currentUser.email) {
       const existingUser = await prisma.user.findUnique({
         where: { email: updateData.email }
       })
-
       if (existingUser) {
         return NextResponse.json(
           { error: 'Email já está em uso' },
@@ -143,13 +124,11 @@ export async function PUT(
         )
       }
     }
-
     // Hash da senha se fornecida
     const dataToUpdate: UserUpdateData = { ...updateData }
     if (updateData.password) {
       dataToUpdate.password = await hash(updateData.password, 12)
     }
-
     // Atualizar usuário
     const updatedUser = await prisma.user.update({
       where: { id },
@@ -164,7 +143,6 @@ export async function PUT(
         updatedAt: true
       }
     })
-
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
@@ -186,7 +164,6 @@ export async function PUT(
         }
       }
     })
-
     return NextResponse.json(updatedUser)
   } catch (error) {
     console.error('Erro ao atualizar usuário:', error)
@@ -196,21 +173,17 @@ export async function PUT(
     )
   }
 }
-
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
     const { id } = await params
-
     // Apenas Admin pode deletar usuários
     if (user.role !== 'ADMIN') {
       return NextResponse.json(
@@ -218,7 +191,6 @@ export async function DELETE(
         { status: 403 }
       )
     }
-
     // Não permitir deletar o próprio usuário
     if (user.id === id) {
       return NextResponse.json(
@@ -226,7 +198,6 @@ export async function DELETE(
         { status: 400 }
       )
     }
-
     const userToDelete = await prisma.user.findUnique({
       where: { id },
       select: {
@@ -243,19 +214,16 @@ export async function DELETE(
         }
       }
     })
-
     if (!userToDelete) {
       return NextResponse.json(
         { error: 'Usuário não encontrado' },
         { status: 404 }
       )
     }
-
     // Verificar se usuário tem atividades importantes
     const hasActivity = userToDelete._count.processosCreated > 0 || 
                        userToDelete._count.tramitacoes > 0 || 
                        userToDelete._count.sessoes > 0
-
     if (hasActivity) {
       // Em vez de deletar, apenas desativar
       const deactivatedUser = await prisma.user.update({
@@ -269,7 +237,6 @@ export async function DELETE(
           active: true
         }
       })
-
       // Log de auditoria
       await prisma.logAuditoria.create({
         data: {
@@ -285,7 +252,6 @@ export async function DELETE(
           }
         }
       })
-
       return NextResponse.json({
         message: 'Usuário desativado devido a atividades registradas',
         user: deactivatedUser
@@ -295,7 +261,6 @@ export async function DELETE(
       await prisma.user.delete({
         where: { id }
       })
-
       // Log de auditoria
       await prisma.logAuditoria.create({
         data: {
@@ -310,7 +275,6 @@ export async function DELETE(
           }
         }
       })
-
       return NextResponse.json({
         message: 'Usuário deletado com sucesso'
       })

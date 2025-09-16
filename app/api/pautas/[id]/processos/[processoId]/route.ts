@@ -3,29 +3,23 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { SessionUser } from '@/types'
-
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; processoId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
-
     if (user.role === 'VISUALIZADOR') {
       return NextResponse.json(
         { error: 'Sem permissão para modificar pautas' },
         { status: 403 }
       )
     }
-
     const { id: pautaId, processoId } = await params
-
     // Verificar se a pauta existe e está aberta
     const pauta = await prisma.pauta.findUnique({
       where: { id: pautaId },
@@ -35,18 +29,15 @@ export async function DELETE(
         }
       }
     })
-
     if (!pauta) {
       return NextResponse.json({ error: 'Pauta não encontrada' }, { status: 404 })
     }
-
     if (pauta.status !== 'aberta') {
       return NextResponse.json(
         { error: 'Apenas pautas abertas podem ser modificadas' },
         { status: 400 }
       )
     }
-
     // Verificar se o processo está na pauta
     const processoPauta = pauta.processos[0]
     if (!processoPauta) {
@@ -55,7 +46,6 @@ export async function DELETE(
         { status: 400 }
       )
     }
-
     // Buscar dados do processo para o histórico
     const processo = await prisma.processo.findUnique({
       where: { id: processoId },
@@ -63,11 +53,9 @@ export async function DELETE(
         contribuinte: true
       }
     })
-
     if (!processo) {
       return NextResponse.json({ error: 'Processo não encontrado' }, { status: 404 })
     }
-
     await prisma.$transaction(async (tx) => {
       // Buscar distribuição anterior (antes desta pauta)
       const distribuicaoAnterior = await tx.processoPauta.findFirst({
@@ -84,17 +72,14 @@ export async function DELETE(
           }
         }
       })
-
       // Buscar última decisão para determinar status correto
       const ultimaDecisao = await tx.decisao.findFirst({
         where: { processoId },
         orderBy: { createdAt: 'desc' }
       })
-
       // Determinar status e distribuição para reverter
       let novoStatus = 'EM_ANALISE'
       let observacaoReversao = ''
-
       if (ultimaDecisao) {
         // Se há decisão anterior, voltar ao status da decisão
         switch (ultimaDecisao.tipoResultado) {
@@ -120,7 +105,6 @@ export async function DELETE(
         // Se não há decisão mas há distribuição anterior, manter EM_ANALISE
         observacaoReversao = ` - Processo retornado ao status anterior`
       }
-
       // Remover processo da pauta atual
       await tx.processoPauta.delete({
         where: {
@@ -130,13 +114,11 @@ export async function DELETE(
           }
         }
       })
-
       // Reordenar os processos restantes na pauta
       const processosRestantes = await tx.processoPauta.findMany({
         where: { pautaId },
         orderBy: { ordem: 'asc' }
       })
-
       for (let i = 0; i < processosRestantes.length; i++) {
         await tx.processoPauta.update({
           where: {
@@ -148,13 +130,11 @@ export async function DELETE(
           data: { ordem: i + 1 }
         })
       }
-
       // Atualizar status do processo baseado no histórico
       await tx.processo.update({
         where: { id: processoId },
-        data: { status: novoStatus as any }
+        data: { status: novoStatus as string }
       })
-
       // Criar histórico no processo
       await tx.historicoProcesso.create({
         data: {
@@ -165,7 +145,6 @@ export async function DELETE(
           tipo: 'PAUTA'
         }
       })
-
       // Criar histórico na pauta
       await tx.historicoPauta.create({
         data: {
@@ -177,7 +156,6 @@ export async function DELETE(
         }
       })
     })
-
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
@@ -195,7 +173,6 @@ export async function DELETE(
         }
       }
     })
-
     return NextResponse.json({ 
       message: 'Processo removido da pauta com sucesso'
     })

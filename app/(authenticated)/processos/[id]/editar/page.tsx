@@ -68,8 +68,10 @@ export default async function EditarProcessoPage({
 
       <EditProcessoForm processo={{
         ...processo,
-        valorOriginal: Number(processo.valorOriginal),
-        valorNegociado: processo.valorNegociado ? Number(processo.valorNegociado) : null
+        contribuinte: {
+          ...processo.contribuinte,
+          cpfCnpj: processo.contribuinte.cpfCnpj || ''
+        }
       }} />
     </div>
   )

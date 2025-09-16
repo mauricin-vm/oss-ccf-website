@@ -4,7 +4,7 @@ import { z } from 'zod'
 export const inscricaoSchema = z.object({
   numeroInscricao: z.string().min(1, 'Número da inscrição é obrigatório'),
   tipoInscricao: z.enum(['imobiliaria', 'economica'], {
-    required_error: 'Tipo de inscrição é obrigatório'
+    message: 'Tipo de inscrição é obrigatório'
   }),
   valorDebito: z.number().min(0.01, 'Valor do débito deve ser maior que zero'),
   percentualAbatido: z.number().min(0).max(100, 'Percentual deve estar entre 0 e 100'),
@@ -44,7 +44,7 @@ export const valoresDacaoSchema = z.object({
 // Schema para Compensação
 export const creditoCompensacaoSchema = z.object({
   tipo: z.enum(['precatorio', 'credito_tributario', 'alvara_judicial', 'outro'], {
-    required_error: 'Tipo de crédito é obrigatório'
+    message: 'Tipo de crédito é obrigatório'
   }),
   numero: z.string().min(1, 'Número do crédito é obrigatório'),
   valor: z.number().min(0.01, 'Valor deve ser maior que zero'),
@@ -76,7 +76,7 @@ export const valoresCompensacaoSchema = z.object({
 export const condicaoEspecialSchema = z.object({
   descricao: z.string().min(1, 'Descrição é obrigatória'),
   tipo: z.enum(['desconto', 'parcelamento', 'prazo', 'outro'], {
-    required_error: 'Tipo de condição é obrigatório'
+    message: 'Tipo de condição é obrigatório'
   }),
   valor: z.number().min(0, 'Valor não pode ser negativo').optional(),
   percentual: z.number().min(0).max(100, 'Percentual deve estar entre 0 e 100').optional(),
@@ -102,7 +102,7 @@ export const condicaoEspecialSchema = z.object({
 export const valoresTransacaoSchema = z.object({
   valorOriginal: z.number().min(0.01, 'Valor original deve ser maior que zero'),
   modalidadeEscolhida: z.enum(['avista', 'parcelado'], {
-    required_error: 'Modalidade é obrigatória'
+    message: 'Modalidade é obrigatória'
   }),
   valorEntrada: z.number().min(0, 'Valor da entrada não pode ser negativo').optional(),
   numeroParcelas: z.number().min(1, 'Número de parcelas deve ser maior que zero').optional(),

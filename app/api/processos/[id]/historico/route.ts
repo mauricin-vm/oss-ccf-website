@@ -4,13 +4,11 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { SessionUser } from '@/types'
 import { z } from 'zod'
-
 const historicoSchema = z.object({
   titulo: z.string().min(1, 'Título é obrigatório'),
   descricao: z.string().min(1, 'Descrição é obrigatória'),
   tipo: z.string().default('EVENTO')
 })
-
 // GET - Listar histórico do processo
 export async function GET(
   request: NextRequest,
@@ -18,13 +16,10 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const { id } = await params
-
     const historicos = await prisma.$queryRaw`
       SELECT 
         hp.id,
@@ -41,7 +36,6 @@ export async function GET(
       WHERE hp."processoId" = ${id}
       ORDER BY hp."createdAt" DESC
     `
-
     const formattedHistoricos = historicos.map(h => ({
       id: h.id,
       titulo: h.titulo,
@@ -55,7 +49,6 @@ export async function GET(
         role: h.userRole
       }
     }))
-
     return NextResponse.json({ historicos: formattedHistoricos })
   } catch (error) {
     console.error('Erro ao listar histórico:', error)
@@ -65,7 +58,6 @@ export async function GET(
     )
   }
 }
-
 // POST - Adicionar novo histórico
 export async function POST(
   request: NextRequest,
@@ -73,14 +65,11 @@ export async function POST(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
     const { id: processoId } = await params
-
     // Apenas Admin e Funcionário podem adicionar histórico
     if (user.role === 'VISUALIZADOR') {
       return NextResponse.json(
@@ -88,44 +77,41 @@ export async function POST(
         { status: 403 }
       )
     }
-
     // Verificar se o processo existe
     const processo = await prisma.processo.findUnique({
       where: { id: processoId },
       select: { id: true, numero: true, status: true }
     })
-
     if (!processo) {
       return NextResponse.json(
         { error: 'Processo não encontrado' },
         { status: 404 }
       )
     }
-
     const body = await request.json()
     const validationResult = historicoSchema.safeParse(body)
-
     if (!validationResult.success) {
       return NextResponse.json(
         { 
           error: 'Dados inválidos',
-          details: validationResult.error.errors
+          details: validationResult.error.issues
         },
         { status: 400 }
       )
     }
-
     const { titulo, descricao, tipo } = validationResult.data
-
     // Usar transação para criar histórico e atualizar status
     const newHistoricoId = await prisma.$transaction(async (tx) => {
-      // Criar histórico usando query raw
-      const historicoId = await tx.$queryRaw`
-        INSERT INTO "HistoricoProcesso" ("id", "processoId", "usuarioId", "titulo", "descricao", "tipo", "createdAt")
-        VALUES (gen_random_uuid(), ${processoId}, ${user.id}, ${titulo}, ${descricao}, ${tipo}, NOW())
-        RETURNING "id"
-      `
-
+      // Criar histórico
+      const novoHistorico = await tx.historicoProcesso.create({
+        data: {
+          processoId,
+          usuarioId: user.id,
+          titulo,
+          descricao,
+          tipo
+        }
+      })
       // Atualizar status para EM_ANALISE se for RECEPCIONADO
       if (processo.status === 'RECEPCIONADO') {
         await tx.processo.update({
@@ -133,10 +119,8 @@ export async function POST(
           data: { status: 'EM_ANALISE' }
         })
       }
-
-      return historicoId[0].id
+      return novoHistorico.id
     })
-
     // Buscar o histórico criado com dados do usuário
     const historico = await prisma.$queryRaw`
       SELECT 
@@ -153,7 +137,6 @@ export async function POST(
       LEFT JOIN "User" u ON u.id = hp."usuarioId"
       WHERE hp.id = ${newHistoricoId}
     `
-
     const formattedHistorico = {
       id: historico[0].id,
       titulo: historico[0].titulo,
@@ -167,12 +150,10 @@ export async function POST(
         role: historico[0].userRole
       }
     }
-
     // Log de auditoria
     const userExists = await prisma.user.findUnique({
       where: { id: user.id }
     })
-    
     if (userExists) {
       await prisma.logAuditoria.create({
         data: {
@@ -189,12 +170,10 @@ export async function POST(
         }
       })
     }
-
     return NextResponse.json({
       message: 'Histórico adicionado com sucesso',
       historico: formattedHistorico
     }, { status: 201 })
-
   } catch (error) {
     console.error('Erro ao adicionar histórico:', error)
     return NextResponse.json(

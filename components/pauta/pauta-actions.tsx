@@ -35,7 +35,7 @@ interface PautaActionsProps {
     numero: string
     status: string
     dataPauta: string
-    processos: any[]
+    processos: Record<string, unknown>[]
   }
   userRole: string
   onEdit: () => void

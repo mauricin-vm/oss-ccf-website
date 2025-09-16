@@ -3,20 +3,18 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { SessionUser } from '@/types'
-
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
+    const resolvedParams = await params
     const detalhes = await prisma.acordoDetalhes.findMany({
-      where: { acordoId: params.id },
+      where: { acordoId: resolvedParams.id },
       include: {
         inscricoes: true,
         imovel: true,
@@ -24,7 +22,6 @@ export async function GET(
       },
       orderBy: { createdAt: 'asc' }
     })
-
     return NextResponse.json({ detalhes })
   } catch (error) {
     console.error('Erro ao buscar detalhes do acordo:', error)
@@ -34,20 +31,16 @@ export async function GET(
     )
   }
 }
-
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
-
     // Apenas Admin e Funcionário podem atualizar detalhes
     if (user.role === 'VISUALIZADOR') {
       return NextResponse.json(
@@ -55,22 +48,20 @@ export async function PATCH(
         { status: 403 }
       )
     }
-
     const body = await request.json()
     const { detalheId, status, observacoes } = body
-
     if (!detalheId || !status) {
       return NextResponse.json(
         { error: 'Detalhe ID e status são obrigatórios' },
         { status: 400 }
       )
     }
-
+    const resolvedParams = await params
     // Verificar se o detalhe pertence ao acordo
     const detalhe = await prisma.acordoDetalhes.findFirst({
       where: {
         id: detalheId,
-        acordoId: params.id
+        acordoId: resolvedParams.id
       },
       include: {
         acordo: {
@@ -80,23 +71,20 @@ export async function PATCH(
         }
       }
     })
-
     if (!detalhe) {
       return NextResponse.json(
         { error: 'Detalhe não encontrado' },
         { status: 404 }
       )
     }
-
     // Atualizar o detalhe
     const dataExecucao = status === 'CONCLUIDO' && detalhe.status !== 'CONCLUIDO'
       ? new Date()
       : detalhe.dataExecucao
-
     const detalheAtualizado = await prisma.acordoDetalhes.update({
       where: { id: detalheId },
       data: {
-        status: status as any,
+        status: status as string,
         observacoes,
         dataExecucao
       },
@@ -106,7 +94,6 @@ export async function PATCH(
         credito: true
       }
     })
-
     // Se foi marcado como concluído, atualizar situação das inscrições relacionadas
     if (status === 'CONCLUIDO' && detalhe.status !== 'CONCLUIDO') {
       await prisma.acordoInscricao.updateMany({
@@ -114,7 +101,6 @@ export async function PATCH(
         data: { situacao: 'quitado' }
       })
     }
-
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
@@ -133,26 +119,22 @@ export async function PATCH(
         }
       }
     })
-
     // Verificar se todos os detalhes foram concluídos para atualizar status do acordo
     const todosDetalhes = await prisma.acordoDetalhes.findMany({
-      where: { acordoId: params.id }
+      where: { acordoId: resolvedParams.id }
     })
-
     const todosConcluidos = todosDetalhes.every(d => d.status === 'CONCLUIDO')
     if (todosConcluidos && todosDetalhes.length > 0) {
       await prisma.acordo.update({
-        where: { id: params.id },
+        where: { id: resolvedParams.id },
         data: { status: 'cumprido' }
       })
-
       // Atualizar status do processo
       await prisma.processo.update({
         where: { id: detalhe.acordo.processoId },
-        data: { status: 'CUMPRIDO' as any }
+        data: { status: 'ACORDO_FIRMADO' }
       })
     }
-
     return NextResponse.json({ detalhe: detalheAtualizado })
   } catch (error) {
     console.error('Erro ao atualizar detalhe do acordo:', error)

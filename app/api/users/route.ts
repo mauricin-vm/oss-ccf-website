@@ -5,7 +5,6 @@ import { prisma } from '@/lib/db'
 import { hash } from 'bcryptjs'
 import { z } from 'zod'
 import { SessionUser, UserWhereFilter } from '@/types'
-
 const userSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: z.string().email('Email inválido'),
@@ -13,17 +12,13 @@ const userSchema = z.object({
   role: z.enum(['ADMIN', 'FUNCIONARIO', 'VISUALIZADOR']),
   active: z.boolean().default(true)
 })
-
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
-
     // Apenas Admin pode listar usuários
     if (user.role !== 'ADMIN') {
       return NextResponse.json(
@@ -31,31 +26,25 @@ export async function GET(request: NextRequest) {
         { status: 403 }
       )
     }
-
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const role = searchParams.get('role')
     const active = searchParams.get('active')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
-    
     const where: UserWhereFilter = {}
-    
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } }
       ]
     }
-    
     if (role) {
       where.role = role
     }
-    
     if (active !== null && active !== undefined) {
       where.active = active === 'true'
     }
-
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
@@ -81,7 +70,6 @@ export async function GET(request: NextRequest) {
       }),
       prisma.user.count({ where })
     ])
-
     return NextResponse.json({
       users,
       pagination: {
@@ -99,17 +87,13 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     const user = session.user as SessionUser
-
     // Apenas Admin pode criar usuários
     if (user.role !== 'ADMIN') {
       return NextResponse.json(
@@ -117,37 +101,30 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       )
     }
-
     const body = await request.json()
     const validationResult = userSchema.safeParse(body)
-
     if (!validationResult.success) {
       return NextResponse.json(
         { 
           error: 'Dados inválidos',
-          details: validationResult.error.errors
+          details: validationResult.error.issues
         },
         { status: 400 }
       )
     }
-
     const { name, email, password, role, active } = validationResult.data
-
     // Verificar se o email já existe
     const existingUser = await prisma.user.findUnique({
       where: { email }
     })
-
     if (existingUser) {
       return NextResponse.json(
         { error: 'Email já está em uso' },
         { status: 400 }
       )
     }
-
     // Hash da senha
     const hashedPassword = await hash(password, 12)
-
     // Criar o usuário
     const newUser = await prisma.user.create({
       data: {
@@ -167,13 +144,11 @@ export async function POST(request: NextRequest) {
         updatedAt: true
       }
     })
-
     // Log de auditoria - verificar se usuário existe
     const currentUser = session.user as SessionUser
     const userExists = await prisma.user.findUnique({
       where: { id: currentUser.id }
     })
-    
     if (userExists) {
       await prisma.logAuditoria.create({
         data: {
@@ -190,7 +165,6 @@ export async function POST(request: NextRequest) {
         }
       })
     }
-
     return NextResponse.json(newUser, { status: 201 })
   } catch (error) {
     console.error('Erro ao criar usuário:', error)
