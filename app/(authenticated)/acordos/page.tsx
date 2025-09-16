@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { SessionUser } from '@/types'
-import { Acordo, Parcela, PagamentoParcela, Processo, Contribuinte } from '@prisma/client'
+import { Acordo, Parcela, PagamentoParcela, Processo, Contribuinte, AcordoDetalhes, AcordoInscricao } from '@prisma/client'
 
 type AcordoWithRelations = Acordo & {
   processo: Processo & {
@@ -27,10 +27,13 @@ type AcordoWithRelations = Acordo & {
   parcelas: (Parcela & {
     pagamentos: PagamentoParcela[]
   })[]
+  detalhes: (AcordoDetalhes & {
+    inscricoes: AcordoInscricao[]
+  })[]
 }
 
 async function getAcordos() {
-  return prisma.acordo.findMany({
+  const acordos = await prisma.acordo.findMany({
     include: {
       processo: {
         include: {
@@ -42,10 +45,44 @@ async function getAcordos() {
         include: {
           pagamentos: true
         }
+      },
+      detalhes: {
+        include: {
+          inscricoes: true
+        }
       }
     },
     orderBy: { createdAt: 'desc' }
   })
+
+  // Serializar campos Decimal para Number
+  return acordos.map(acordo => ({
+    ...acordo,
+    valorTotal: Number(acordo.valorTotal),
+    valorDesconto: Number(acordo.valorDesconto),
+    percentualDesconto: Number(acordo.percentualDesconto),
+    valorFinal: Number(acordo.valorFinal),
+    valorEntrada: acordo.valorEntrada ? Number(acordo.valorEntrada) : null,
+    parcelas: acordo.parcelas.map(parcela => ({
+      ...parcela,
+      valor: Number(parcela.valor),
+      pagamentos: parcela.pagamentos.map(pagamento => ({
+        ...pagamento,
+        valorPago: Number(pagamento.valorPago)
+      }))
+    })),
+    detalhes: acordo.detalhes.map(detalhe => ({
+      ...detalhe,
+      valorOriginal: Number(detalhe.valorOriginal),
+      valorNegociado: Number(detalhe.valorNegociado),
+      inscricoes: detalhe.inscricoes.map(inscricao => ({
+        ...inscricao,
+        valorDebito: Number(inscricao.valorDebito),
+        valorAbatido: Number(inscricao.valorAbatido),
+        percentualAbatido: Number(inscricao.percentualAbatido)
+      }))
+    }))
+  }))
 }
 
 export default async function AcordosPage() {
@@ -65,8 +102,10 @@ export default async function AcordosPage() {
   }).length
 
   const valorTotalAcordos = acordos.reduce((total, acordo) => {
-    return total + (acordo.valorFinal || 0)
+    return total + acordo.valorFinal
   }, 0)
+
+  const acordosComDetalhes = acordos.filter(a => a.detalhes.length > 0).length
 
 
   const getStatusColor = (status: string) => {
@@ -99,12 +138,32 @@ export default async function AcordosPage() {
       }, 0)
     }, 0)
     const percentual = valorTotal > 0 ? Math.round((valorPago / valorTotal) * 100) : 0
-    
+
     return {
       valorTotal,
       valorPago,
       valorPendente: valorTotal - valorPago,
       percentual
+    }
+  }
+
+  const getDetalhesAcordo = (acordo: AcordoWithRelations) => {
+    if (acordo.detalhes.length === 0) return null
+
+    const detalhe = acordo.detalhes[0]
+    const tipoLabel = {
+      'transacao': 'Transação Excepcional',
+      'compensacao': 'Compensação',
+      'dacao': 'Dação em Pagamento'
+    }[detalhe.tipo] || detalhe.tipo
+
+    return {
+      tipo: tipoLabel,
+      descricao: detalhe.descricao,
+      valorOriginal: detalhe.valorOriginal,
+      valorNegociado: detalhe.valorNegociado,
+      totalInscricoes: detalhe.inscricoes.length,
+      valorTotalInscricoes: detalhe.inscricoes.reduce((total, inscricao) => total + inscricao.valorDebito, 0)
     }
   }
 
@@ -124,7 +183,7 @@ export default async function AcordosPage() {
         
         {canCreate && (
           <Link href="/acordos/novo">
-            <Button>
+            <Button className="cursor-pointer">
               <Plus className="mr-2 h-4 w-4" />
               Novo Acordo
             </Button>
@@ -148,7 +207,7 @@ export default async function AcordosPage() {
                 />
               </div>
             </div>
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" className="cursor-pointer">
               <Filter className="h-4 w-4" />
             </Button>
           </div>
@@ -156,7 +215,7 @@ export default async function AcordosPage() {
       </Card>
 
       {/* Estatísticas */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-2">
@@ -168,7 +227,7 @@ export default async function AcordosPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-2">
@@ -180,7 +239,7 @@ export default async function AcordosPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-2">
@@ -192,7 +251,20 @@ export default async function AcordosPage() {
             </div>
           </CardContent>
         </Card>
-        
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-orange-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-600">Específicos</p>
+                <p className="text-2xl font-bold">{acordosComDetalhes}</p>
+                <p className="text-xs text-gray-500">Com detalhes</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-2">
@@ -222,7 +294,7 @@ export default async function AcordosPage() {
               </p>
               {canCreate && (
                 <Link href="/acordos/novo">
-                  <Button>
+                  <Button className="cursor-pointer">
                     <Plus className="mr-2 h-4 w-4" />
                     Criar Acordo
                   </Button>
@@ -234,15 +306,16 @@ export default async function AcordosPage() {
           acordos.map((acordo) => {
             const progresso = getProgressoPagamento(acordo)
             const vencido = isVencido(acordo.dataVencimento)
-            
+            const detalhes = getDetalhesAcordo(acordo)
+
             return (
               <Card key={acordo.id} className="hover:shadow-md transition-shadow cursor-pointer">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="space-y-3 flex-1">
                       {/* Cabeçalho do Acordo */}
-                      <div className="flex items-center gap-3">
-                        <Link 
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Link
                           href={`/processos/${acordo.processo.id}`}
                           className="font-semibold text-lg hover:text-blue-600 transition-colors"
                         >
@@ -258,16 +331,58 @@ export default async function AcordosPage() {
                           </Badge>
                         )}
                         <Badge variant="outline">
-                          {acordo.modalidadePagamento === 'avista' ? 'À Vista' : 
+                          {acordo.modalidadePagamento === 'avista' ? 'À Vista' :
                            `${acordo.numeroParcelas}x`}
                         </Badge>
+                        {detalhes && (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                            {detalhes.tipo}
+                          </Badge>
+                        )}
                       </div>
 
                       {/* Informações do Contribuinte */}
                       <div>
                         <p className="font-medium">{acordo.processo.contribuinte.nome}</p>
-                        <p className="text-sm text-gray-600">{acordo.processo.contribuinte.documento}</p>
+                        <p className="text-sm text-gray-600">{acordo.processo.contribuinte.cpfCnpj}</p>
                       </div>
+
+                      {/* Detalhes Específicos do Acordo */}
+                      {detalhes && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <h4 className="text-sm font-medium text-blue-900 mb-2">
+                            Detalhes do {detalhes.tipo}
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                            <div>
+                              <span className="text-blue-700">Valor Original:</span>
+                              <p className="font-medium">
+                                R$ {detalhes.valorOriginal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </p>
+                            </div>
+                            <div>
+                              <span className="text-blue-700">Valor Negociado:</span>
+                              <p className="font-medium">
+                                R$ {detalhes.valorNegociado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </p>
+                            </div>
+                            <div>
+                              <span className="text-blue-700">Inscrições:</span>
+                              <p className="font-medium">
+                                {detalhes.totalInscricoes} inscrição{detalhes.totalInscricoes !== 1 ? 'ões' : ''}
+                              </p>
+                            </div>
+                          </div>
+                          {detalhes.valorTotalInscricoes > 0 && (
+                            <div className="mt-2 text-xs">
+                              <span className="text-blue-700">Total das Inscrições:</span>
+                              <span className="font-medium ml-1">
+                                R$ {detalhes.valorTotalInscricoes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Valores e Progresso */}
                       <div className="space-y-2">
@@ -336,7 +451,7 @@ export default async function AcordosPage() {
                               .map((parcela) => (
                                 <div key={parcela.id} className="text-sm flex items-center justify-between">
                                   <span>
-                                    Parcela {parcela.numero} - {new Date(parcela.dataVencimento).toLocaleDateString('pt-BR')}
+                                    {parcela.numero === 0 ? 'Entrada' : `Parcela ${parcela.numero}`} - {new Date(parcela.dataVencimento).toLocaleDateString('pt-BR')}
                                   </span>
                                   <span className="font-medium">
                                     R$ {parcela.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}

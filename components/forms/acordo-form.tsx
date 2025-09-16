@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -13,7 +13,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Loader2, AlertCircle, HandCoins, Calculator, FileText, Search, User, Building } from 'lucide-react'
+import { Loader2, AlertCircle, HandCoins, Calculator, FileText, Search, User, Building, Settings, CreditCard } from 'lucide-react'
+import TransacaoExcepcionalAcordoSection from '@/components/acordo/transacao-excepcional-acordo-section'
+import CompensacaoSection from '@/components/acordo/compensacao-section'
+import DacaoSection from '@/components/acordo/dacao-section'
 
 interface AcordoFormProps {
   onSuccess?: () => void
@@ -26,16 +29,12 @@ interface Processo {
   tipo: string
   valor: number
   status: string
+  tipoDecisao?: string // Adicionar tipo de decisão para processos julgados
   contribuinte: {
     nome: string
     documento: string
     email: string
   }
-  decisoes: Array<{
-    id: string
-    tipo: string
-    descricao: string
-  }>
   valoresEspecificos?: {
     configurado: boolean
     valorOriginal: number
@@ -49,20 +48,18 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
   const searchParams = useSearchParams()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingProcessos, setIsLoadingProcessos] = useState(true)
   const [processos, setProcessos] = useState<Processo[]>([])
   const [selectedProcesso, setSelectedProcesso] = useState<Processo | null>(null)
   const [searchProcesso, setSearchProcesso] = useState('')
-  const [valorCalculado, setValorCalculado] = useState({
-    original: 0,
-    desconto: 0,
-    final: 0
-  })
+  const [dadosEspecificos, setDadosEspecificos] = useState<any>(null)
 
   const {
     register,
     handleSubmit,
     setValue,
     watch,
+    getValues,
     formState: { errors }
   } = useForm<AcordoInput>({
     resolver: zodResolver(acordoSchema),
@@ -73,22 +70,104 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
     }
   })
 
+  // Função para verificar se processo julgado teve decisão deferida e retornar o tipo
+  const fetchDecisoesDeferidas = useCallback(async (processoId: string) => {
+    try {
+      const response = await fetch(`/api/processos/${processoId}/decisoes`)
+      if (response.ok) {
+        const data = await response.json()
+        const decisaoDeferida = data.decisoes?.find((decisao: any) =>
+          ['DEFERIDO', 'PARCIAL'].includes(decisao.tipoDecisao)
+        )
+        return decisaoDeferida ? decisaoDeferida.tipoDecisao : null
+      }
+    } catch (error) {
+      console.error('Erro ao buscar decisões:', error)
+    }
+    return null
+  }, [])
+
+  // Função para buscar valores específicos baseado no tipo do processo
+  const fetchValoresEspecificos = useCallback(async (processo: any) => {
+    try {
+      let valoresResponse
+
+      switch (processo.tipo) {
+        case 'TRANSACAO_EXCEPCIONAL':
+          valoresResponse = await fetch(`/api/processos/${processo.id}/valores-transacao`)
+          break
+        case 'COMPENSACAO':
+          valoresResponse = await fetch(`/api/processos/${processo.id}/valores-compensacao`)
+          break
+        case 'DACAO_PAGAMENTO':
+          valoresResponse = await fetch(`/api/processos/${processo.id}/valores-dacao`)
+          break
+        default:
+          return processo
+      }
+
+      if (valoresResponse && valoresResponse.ok) {
+        const valoresData = await valoresResponse.json()
+        processo.valoresEspecificos = {
+          configurado: true,
+          detalhes: valoresData,
+          tipo: processo.tipo
+        }
+      }
+
+      return processo
+    } catch (error) {
+      console.error('Erro ao buscar valores específicos:', error)
+      return processo
+    }
+  }, [])
+
   // Buscar processos elegíveis para acordo
   useEffect(() => {
     const fetchProcessos = async () => {
+      setIsLoadingProcessos(true)
       try {
-        const response = await fetch('/api/processos?status=DEFERIDO,DEFERIDO_PARCIAL&semAcordo=true')
+        const response = await fetch('/api/processos?status=JULGADO&limit=1000')
         if (response.ok) {
           const data = await response.json()
-          setProcessos(data.processos || [])
+
+          // Filtrar processos elegíveis
+          const processosElegiveis = await Promise.all(
+            (data.processos || []).map(async (processo) => {
+              // Verificar se já tem acordo
+              if (processo.acordo && processo.acordo.length > 0) {
+                return null
+              }
+
+              // Só processos julgados são elegíveis, verificar se teve decisão deferida
+              if (processo.status === 'JULGADO') {
+                const tipoDecisao = await fetchDecisoesDeferidas(processo.id)
+                if (tipoDecisao) {
+                  const processoComDecisao = { ...processo, tipoDecisao }
+
+                  // Buscar valores específicos para cada processo elegível
+                  await fetchValoresEspecificos(processoComDecisao)
+
+                  return processoComDecisao
+                }
+              }
+
+              return null
+            })
+          )
+
+          setProcessos(processosElegiveis.filter(p => p !== null))
         }
       } catch (error) {
         console.error('Erro ao buscar processos:', error)
+        setError('Erro ao carregar processos elegíveis')
+      } finally {
+        setIsLoadingProcessos(false)
       }
     }
 
     fetchProcessos()
-  }, [])
+  }, [fetchDecisoesDeferidas, fetchValoresEspecificos])
 
   // Se processoId for fornecido via prop ou URL, buscar o processo específico
   useEffect(() => {
@@ -100,7 +179,16 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
         const response = await fetch(`/api/processos/${processoIdFromUrl}`)
         if (response.ok) {
           const processo = await response.json()
-          if (['DEFERIDO', 'DEFERIDO_PARCIAL'].includes(processo.status)) {
+
+          // Verificar se processo é elegível para acordo (só processos julgados com decisão deferida)
+          const tipoDecisao = processo.status === 'JULGADO' ? await fetchDecisoesDeferidas(processo.id) : null
+
+          if (tipoDecisao) {
+            // Adicionar tipo de decisão ao processo
+            processo.tipoDecisao = tipoDecisao
+
+            // Buscar valores específicos baseado no tipo do processo
+            await fetchValoresEspecificos(processo)
             
             // Usar valores específicos se já estão no processo (vindos da API principal)
             let valorOriginal = processo.valor || 0
@@ -144,11 +232,6 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
             const valorParaUsar = processoComValores.valoresEspecificos.valorFinal
             setValue('valorTotal', valorParaUsar)
             setValue('valorFinal', valorParaUsar)
-            setValorCalculado({
-              original: processoComValores.valoresEspecificos.valorOriginal,
-              desconto: processoComValores.valoresEspecificos.valorOriginal - valorParaUsar,
-              final: valorParaUsar
-            })
           }
         }
       } catch (error) {
@@ -157,50 +240,49 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
     }
 
     fetchProcesso()
-  }, [processoId, searchParams, setValue])
+  }, [processoId, searchParams, setValue, fetchDecisoesDeferidas, fetchValoresEspecificos])
 
-  // Calcular valores quando há mudanças
-  useEffect(() => {
-    const valorTotal = watch('valorTotal') || 0
-    const percentualDesconto = watch('percentualDesconto') || 0
-    const valorDesconto = watch('valorDesconto') || 0
+  // Watch valores para exibição
+  const modalidadePagamento = watch('modalidadePagamento')
+  const numeroParcelas = watch('numeroParcelas') || 1
+  const valorTotal = watch('valorTotal') || 0
+  const percentualDesconto = watch('percentualDesconto') || 0
+  const valorDesconto = watch('valorDesconto') || 0
 
-    let novoDesconto = valorDesconto
-    let novoPercentual = percentualDesconto
-
-    // Se foi alterado o percentual, calcular valor do desconto
-    if (percentualDesconto > 0 && valorTotal > 0) {
-      novoDesconto = (valorTotal * percentualDesconto) / 100
-      setValue('valorDesconto', novoDesconto)
-    }
-
-    // Se foi alterado o valor do desconto, calcular percentual
-    if (valorDesconto > 0 && valorTotal > 0) {
-      novoPercentual = (valorDesconto / valorTotal) * 100
-      setValue('percentualDesconto', novoPercentual)
-    }
-
-    const valorFinal = valorTotal - novoDesconto
-    setValue('valorFinal', valorFinal)
-
-    setValorCalculado({
+  // Calcular valores finais para exibição (sem usar setValue)
+  const calcularValores = () => {
+    const desconto = percentualDesconto > 0 ? (valorTotal * percentualDesconto) / 100 : valorDesconto
+    const final = valorTotal - desconto
+    return {
       original: valorTotal,
-      desconto: novoDesconto,
-      final: valorFinal
-    })
-  }, [watch, setValue])
+      desconto,
+      final
+    }
+  }
+
+  const valoresCalculados = calcularValores()
 
   const onSubmit = async (data: AcordoInput) => {
     setIsLoading(true)
     setError(null)
 
     try {
+      // Calcular valores finais antes de enviar
+      const valores = calcularValores()
+      const finalData = {
+        ...data,
+        valorFinal: valores.final,
+        valorDesconto: valores.desconto,
+        dadosEspecificos
+      }
+
+
       const response = await fetch('/api/acordos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(finalData)
       })
 
       if (!response.ok) {
@@ -225,7 +307,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
   const handleSelectProcesso = (processo: Processo) => {
     setSelectedProcesso(processo)
     setValue('processoId', processo.id)
-    setValue('valorTotal', processo.valor)
+    setValue('valorTotal', processo.valor || 0)
     setSearchProcesso('')
   }
 
@@ -238,17 +320,32 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
     }
   }
 
+  const getTipoDecisaoLabel = (tipoDecisao: string) => {
+    switch (tipoDecisao) {
+      case 'DEFERIDO': return 'Deferido'
+      case 'PARCIAL': return 'Deferido Parcial'
+      case 'INDEFERIDO': return 'Indeferido'
+      default: return tipoDecisao
+    }
+  }
+
+  const getTipoDecisaoColor = (tipoDecisao: string) => {
+    switch (tipoDecisao) {
+      case 'DEFERIDO': return 'bg-green-100 text-green-800'
+      case 'PARCIAL': return 'bg-yellow-100 text-yellow-800'
+      case 'INDEFERIDO': return 'bg-red-100 text-red-800'
+      default: return 'bg-green-100 text-green-800'
+    }
+  }
+
   const processosFiltrados = processos.filter(processo =>
     processo.numero.toLowerCase().includes(searchProcesso.toLowerCase()) ||
     processo.contribuinte.nome.toLowerCase().includes(searchProcesso.toLowerCase())
   )
 
-  const modalidadePagamento = watch('modalidadePagamento')
-  const numeroParcelas = watch('numeroParcelas') || 1
-
   // Calcular valor das parcelas se for parcelado
   const valorParcela = modalidadePagamento === 'parcelado' && numeroParcelas > 0
-    ? valorCalculado.final / numeroParcelas
+    ? valoresCalculados.final / numeroParcelas
     : 0
 
   return (
@@ -278,49 +375,70 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                   value={searchProcesso}
                   onChange={(e) => setSearchProcesso(e.target.value)}
                   className="pl-10"
-                  disabled={isLoading}
+                  disabled={isLoading || isLoadingProcessos}
                 />
               </div>
 
-              {processosFiltrados.length > 0 && (
-                <div className="border rounded-lg max-h-60 overflow-y-auto">
+              {isLoadingProcessos ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex flex-col items-center gap-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-gray-700">Carregando processos elegíveis</p>
+                      <p className="text-xs text-gray-500">Verificando processos julgados e configurações...</p>
+                    </div>
+                  </div>
+                </div>
+              ) : processosFiltrados.length > 0 ? (
+                <div className="border rounded-lg max-h-96 overflow-y-auto">
                   {processosFiltrados.map((processo) => (
                     <div
                       key={processo.id}
                       onClick={() => handleSelectProcesso(processo)}
-                      className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                      className="p-4 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
                     >
-                      <div className="flex items-center justify-between">
+                      <div>
                         <div>
                           <p className="font-medium">{processo.numero}</p>
                           <p className="text-sm text-gray-600">{processo.contribuinte.nome}</p>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-2 mt-2">
                             <Badge variant="outline">
                               {getTipoProcessoLabel(processo.tipo)}
                             </Badge>
-                            <Badge className="bg-green-100 text-green-800">
-                              {processo.status === 'DEFERIDO' ? 'Deferido' : 'Deferido Parcial'}
+                            <Badge className="bg-blue-100 text-blue-800">
+                              {processo.status === 'JULGADO' ? 'Julgado' : processo.status}
                             </Badge>
+                            {processo.tipoDecisao && (
+                              <Badge className={getTipoDecisaoColor(processo.tipoDecisao)}>
+                                {getTipoDecisaoLabel(processo.tipoDecisao)}
+                              </Badge>
+                            )}
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">
-                            R$ {processo.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </p>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
+              ) : searchProcesso.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <HandCoins className="h-12 w-12 text-blue-600 mx-auto mb-3" />
+                    <p className="text-sm font-medium text-blue-800 mb-2">
+                      <strong>{processos.length}</strong> processo{processos.length !== 1 ? 's' : ''} elegível{processos.length !== 1 ? 'is' : ''} para acordo
+                    </p>
+                    <p className="text-xs text-blue-600">
+                      Digite no campo acima para buscar um processo específico
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Nenhum processo encontrado com os critérios de busca</p>
+                  <p className="text-xs text-gray-400 mt-1">Tente uma busca diferente</p>
+                </div>
               )}
 
-              {searchProcesso.length > 0 && processosFiltrados.length === 0 && (
-                <p className="text-center text-gray-500 py-4">
-                  Nenhum processo encontrado
-                </p>
-              )}
-
-              {processos.length === 0 && (
+              {!isLoadingProcessos && processos.length === 0 && (
                 <div className="text-center py-8">
                   <HandCoins className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -342,9 +460,6 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                     <Badge variant="outline">
                       {getTipoProcessoLabel(selectedProcesso.tipo)}
                     </Badge>
-                    <span className="text-sm text-blue-700">
-                      R$ {selectedProcesso.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
                   </div>
                 </div>
                 <Button
@@ -361,88 +476,8 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                 </Button>
               </div>
 
-              {/* Detalhes do Contribuinte */}
-              <div className="mt-4 p-3 bg-white rounded border">
-                <h5 className="text-sm font-medium text-blue-900 mb-2">Dados do Contribuinte:</h5>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-gray-400" />
-                    <span>{selectedProcesso.contribuinte.nome}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Building className="h-4 w-4 text-gray-400" />
-                    <span>{selectedProcesso.contribuinte.documento}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-gray-400" />
-                    <span>{selectedProcesso.contribuinte.email}</span>
-                  </div>
-                </div>
-              </div>
 
-              {/* Decisões do Processo */}
-              {selectedProcesso.decisoes.length > 0 && (
-                <div className="mt-4 p-3 bg-white rounded border">
-                  <h5 className="text-sm font-medium text-blue-900 mb-2">Decisões do Processo:</h5>
-                  <div className="space-y-2">
-                    {selectedProcesso.decisoes.map((decisao) => (
-                      <div key={decisao.id} className="text-sm">
-                        <Badge
-                          className={
-                            decisao.tipo === 'deferido' ? 'bg-green-100 text-green-800' :
-                              decisao.tipo === 'indeferido' ? 'bg-red-100 text-red-800' :
-                                'bg-yellow-100 text-yellow-800'
-                          }
-                        >
-                          {decisao.tipo === 'deferido' ? 'Deferido' :
-                            decisao.tipo === 'indeferido' ? 'Indeferido' :
-                              'Parcial'}
-                        </Badge>
-                        <p className="text-gray-700 mt-1">{decisao.descricao}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
-              {/* Valores Específicos Configurados */}
-              {selectedProcesso.valoresEspecificos && (
-                <div className="mt-4 p-3 rounded border bg-gradient-to-r from-green-50 to-blue-50">
-                  <h5 className="text-sm font-medium text-green-900 mb-2 flex items-center gap-2">
-                    <Calculator className="h-4 w-4" />
-                    Valores Configurados para o Tipo de Processo
-                  </h5>
-                  
-                  {selectedProcesso.valoresEspecificos.configurado ? (
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-600">Valor Original:</span>
-                          <p className="font-medium">
-                            R$ {selectedProcesso.valoresEspecificos.valorOriginal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Valor para Acordo:</span>
-                          <p className="font-bold text-green-700">
-                            R$ {selectedProcesso.valoresEspecificos.valorFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="text-xs text-green-700 bg-green-100 p-2 rounded">
-                        ✅ Os valores específicos para este tipo de processo ({getTipoProcessoLabel(selectedProcesso.tipo)}) 
-                        já foram configurados. O acordo será baseado nos valores configurados.
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-amber-700 bg-amber-100 p-2 rounded">
-                      ⚠️ Os valores específicos para este tipo de processo ({getTipoProcessoLabel(selectedProcesso.tipo)}) 
-                      ainda não foram configurados. Será usado o valor original do processo.
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           )}
           {errors.processoId && (
@@ -451,161 +486,139 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
         </CardContent>
       </Card>
 
+      {/* Seção Específica por Tipo de Processo */}
+      {selectedProcesso && selectedProcesso.tipo === 'TRANSACAO_EXCEPCIONAL' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Detalhes da Transação Excepcional
+            </CardTitle>
+            <CardDescription>
+              Configure os detalhes específicos do acordo de transação excepcional
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {selectedProcesso.valoresEspecificos?.detalhes ? (
+              <TransacaoExcepcionalAcordoSection
+                valoresTransacao={selectedProcesso.valoresEspecificos.detalhes}
+                onSelectionChange={(dadosSelecionados) => {
+                  // Atualizar valores do formulário baseado na seleção
+                  setValue('valorTotal', dadosSelecionados.valorTotal)
+                  setValue('valorFinal', dadosSelecionados.valorFinal)
+
+                  // Configurar modalidade de pagamento baseada na proposta
+                  if (dadosSelecionados.metodoPagamento) {
+                    const modalidade = dadosSelecionados.metodoPagamento === 'a_vista' ? 'avista' : 'parcelado'
+                    setValue('modalidadePagamento', modalidade)
+                  }
+
+                  // Configurar número de parcelas
+                  if (dadosSelecionados.numeroParcelas) {
+                    setValue('numeroParcelas', dadosSelecionados.numeroParcelas)
+                  }
+
+                  // Capturar dados específicos
+                  setDadosEspecificos(dadosSelecionados)
+                }}
+              />
+            ) : (
+              <div className="text-center py-8">
+                <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Valores não configurados
+                </h3>
+                <p className="text-gray-600">
+                  Os valores específicos da transação excepcional ainda não foram configurados para este processo.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Seção Específica para Compensação */}
+      {selectedProcesso && selectedProcesso.tipo === 'COMPENSACAO' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Detalhes da Compensação
+            </CardTitle>
+            <CardDescription>
+              Configure os detalhes específicos do acordo de compensação
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {selectedProcesso.valoresEspecificos?.detalhes ? (
+              <CompensacaoSection
+                valoresCompensacao={selectedProcesso.valoresEspecificos.detalhes}
+                onSelectionChange={(dadosSelecionados) => {
+                  // Atualizar valores do formulário baseado na seleção
+                  setValue('valorTotal', dadosSelecionados.valorTotal)
+                  setValue('valorFinal', dadosSelecionados.valorFinal)
+                  // Capturar dados específicos
+                  setDadosEspecificos(dadosSelecionados)
+                }}
+              />
+            ) : (
+              <div className="text-center py-8">
+                <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Valores não configurados
+                </h3>
+                <p className="text-gray-600">
+                  Os valores específicos da compensação ainda não foram configurados para este processo.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Seção Específica para Dação em Pagamento */}
+      {selectedProcesso && selectedProcesso.tipo === 'DACAO_PAGAMENTO' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              Detalhes da Dação em Pagamento
+            </CardTitle>
+            <CardDescription>
+              Configure os detalhes específicos do acordo de dação em pagamento
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {selectedProcesso.valoresEspecificos?.detalhes ? (
+              <DacaoSection
+                valoresDacao={selectedProcesso.valoresEspecificos.detalhes}
+                onSelectionChange={(dadosSelecionados) => {
+                  // Atualizar valores do formulário baseado na seleção
+                  setValue('valorTotal', dadosSelecionados.valorTotal)
+                  setValue('valorFinal', dadosSelecionados.valorFinal)
+                  // Capturar dados específicos
+                  setDadosEspecificos(dadosSelecionados)
+                }}
+              />
+            ) : (
+              <div className="text-center py-8">
+                <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Valores não configurados
+                </h3>
+                <p className="text-gray-600">
+                  Os valores específicos da dação em pagamento ainda não foram configurados para este processo.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Valores do Acordo */}
       {selectedProcesso && (
         <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calculator className="h-5 w-5" />
-                Valores do Acordo
-              </CardTitle>
-              <CardDescription>
-                Configure o valor total e descontos aplicáveis
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="valorTotal">Valor Total *</Label>
-                  <Input
-                    id="valorTotal"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    {...register('valorTotal', { valueAsNumber: true })}
-                    disabled={isLoading}
-                  />
-                  {errors.valorTotal && (
-                    <p className="text-sm text-red-500">{errors.valorTotal.message}</p>
-                  )}
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="percentualDesconto">Percentual de Desconto (%)</Label>
-                  <Input
-                    id="percentualDesconto"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    {...register('percentualDesconto', { valueAsNumber: true })}
-                    disabled={isLoading}
-                  />
-                  {errors.percentualDesconto && (
-                    <p className="text-sm text-red-500">{errors.percentualDesconto.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="valorDesconto">Valor do Desconto (R$)</Label>
-                  <Input
-                    id="valorDesconto"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    {...register('valorDesconto', { valueAsNumber: true })}
-                    disabled={isLoading}
-                  />
-                  {errors.valorDesconto && (
-                    <p className="text-sm text-red-500">{errors.valorDesconto.message}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Resumo dos Valores */}
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <h5 className="text-sm font-medium mb-3">Resumo dos Valores:</h5>
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">Valor Original:</span>
-                    <p className="font-medium">
-                      R$ {valorCalculado.original.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Desconto:</span>
-                    <p className="font-medium text-red-600">
-                      - R$ {valorCalculado.desconto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Valor Final:</span>
-                    <p className="font-bold text-green-600 text-lg">
-                      R$ {valorCalculado.final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <Input
-                type="hidden"
-                {...register('valorFinal', { valueAsNumber: true })}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Modalidade de Pagamento */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Modalidade de Pagamento</CardTitle>
-              <CardDescription>
-                Escolha como o acordo será pago
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <RadioGroup
-                value={modalidadePagamento}
-                onValueChange={(value) => {
-                  setValue('modalidadePagamento', value as 'avista' | 'parcelado')
-                  if (value === 'avista') {
-                    setValue('numeroParcelas', 1)
-                  }
-                }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-4"
-              >
-                <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                  <RadioGroupItem value="avista" id="avista" />
-                  <div className="space-y-1">
-                    <Label htmlFor="avista" className="font-medium">À Vista</Label>
-                    <p className="text-sm text-gray-600">Pagamento integral na data de vencimento</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                  <RadioGroupItem value="parcelado" id="parcelado" />
-                  <div className="space-y-1">
-                    <Label htmlFor="parcelado" className="font-medium">Parcelado</Label>
-                    <p className="text-sm text-gray-600">Pagamento dividido em parcelas mensais</p>
-                  </div>
-                </div>
-              </RadioGroup>
-
-              {modalidadePagamento === 'parcelado' && (
-                <div className="space-y-2">
-                  <Label htmlFor="numeroParcelas">Número de Parcelas *</Label>
-                  <Input
-                    id="numeroParcelas"
-                    type="number"
-                    min="2"
-                    max="60"
-                    {...register('numeroParcelas', { valueAsNumber: true })}
-                    disabled={isLoading}
-                  />
-                  {valorParcela > 0 && (
-                    <p className="text-sm text-gray-600">
-                      Cada parcela: R$ {valorParcela.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  )}
-                  {errors.numeroParcelas && (
-                    <p className="text-sm text-red-500">{errors.numeroParcelas.message}</p>
-                  )}
-                </div>
-              )}
-              {errors.modalidadePagamento && (
-                <p className="text-sm text-red-500">{errors.modalidadePagamento.message}</p>
-              )}
-            </CardContent>
-          </Card>
 
           {/* Datas */}
           <Card>
@@ -651,97 +664,73 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
             </CardContent>
           </Card>
 
-          {/* Observações */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Observações e Cláusulas</CardTitle>
-              <CardDescription>
-                Informações adicionais sobre o acordo
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="observacoes">Observações Gerais</Label>
-                <Textarea
-                  id="observacoes"
-                  placeholder="Observações sobre o acordo, condições especiais, etc..."
-                  rows={3}
-                  {...register('observacoes')}
-                  disabled={isLoading}
-                />
-              </div>
+          {/* Modalidade de Pagamento - apenas para tipos que não têm proposta específica */}
+          {selectedProcesso.tipo !== 'TRANSACAO_EXCEPCIONAL' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Modalidade de Pagamento</CardTitle>
+                <CardDescription>
+                  Escolha se o pagamento será à vista ou parcelado
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <Label>Forma de Pagamento *</Label>
+                  <RadioGroup
+                    value={modalidadePagamento}
+                    onValueChange={(value) => {
+                      setValue('modalidadePagamento', value)
+                      // Se mudar para à vista, definir parcelas como 1
+                      if (value === 'avista') {
+                        setValue('numeroParcelas', 1)
+                      } else if (value === 'parcelado' && numeroParcelas < 2) {
+                        // Se mudar para parcelado e tem menos de 2 parcelas, definir como 2
+                        setValue('numeroParcelas', 2)
+                      }
+                    }}
+                    disabled={isLoading}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="avista" id="avista" />
+                      <Label htmlFor="avista">À Vista</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="parcelado" id="parcelado" />
+                      <Label htmlFor="parcelado">Parcelado</Label>
+                    </div>
+                  </RadioGroup>
+                  {errors.modalidadePagamento && (
+                    <p className="text-sm text-red-500">{errors.modalidadePagamento.message}</p>
+                  )}
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="clausulasEspeciais">Cláusulas Especiais</Label>
-                <Textarea
-                  id="clausulasEspeciais"
-                  placeholder="Cláusulas contratuais específicas, penalidades, etc..."
-                  rows={4}
-                  {...register('clausulasEspeciais')}
-                  disabled={isLoading}
-                />
-                <p className="text-xs text-gray-500">
-                  Descreva condições especiais, multas por atraso, ou outras cláusulas contratuais
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Resumo Final */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Resumo do Acordo
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Processo:</span>
-                  <span className="font-medium">{selectedProcesso.numero}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Contribuinte:</span>
-                  <span className="font-medium">{selectedProcesso.contribuinte.nome}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Valor Original:</span>
-                  <span className="font-medium">
-                    R$ {valorCalculado.original.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-                {valorCalculado.desconto > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Desconto:</span>
-                    <span className="font-medium text-red-600">
-                      - R$ {valorCalculado.desconto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
+                {modalidadePagamento === 'parcelado' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="numeroParcelas">Número de Parcelas *</Label>
+                    <Input
+                      id="numeroParcelas"
+                      type="number"
+                      min={2}
+                      max={60}
+                      {...register('numeroParcelas', {
+                        setValueAs: (value) => parseInt(value) || 1
+                      })}
+                      disabled={isLoading}
+                      placeholder="Ex: 12"
+                    />
+                    {errors.numeroParcelas && (
+                      <p className="text-sm text-red-500">{errors.numeroParcelas.message}</p>
+                    )}
+                    {valorParcela > 0 && (
+                      <p className="text-sm text-gray-600">
+                        Valor da parcela: R$ {valorParcela.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    )}
                   </div>
                 )}
-                <div className="flex justify-between border-t pt-2">
-                  <span className="text-gray-600">Valor Final:</span>
-                  <span className="font-bold text-lg">
-                    R$ {valorCalculado.final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Modalidade:</span>
-                  <span className="font-medium">
-                    {modalidadePagamento === 'avista' ? 'À Vista' : `${numeroParcelas}x`}
-                  </span>
-                </div>
-                {modalidadePagamento === 'parcelado' && valorParcela > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Valor por Parcela:</span>
-                    <span className="font-medium">
-                      R$ {valorParcela.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Botões de Ação */}
           <div className="flex gap-4 justify-end">

@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Loader2, AlertCircle, Plus, Trash2, FileText, Calculator, DollarSign, Edit, CreditCard, Settings } from 'lucide-react'
+import { Loader2, AlertCircle, Plus, Trash2, FileText, Calculator, DollarSign, Edit, CreditCard, Settings, BadgeIcon } from 'lucide-react'
 import { toast } from 'sonner'
 
 const debitoSchema = z.object({
@@ -78,7 +78,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
       inscricoes: [],
       proposta: {
         valorTotalProposto: 0,
-        metodoPagamento: 'a_vista',
+        metodoPagamento: 'parcelado',
         valorEntrada: 0,
         quantidadeParcelas: 1
       }
@@ -116,7 +116,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
           // Carregar proposta
           if (data.proposta) {
             setValue('proposta.valorTotalProposto', data.proposta.valorTotalProposto || 0)
-            setValue('proposta.metodoPagamento', data.proposta.metodoPagamento || 'a_vista')
+            setValue('proposta.metodoPagamento', data.proposta.metodoPagamento || 'parcelado')
             setValue('proposta.valorEntrada', data.proposta.valorEntrada || 0)
             setValue('proposta.quantidadeParcelas', data.proposta.quantidadeParcelas || 1)
           }
@@ -248,12 +248,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
   }
 
   const calcularTotalDebitos = () => {
-    // Se temos dados do resumo salvos no banco, usar eles
-    if (resumoData?.valorTotalInscricoes) {
-      return resumoData.valorTotalInscricoes
-    }
-
-    // Senão, calcular baseado nos campos do formulário
+    // Sempre calcular baseado nos campos do formulário atual
     const inscricoes = watch('inscricoes') || []
     return inscricoes.reduce((total, inscricao) => {
       const totalInscricao = (inscricao.debitos || []).reduce((subtotal, debito) => {
@@ -264,24 +259,14 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
   }
 
   const calcularDesconto = () => {
-    // Se temos dados do resumo salvos no banco, usar eles
-    if (resumoData?.valorDesconto !== undefined) {
-      return resumoData.valorDesconto
-    }
-
-    // Senão, calcular baseado nos valores atuais
+    // Sempre calcular baseado nos valores atuais do formulário
     const totalDebitos = calcularTotalDebitos()
     const valorProposto = watch('proposta.valorTotalProposto') || 0
     return totalDebitos - valorProposto
   }
 
   const calcularPercentualDesconto = () => {
-    // Se temos dados do resumo salvos no banco, usar eles
-    if (resumoData?.percentualDesconto !== undefined) {
-      return resumoData.percentualDesconto
-    }
-
-    // Senão, calcular baseado nos valores atuais
+    // Sempre calcular baseado nos valores atuais do formulário
     const totalDebitos = calcularTotalDebitos()
     const desconto = calcularDesconto()
     return totalDebitos > 0 ? (desconto / totalDebitos) * 100 : 0
@@ -387,7 +372,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
 
               <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
                 <div className="flex items-center gap-2 mb-1">
-                  <Badge className="h-4 w-4 text-purple-600" />
+                  <BadgeIcon className="h-4 w-4 text-purple-600" />
                   <span className="text-sm font-medium text-purple-800">Status</span>
                 </div>
                 <p className={`text-sm font-medium ${valorProposto > 0 ? 'text-green-600' : 'text-orange-600'}`}>
@@ -422,7 +407,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
               </Button>
             </div>
             <CardDescription>
-              Inscrições de dívida ativa que o contribuinte deseja negociar
+              Inscrições que o contribuinte quer quitar com a transação excepcional
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -520,8 +505,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
                 <Label htmlFor="valorTotalProposto">Valor Total Proposto <span className="text-red-500">*</span></Label>
                 <Input
                   id="valorTotalProposto"
-                  type="number"
-                  step="0.01"
+                  type="text"
                   {...register('proposta.valorTotalProposto', { valueAsNumber: true })}
                   placeholder="Ex: 120000.00"
                 />
@@ -535,10 +519,11 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
                 <select
                   id="metodoPagamento"
                   {...register('proposta.metodoPagamento')}
+                  defaultValue="parcelado"
                   className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
-                  <option value="a_vista">À Vista</option>
                   <option value="parcelado">Parcelado</option>
+                  <option value="a_vista">À Vista</option>
                 </select>
                 {errors.proposta?.metodoPagamento && (
                   <p className="text-sm text-red-600">{errors.proposta.metodoPagamento.message}</p>
@@ -546,13 +531,12 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
+            <div className={`grid grid-cols-1 ${metodoPagamento === 'a_vista' ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-4`}>
+              <div className={`space-y-2 ${metodoPagamento === 'a_vista' ? 'md:col-span-1' : ''}`}>
                 <Label htmlFor="valorEntrada">Valor de Entrada</Label>
                 <Input
                   id="valorEntrada"
-                  type="number"
-                  step="0.01"
+                  type="text"
                   {...register('proposta.valorEntrada', { valueAsNumber: true })}
                   placeholder="Ex: 20000.00"
                 />
@@ -567,9 +551,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
                     <Label htmlFor="quantidadeParcelas">Quantidade de Parcelas (máx. 120)</Label>
                     <Input
                       id="quantidadeParcelas"
-                      type="number"
-                      min="1"
-                      max="120"
+                      type="text"
                       {...register('proposta.quantidadeParcelas', { valueAsNumber: true })}
                       placeholder="Ex: 12"
                     />

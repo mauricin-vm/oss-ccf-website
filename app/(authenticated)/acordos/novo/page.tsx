@@ -27,9 +27,8 @@ export default async function NovoAcordoPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/acordos">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
+          <Button variant="outline" size="icon" className="cursor-pointer">
+            <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div>
@@ -61,46 +60,6 @@ export default async function NovoAcordoPage() {
         </CardContent>
       </Card>
 
-      {/* Informações Importantes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Informações Importantes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 text-sm text-gray-600">
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <strong>Processos Elegíveis:</strong> Apenas processos com decisão &quot;Deferido&quot; ou &quot;Deferido Parcial&quot; que ainda não possuem acordo podem ser selecionados
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <strong>Cálculo de Descontos:</strong> Você pode inserir o percentual ou o valor do desconto. O sistema calculará automaticamente o valor complementar
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <strong>Modalidade de Pagamento:</strong> Escolha entre pagamento à vista ou parcelado. Para parcelamento, defina o número de parcelas mensais
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <strong>Geração de Parcelas:</strong> Se escolher pagamento parcelado, as parcelas serão geradas automaticamente com vencimentos mensais
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <strong>Cláusulas Especiais:</strong> Use este campo para definir multas por atraso, correção monetária ou outras condições contratuais
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

@@ -42,12 +42,19 @@ export async function GET(request: NextRequest) {
     if (status) {
       // Converter string separada por vírgula em array para usar com 'in'
       const statusArray = status.split(',').map(s => s.trim())
-      where.status = { in: statusArray }
+
+      // Validar se os status existem no enum StatusProcesso
+      const validStatuses = ['RECEPCIONADO', 'EM_ANALISE', 'EM_PAUTA', 'SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO', 'ACORDO_FIRMADO', 'EM_CUMPRIMENTO', 'ARQUIVADO']
+      const filteredStatuses = statusArray.filter(s => validStatuses.includes(s))
+
+      if (filteredStatuses.length > 0) {
+        where.status = { in: filteredStatuses as any }
+      }
     }
 
     const [processos, total] = await Promise.all([
       prisma.processo.findMany({
-        where,
+        where: where as any,
         include: {
           contribuinte: true,
           tramitacoes: {
@@ -81,7 +88,7 @@ export async function GET(request: NextRequest) {
         skip: (page - 1) * limit,
         take: limit
       }),
-      prisma.processo.count({ where })
+      prisma.processo.count({ where: where as any })
     ])
 
 

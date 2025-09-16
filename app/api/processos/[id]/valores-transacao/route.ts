@@ -145,21 +145,6 @@ export async function POST(
         }
       })
 
-      // Criar registro no histórico
-      await tx.historicoProcesso.create({
-        data: {
-          processoId: id,
-          usuarioId: user.id,
-          titulo: 'Valores de Transação Excepcional Configurados',
-          descricao: `Inscrições a Negociar: ${inscricoes.length}
-Valor Total Original: R$ ${valorTotalInscricoes.toFixed(2)}
-Valor Proposto: R$ ${proposta.valorTotalProposto.toFixed(2)}
-Desconto: R$ ${valorDesconto.toFixed(2)} (${percentualDesconto.toFixed(2)}%)
-Método de Pagamento: ${proposta.metodoPagamento === 'a_vista' ? 'À Vista' : 'Parcelado'}
-${proposta.metodoPagamento === 'parcelado' ? `Entrada: R$ ${proposta.valorEntrada.toFixed(2)}, Parcelas: ${proposta.quantidadeParcelas}, Valor da Parcela: R$ ${valorParcela?.toFixed(2) || '0,00'}` : ''}`,
-          tipo: 'CONFIGURACAO'
-        }
-      })
 
       return { success: true }
     })

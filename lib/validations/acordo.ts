@@ -15,9 +15,43 @@ export const acordoSchema = z.object({
   modalidadePagamento: z.enum(['avista', 'parcelado'], {
     required_error: 'Modalidade de pagamento é obrigatória'
   }),
-  numeroParcelas: z.number().min(1, 'Número de parcelas deve ser maior que zero').optional(),
+  numeroParcelas: z.number().min(1, 'Número de parcelas deve ser maior que zero'),
   observacoes: z.string().optional(),
-  clausulasEspeciais: z.string().optional()
+  clausulasEspeciais: z.string().optional(),
+  // Dados específicos por tipo de processo
+  dadosEspecificos: z.object({
+    // Transação Excepcional
+    inscricoesSelecionadas: z.array(z.string()).optional(),
+    debitosSelecionados: z.record(z.array(z.string())).optional(),
+    inscricoesSelecionadasDetalhes: z.array(z.any()).optional(),
+    propostaFinal: z.object({
+      valorTotalProposto: z.number(),
+      metodoPagamento: z.string(),
+      valorEntrada: z.number(),
+      quantidadeParcelas: z.number()
+    }).optional(),
+    observacoesAcordo: z.string().optional(),
+    // Compensação
+    creditosSelecionados: z.array(z.string()).optional(),
+    valorCreditos: z.number().optional(),
+    valorDebitos: z.number().optional(),
+    valorCompensacao: z.number().optional(),
+    saldoFinal: z.number().optional(),
+    // Dação em Pagamento
+    inscricoesOferecidas: z.array(z.string()).optional(),
+    inscricoesCompensar: z.array(z.string()).optional(),
+    valorOferecido: z.number().optional(),
+    valorCompensar: z.number().optional(),
+    valorDacao: z.number().optional()
+  }).optional()
+}).refine((data) => {
+  if (data.modalidadePagamento === 'parcelado') {
+    return data.numeroParcelas >= 2
+  }
+  return true
+}, {
+  message: 'Parcelamento deve ter pelo menos 2 parcelas',
+  path: ['numeroParcelas']
 })
 
 export const parcelaSchema = z.object({

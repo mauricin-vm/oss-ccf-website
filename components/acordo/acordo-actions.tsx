@@ -34,7 +34,10 @@ interface AcordoActionsProps {
   acordo: {
     id: string
     status: string
-    pagamentos: Array<{ id: string }>
+    parcelas: Array<{
+      id: string
+      pagamentos: Array<{ id: string; valorPago: number }>
+    }>
     valorFinal: number
   }
 }
@@ -45,9 +48,14 @@ export default function AcordoActions({ acordo }: AcordoActionsProps) {
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
+  // Calcular total de pagamentos através das parcelas
+  const totalPagamentos = acordo.parcelas.reduce((total, parcela) => {
+    return total + (parcela.pagamentos || []).length
+  }, 0)
+
   const canCancel = acordo.status === 'ativo'
-  const canDelete = acordo.pagamentos.length === 0 && acordo.status !== 'cumprido'
-  const canRenegotiate = acordo.status === 'ativo' && acordo.pagamentos.length > 0
+  const canDelete = totalPagamentos === 0 && acordo.status !== 'cumprido'
+  const canRenegotiate = acordo.status === 'ativo' && totalPagamentos > 0
 
   const handleCancel = async () => {
     setIsLoading(true)

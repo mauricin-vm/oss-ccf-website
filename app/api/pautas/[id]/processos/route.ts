@@ -214,7 +214,7 @@ export async function POST(
           processoId,
           usuarioId: user.id,
           titulo: tituloHistorico,
-          descricao: `Processo incluído na ${pauta.numero} agendada para ${pauta.dataPauta.toLocaleDateString('pt-BR')}${observacaoDistribuicao}${isRepautamentoJulgado ? ' (ATENÇÃO: Processo já foi julgado anteriormente)' : ''}`,
+          descricao: `Processo incluído na ${pauta.numero} agendada para ${new Date(pauta.dataPauta.getTime() + pauta.dataPauta.getTimezoneOffset() * 60000).toLocaleDateString('pt-BR')}${observacaoDistribuicao}${isRepautamentoJulgado ? ' (ATENÇÃO: Processo já foi julgado anteriormente)' : ''}`,
           tipo: tipoHistorico
         }
       })
@@ -227,7 +227,7 @@ export async function POST(
             usuarioId: user.id,
             setorOrigem: 'CCF',
             setorDestino: distribuidoPara, // Nome da pessoa (conselheiro)
-            observacoes: `Processo distribuído na ${pauta.numero} para julgamento em ${pauta.dataPauta.toLocaleDateString('pt-BR')}${novosRevisores.length > 0 ? ` - Revisores: ${novosRevisores.join(', ')}` : ''}`
+            observacoes: `Processo distribuído na ${pauta.numero} para julgamento em ${new Date(pauta.dataPauta.getTime() + pauta.dataPauta.getTimezoneOffset() * 60000).toLocaleDateString('pt-BR')}${novosRevisores.length > 0 ? ` - Revisores: ${novosRevisores.join(', ')}` : ''}`
           }
         })
       }

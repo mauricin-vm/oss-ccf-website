@@ -120,7 +120,11 @@ export async function PUT(
     }
 
     // Se há pagamentos, limitar edições
-    if (acordoAtual.pagamentos.length > 0) {
+    const totalPagamentos = acordoAtual.parcelas.reduce((total, parcela) => {
+      return total + parcela.pagamentos.length
+    }, 0)
+
+    if (totalPagamentos > 0) {
       return NextResponse.json(
         { error: 'Acordos com pagamentos registrados não podem ser editados. Use a renegociação.' },
         { status: 400 }
@@ -156,10 +160,12 @@ export async function PUT(
           }
         },
         parcelas: {
-          orderBy: { numero: 'asc' }
-        },
-        pagamentos: {
-          orderBy: { createdAt: 'desc' }
+          orderBy: { numero: 'asc' },
+          include: {
+            pagamentos: {
+              orderBy: { createdAt: 'desc' }
+            }
+          }
         }
       }
     })
@@ -168,7 +174,7 @@ export async function PUT(
     if (body.status === 'cancelado') {
       await prisma.processo.update({
         where: { id: acordoAtual.processoId },
-        data: { status: 'DEFERIDO' } // Volta para o status anterior
+        data: { status: 'JULGADO' } // Volta para o status anterior
       })
 
       // Cancelar parcelas pendentes
@@ -253,7 +259,11 @@ export async function DELETE(
     }
 
     // Verificar se pode ser deletado (apenas acordos sem pagamentos)
-    if (acordo.pagamentos.length > 0) {
+    const totalPagamentos = acordo.parcelas.reduce((total, parcela) => {
+      return total + parcela.pagamentos.length
+    }, 0)
+
+    if (totalPagamentos > 0) {
       return NextResponse.json(
         { error: 'Não é possível deletar acordos que já têm pagamentos registrados' },
         { status: 400 }
@@ -272,7 +282,7 @@ export async function DELETE(
     // Retornar processo ao status anterior
     await prisma.processo.update({
       where: { id: acordo.processoId },
-      data: { status: 'DEFERIDO' }
+      data: { status: 'JULGADO' }
     })
 
     // Log de auditoria

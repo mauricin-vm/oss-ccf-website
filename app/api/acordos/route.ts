@@ -5,6 +5,110 @@ import { prisma } from '@/lib/db'
 import { acordoSchema } from '@/lib/validations/acordo'
 import { SessionUser, AcordoWhereFilter } from '@/types'
 
+async function criarDetalhesEspecificos(acordoId: string, tipoProcesso: string, dadosEspecificos: any) {
+  switch (tipoProcesso) {
+    case 'TRANSACAO_EXCEPCIONAL':
+      if (dadosEspecificos.inscricoesSelecionadas?.length > 0) {
+        const detalhe = await prisma.acordoDetalhes.create({
+          data: {
+            acordoId,
+            tipo: 'transacao',
+            descricao: 'Transação Excepcional - Acordo Final',
+            valorOriginal: dadosEspecificos.valorInscricoes || 0,
+            valorNegociado: dadosEspecificos.propostaFinal?.valorTotalProposto || dadosEspecificos.valorTotal || 0,
+            status: 'PENDENTE',
+            observacoes: dadosEspecificos.observacoesAcordo || null
+          }
+        })
+
+        // Criar registros detalhados das inscrições e débitos selecionados
+        for (const inscricaoDetalhes of dadosEspecificos.inscricoesSelecionadasDetalhes) {
+          // Calcular valor total dos débitos selecionados para esta inscrição
+          const valorDebitosSelecionados = inscricaoDetalhes.debitosSelecionados?.reduce(
+            (total: number, debito: any) => total + (debito?.valor || 0), 0
+          ) || 0
+
+          await prisma.acordoInscricao.create({
+            data: {
+              acordoDetalheId: detalhe.id,
+              numeroInscricao: inscricaoDetalhes.numeroInscricao,
+              tipoInscricao: inscricaoDetalhes.tipoInscricao,
+              valorDebito: valorDebitosSelecionados,
+              valorAbatido: valorDebitosSelecionados,
+              percentualAbatido: 100,
+              situacao: 'pendente'
+            }
+          })
+        }
+      }
+      break
+
+    case 'COMPENSACAO':
+      if (dadosEspecificos.creditosSelecionados?.length > 0 || dadosEspecificos.inscricoesSelecionadas?.length > 0) {
+        const detalhe = await prisma.acordoDetalhes.create({
+          data: {
+            acordoId,
+            tipo: 'compensacao',
+            descricao: 'Compensação de Créditos e Débitos',
+            valorOriginal: Math.max(dadosEspecificos.valorCreditos || 0, dadosEspecificos.valorDebitos || 0),
+            valorNegociado: dadosEspecificos.valorCompensacao || 0,
+            status: 'PENDENTE'
+          }
+        })
+
+        // Criar registros para inscrições compensadas
+        if (dadosEspecificos.inscricoesSelecionadas?.length > 0) {
+          for (const inscricaoId of dadosEspecificos.inscricoesSelecionadas) {
+            await prisma.acordoInscricao.create({
+              data: {
+                acordoDetalheId: detalhe.id,
+                numeroInscricao: inscricaoId,
+                tipoInscricao: 'economica',
+                valorDebito: dadosEspecificos.valorDebitos || 0,
+                valorAbatido: dadosEspecificos.valorCompensacao || 0,
+                percentualAbatido: 0,
+                situacao: 'pendente'
+              }
+            })
+          }
+        }
+      }
+      break
+
+    case 'DACAO_PAGAMENTO':
+      if (dadosEspecificos.inscricoesOferecidas?.length > 0 || dadosEspecificos.inscricoesCompensar?.length > 0) {
+        const detalhe = await prisma.acordoDetalhes.create({
+          data: {
+            acordoId,
+            tipo: 'dacao',
+            descricao: 'Dação em Pagamento',
+            valorOriginal: dadosEspecificos.valorCompensar || 0,
+            valorNegociado: dadosEspecificos.valorDacao || 0,
+            status: 'PENDENTE'
+          }
+        })
+
+        // Criar registros para inscrições a compensar
+        if (dadosEspecificos.inscricoesCompensar?.length > 0) {
+          for (const inscricaoId of dadosEspecificos.inscricoesCompensar) {
+            await prisma.acordoInscricao.create({
+              data: {
+                acordoDetalheId: detalhe.id,
+                numeroInscricao: inscricaoId,
+                tipoInscricao: 'imobiliaria',
+                valorDebito: dadosEspecificos.valorCompensar || 0,
+                valorAbatido: dadosEspecificos.valorDacao || 0,
+                percentualAbatido: 0,
+                situacao: 'pendente'
+              }
+            })
+          }
+        }
+      }
+      break
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -102,13 +206,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    
-    // Converter datas
+
+
+    // Converter datas (ajustar timezone para evitar diferença de um dia)
     if (body.dataAssinatura) {
-      body.dataAssinatura = new Date(body.dataAssinatura)
+      const dataAssinatura = new Date(body.dataAssinatura)
+      dataAssinatura.setHours(12, 0, 0, 0) // Meio-dia para evitar problemas de timezone
+      body.dataAssinatura = dataAssinatura
     }
     if (body.dataVencimento) {
-      body.dataVencimento = new Date(body.dataVencimento)
+      const dataVencimento = new Date(body.dataVencimento)
+      dataVencimento.setHours(12, 0, 0, 0) // Meio-dia para evitar problemas de timezone
+      body.dataVencimento = dataVencimento
     }
 
     const validationResult = acordoSchema.safeParse(body)
@@ -130,7 +239,11 @@ export async function POST(request: NextRequest) {
       where: { id: data.processoId },
       include: {
         contribuinte: true,
-        acordo: true
+        acordo: true,
+        decisoes: {
+          orderBy: { dataDecisao: 'desc' },
+          take: 1
+        }
       }
     })
 
@@ -141,9 +254,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!['DEFERIDO', 'DEFERIDO_PARCIAL'].includes(processo.status)) {
+    // Verificar se o processo foi julgado e tem decisão favorável
+    if (processo.status !== 'JULGADO' || processo.decisoes.length === 0) {
       return NextResponse.json(
-        { error: 'Apenas processos deferidos podem ter acordos' },
+        { error: 'Apenas processos julgados podem ter acordos' },
+        { status: 400 }
+      )
+    }
+
+    const ultimaDecisao = processo.decisoes[0]
+    if (!ultimaDecisao.tipoDecisao || !['DEFERIDO', 'PARCIAL'].includes(ultimaDecisao.tipoDecisao)) {
+      return NextResponse.json(
+        { error: 'Apenas processos deferidos ou parcialmente deferidos podem ter acordos' },
         { status: 400 }
       )
     }
@@ -182,14 +304,27 @@ export async function POST(request: NextRequest) {
 
     const numeroTermo = `${proximoNumero.toString().padStart(4, '0')}/${ano}`
 
+    // Calcular valores corretos para o acordo
+    let valorOriginal = data.valorTotal
+    let valorDesconto = data.valorDesconto || 0
+    let percentualDesconto = data.percentualDesconto || 0
+
+    // Para transação excepcional, usar valor das inscrições como valor original
+    if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && data.dadosEspecificos?.valorInscricoes) {
+      valorOriginal = data.dadosEspecificos.valorInscricoes
+      valorDesconto = valorOriginal - data.valorFinal
+      percentualDesconto = valorOriginal > 0 ? (valorDesconto / valorOriginal) * 100 : 0
+
+    }
+
     // Criar o acordo
     const acordo = await prisma.acordo.create({
       data: {
         processoId: data.processoId,
         numeroTermo,
-        valorTotal: data.valorTotal,
-        valorDesconto: data.valorDesconto || 0,
-        percentualDesconto: data.percentualDesconto || 0,
+        valorTotal: valorOriginal,
+        valorDesconto: valorDesconto,
+        percentualDesconto: percentualDesconto,
         valorFinal: data.valorFinal,
         dataAssinatura: data.dataAssinatura,
         dataVencimento: data.dataVencimento,
@@ -208,20 +343,52 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    // Criar detalhes específicos do acordo baseado no tipo de processo
+    if (data.dadosEspecificos && processo.tipo) {
+      await criarDetalhesEspecificos(acordo.id, processo.tipo, data.dadosEspecificos)
+    }
+
     // Gerar parcelas se for parcelado
+
     if (data.modalidadePagamento === 'parcelado' && data.numeroParcelas && data.numeroParcelas > 1) {
-      const valorParcela = data.valorFinal / data.numeroParcelas
+      // Para transação excepcional, considerar entrada da proposta
+      let valorEntrada = 0
+      let valorParaParcelas = data.valorFinal
+
+      if (data.dadosEspecificos?.propostaFinal?.valorEntrada && processo.tipo === 'TRANSACAO_EXCEPCIONAL') {
+        valorEntrada = data.dadosEspecificos.propostaFinal.valorEntrada
+        valorParaParcelas = data.valorFinal - valorEntrada
+      }
+
+      const valorParcela = valorParaParcelas / data.numeroParcelas
+
       const parcelas = []
 
-      for (let i = 1; i <= data.numeroParcelas; i++) {
-        const dataVencimentoParcela = new Date(data.dataAssinatura)
-        dataVencimentoParcela.setMonth(dataVencimentoParcela.getMonth() + i)
+      // Se há entrada, criar uma "parcela" de entrada com vencimento na data de assinatura
+      if (valorEntrada > 0) {
+        const dataVencimentoEntrada = new Date(data.dataAssinatura)
+        dataVencimentoEntrada.setHours(12, 0, 0, 0) // Ajustar timezone
 
         parcelas.push({
           acordoId: acordo.id,
-          numero: i,
-          valor: i === data.numeroParcelas 
-            ? data.valorFinal - (valorParcela * (data.numeroParcelas - 1)) // Ajustar última parcela para compensar arredondamentos
+          numero: 0, // Entrada como parcela 0
+          valor: valorEntrada,
+          dataVencimento: dataVencimentoEntrada,
+          status: 'PENDENTE'
+        })
+      }
+
+      for (let i = 1; i <= data.numeroParcelas; i++) {
+        // Usar data de vencimento como base para as parcelas
+        const dataVencimentoParcela = new Date(data.dataVencimento)
+        dataVencimentoParcela.setMonth(dataVencimentoParcela.getMonth() + (i - 1)) // Primeira parcela vence na data de vencimento
+        dataVencimentoParcela.setHours(12, 0, 0, 0) // Ajustar timezone
+
+        parcelas.push({
+          acordoId: acordo.id,
+          numero: i, // Parcelas 1, 2, 3, ..., 20
+          valor: i === data.numeroParcelas
+            ? valorParaParcelas - (valorParcela * (data.numeroParcelas - 1)) // Ajustar última parcela para compensar arredondamentos
             : valorParcela,
           dataVencimento: dataVencimentoParcela,
           status: 'PENDENTE'
@@ -233,12 +400,15 @@ export async function POST(request: NextRequest) {
       })
     } else {
       // Criar parcela única para pagamento à vista
+      const dataVencimentoAvista = new Date(data.dataVencimento)
+      dataVencimentoAvista.setHours(12, 0, 0, 0) // Ajustar timezone
+
       await prisma.parcela.create({
         data: {
           acordoId: acordo.id,
           numero: 1,
           valor: data.valorFinal,
-          dataVencimento: data.dataVencimento,
+          dataVencimento: dataVencimentoAvista,
           status: 'PENDENTE'
         }
       })
