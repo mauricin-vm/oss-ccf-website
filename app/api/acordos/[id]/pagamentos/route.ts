@@ -14,7 +14,7 @@ export async function GET(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
     const { id } = await params
-    const pagamentos = await prisma.pagamentoAcordo.findMany({
+    const pagamentos = await prisma.pagamentoParcela.findMany({
       where: { 
         parcela: { 
           acordoId: id 
@@ -104,15 +104,15 @@ export async function POST(
         { status: 404 }
       )
     }
-    if (parcela.status !== 'pendente') {
+    if (parcela.status !== 'PENDENTE') {
       return NextResponse.json(
         { error: 'Esta parcela não está pendente de pagamento' },
         { status: 400 }
       )
     }
     // Calcular valor já pago da parcela
-    const valorJaPago = parcela.pagamentos.reduce((total, p) => total + p.valorPago, 0)
-    const valorRestante = parcela.valor - valorJaPago
+    const valorJaPago = parcela.pagamentos.reduce((total, p) => total + Number(p.valorPago), 0)
+    const valorRestante = Number(parcela.valor) - valorJaPago
     if (data.valorPago > valorRestante) {
       return NextResponse.json(
         { error: `Valor excede o saldo restante da parcela (R$ ${valorRestante.toFixed(2)})` },
@@ -127,7 +127,7 @@ export async function POST(
       )
     }
     // Criar o pagamento
-    const pagamento = await prisma.pagamentoAcordo.create({
+    const pagamento = await prisma.pagamentoParcela.create({
       data: {
         parcelaId: data.parcelaId,
         dataPagamento: data.dataPagamento,
@@ -142,31 +142,25 @@ export async function POST(
     })
     // Verificar se a parcela foi quitada
     const novoValorPago = valorJaPago + data.valorPago
-    const parcelaQuitada = novoValorPago >= parcela.valor
+    const parcelaQuitada = novoValorPago >= Number(parcela.valor)
     if (parcelaQuitada) {
       // Atualizar status da parcela para 'paga' e definir data de pagamento
-      await prisma.parcelaAcordo.update({
+      await prisma.parcela.update({
         where: { id: data.parcelaId },
         data: {
-          status: 'paga',
-          dataPagamento: data.dataPagamento,
-          valorPago: novoValorPago
+          status: 'PAGO',
+          dataPagamento: data.dataPagamento
         }
       })
     } else {
-      // Atualizar apenas o valor pago
-      await prisma.parcelaAcordo.update({
-        where: { id: data.parcelaId },
-        data: {
-          valorPago: novoValorPago
-        }
-      })
+      // Atualizar apenas o valor pago - não há campo valorPago diretamente na parcela
+      // O valor pago será calculado através dos pagamentos relacionados
     }
     // Verificar se todas as parcelas foram pagas para marcar acordo como cumprido
-    const todasParcelasPagas = await prisma.parcelaAcordo.findMany({
-      where: { 
+    const todasParcelasPagas = await prisma.parcela.findMany({
+      where: {
         acordoId: id,
-        status: 'pendente'
+        status: 'PENDENTE'
       }
     })
     const parcelasRestantes = todasParcelasPagas.filter(p => {
@@ -200,7 +194,7 @@ export async function POST(
           acordoId: id,
           processoNumero: acordo.processo.numero,
           contribuinte: acordo.processo.contribuinte.nome,
-          parcelaNumerо: parcela.numero,
+          parcelaNumero: parcela.numero,
           valorPago: data.valorPago,
           formaPagamento: data.formaPagamento,
           dataPagamento: data.dataPagamento,
@@ -210,7 +204,7 @@ export async function POST(
       }
     })
     // Buscar pagamento completo para retorno
-    const pagamentoCompleto = await prisma.pagamentoAcordo.findUnique({
+    const pagamentoCompleto = await prisma.pagamentoParcela.findUnique({
       where: { id: pagamento.id },
       include: {
         parcela: {

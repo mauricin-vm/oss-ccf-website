@@ -7,11 +7,11 @@ import { z } from 'zod'
 const pagamentoSchema = z.object({
   parcelaId: z.string().min(1, 'Parcela é obrigatória'),
   dataPagamento: z.coerce.date({
-    required_error: 'Data de pagamento é obrigatória'
+    message: 'Data de pagamento é obrigatória'
   }),
   valorPago: z.number().min(0.01, 'Valor pago deve ser maior que zero'),
-  formaPagamento: z.enum(['dinheiro', 'pix', 'transferencia', 'boleto', 'cartao', 'dacao', 'compensacao'], {
-    required_error: 'Forma de pagamento é obrigatória'
+  formaPagamento: z.enum(['dinheiro', 'pix', 'transferencia', 'boleto', 'cartao', 'dacao', 'compensacao']).refine(val => ['dinheiro', 'pix', 'transferencia', 'boleto', 'cartao', 'dacao', 'compensacao'].includes(val), {
+    message: 'Forma de pagamento é obrigatória'
   }),
   numeroComprovante: z.string().optional(),
   observacoes: z.string().optional()

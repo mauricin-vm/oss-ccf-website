@@ -30,6 +30,7 @@ import {
 import Link from 'next/link'
 import { SessionUser, PautaWithRelations, ProcessoWithRelations } from '@/types'
 import { User as PrismaUser } from '@prisma/client'
+
 import PautaActions from '@/components/pauta/pauta-actions'
 import { formatLocalDate } from '@/lib/utils/date'
 
@@ -49,7 +50,6 @@ export default function PautaDetalhesPage({
   const [selectedProcess, setSelectedProcess] = useState<ProcessoWithRelations | null>(null)
   const [conselheiro, setConselheiro] = useState('')
   const [conselheiros, setConselheiros] = useState<PrismaUser[]>([])
-  const [distribuicaoInfo, setDistribuicaoInfo] = useState<Record<string, unknown> | null>(null)
 
   useEffect(() => {
     params.then(p => setId(p.id))
@@ -147,8 +147,7 @@ export default function PautaDetalhesPage({
       const response = await fetch(`/api/processos/${processoId}/distribuicao?status=${encodeURIComponent(status)}`)
       if (response.ok) {
         const data = await response.json()
-        setDistribuicaoInfo(data)
-
+        
         // Definir sugestão automaticamente se existir
         if (data.sugestao) {
           setConselheiro(data.sugestao)
@@ -156,14 +155,12 @@ export default function PautaDetalhesPage({
       }
     } catch (error) {
       console.error('Erro ao buscar informações de distribuição:', error)
-      setDistribuicaoInfo(null)
-    }
+          }
   }
 
   const handleSelectProcess = async (processo: ProcessoWithRelations) => {
     setSelectedProcess(processo)
-    setDistribuicaoInfo(null)
-
+    
     // Preencher automaticamente com conselheiro correto para distribuição
     const conselheiroParaDistribuicao = getConselheiroParaDistribuicao(processo)
     setConselheiro(conselheiroParaDistribuicao)
@@ -222,8 +219,7 @@ export default function PautaDetalhesPage({
       setConselheiro('')
       setSearchProcess('')
       setAvailableProcesses([])
-      setDistribuicaoInfo(null)
-      setIsAddProcessModalOpen(false)
+            setIsAddProcessModalOpen(false)
 
       // Recarregar dados da pauta
       handleEditSuccess()
@@ -1102,8 +1098,7 @@ export default function PautaDetalhesPage({
                 setConselheiro('')
                 setSearchProcess('')
                 setAvailableProcesses([])
-                setDistribuicaoInfo(null)
-              }}
+                              }}
               className="cursor-pointer"
             >
               Cancelar

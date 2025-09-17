@@ -3,7 +3,19 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { sessaoSchema } from '@/lib/validations/pauta'
-import { SessionUser, PrismaWhereFilter } from '@/types'
+import { SessionUser } from '@/types'
+
+interface SessaoWhereInput {
+  OR?: Array<{
+    pauta?: { numero: { contains: string; mode: 'insensitive' } }
+    conselheiros?: { some: { nome: { contains: string; mode: 'insensitive' } } }
+  }>
+  dataFim?: null | { not: null }
+  dataInicio?: {
+    gte: Date
+    lte: Date
+  }
+}
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -16,7 +28,7 @@ export async function GET(request: NextRequest) {
     const ano = searchParams.get('ano')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
-    const where: PrismaWhereFilter = {}
+    const where: SessaoWhereInput = {}
     if (search) {
       where.OR = [
         { pauta: { numero: { contains: search, mode: 'insensitive' } } },

@@ -34,9 +34,15 @@ interface ValoresDacao {
   inscricoesCompensar: InscricaoCompensar[]
 }
 
+interface DadosSelecionadosDacao {
+  valorTotal: number
+  valorFinal: number
+  [key: string]: unknown
+}
+
 interface DacaoSectionProps {
   valoresDacao: ValoresDacao
-  onSelectionChange: (dadosSelecionados: Record<string, unknown>) => void
+  onSelectionChange: (dadosSelecionados: DadosSelecionadosDacao) => void
 }
 
 export default function DacaoSection({
@@ -61,15 +67,15 @@ export default function DacaoSection({
     const valorDacao = Math.min(valorOferecido, valorCompensar)
     const saldoFinal = Math.abs(valorOferecido - valorCompensar)
 
-    const dadosSelecionados = {
+    const dadosSelecionados: DadosSelecionadosDacao = {
+      valorTotal: valorDacao,
+      valorFinal: saldoFinal,
       inscricoesOferecidasSelecionadas: inscricoesOferecidasSelecionadas,
       inscricoesCompensarSelecionadas: inscricoesCompensarSelecionadas,
       valorOferecido: valorOferecido,
       valorCompensar: valorCompensar,
       valorDacao: valorDacao,
-      saldoFinal: saldoFinal,
-      valorTotal: valorDacao,
-      valorFinal: saldoFinal
+      saldoFinal: saldoFinal
     }
 
     onSelectionChange(dadosSelecionados)

@@ -34,7 +34,7 @@ import {
   CreditCard,
 } from 'lucide-react'
 import Link from 'next/link'
-import { SessionUser, ProcessoWithRelations } from '@/types'
+import { SessionUser, ProcessoWithRelations, ProcessoDecisao, ProcessoPautaWithDetails, ProcessoVoto, ProcessoParcela, ProcessoPagamento } from '@/types'
 import ProcessoDocumentos from '@/components/processo/processo-documentos'
 import AdicionarHistoricoModal from '@/components/modals/adicionar-historico-modal'
 import AlterarStatusModal from '@/components/modals/alterar-status-modal'
@@ -188,7 +188,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
   const statusInfo = statusMap[processo.status] || { label: processo.status, color: 'bg-gray-100 text-gray-800', icon: AlertCircle }
   const StatusIcon = statusInfo.icon
 
-  const getResultadoBadge = (decisao: Record<string, unknown>) => {
+  const getResultadoBadge = (decisao: ProcessoDecisao) => {
     if (!decisao) return null
 
     switch (decisao.tipoResultado) {
@@ -218,7 +218,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
     }
   }
 
-  const getCardBackground = (decisao: Record<string, unknown>) => {
+  const getCardBackground = (decisao: ProcessoDecisao) => {
     if (!decisao) return 'bg-gray-50'
 
     switch (decisao.tipoResultado) {
@@ -467,7 +467,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     </p>
                     {canEdit && (
                       <p className="text-sm text-gray-400 mt-1">
-                        Clique em &ldquo;Configurar Valores&rdquo; para definir os valores específicos
+                        Clique em &quot;Configurar Valores&quot; para definir os valores específicos
                       </p>
                     )}
                   </div>
@@ -574,7 +574,10 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                             <span className="text-sm font-medium text-gray-800">Saldo</span>
                           </div>
                           {(() => {
-                            const totalImoveis = processo.valoresEspecificos.imoveis.reduce((total: number, imovel: Record<string, unknown>) => total + Number(imovel.valorAvaliacao), 0)
+                            const totalImoveis = processo.valoresEspecificos.imoveis.reduce((total: number, imovel: Record<string, unknown>) => {
+                              const valor = Number((imovel.imovel as Record<string, unknown>)?.valorAvaliado || imovel.valorAvaliacao || 0);
+                              return total + valor;
+                            }, 0)
                             const totalDebitos = processo.valoresEspecificos.inscricoes.reduce((total: number, inscricao: Record<string, unknown>) =>
                               total + ((inscricao.debitos as Record<string, unknown>[])?.reduce((subtotal: number, debito: Record<string, unknown>) => subtotal + Number(debito.valor), 0) || 0), 0
                             )
@@ -592,7 +595,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                           })()}
                         </div>
                       </div>
-                    )}
+                    ) : null}
 
                     {/* Para Transação Excepcional, mostrar resumo específico */}
                     {processo.tipo === 'TRANSACAO_EXCEPCIONAL' && (processo.valoresEspecificos as Record<string, unknown>).transacao && processo.valoresEspecificos?.inscricoes ? (
@@ -636,7 +639,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                           </p>
                         </div>
                       </div>
-                    )}
+                    ) : null}
 
                     {/* Para outros tipos de processo, mostrar resumo genérico */}
                     {!['COMPENSACAO', 'DACAO_PAGAMENTO', 'TRANSACAO_EXCEPCIONAL'].includes(processo.tipo) && (
@@ -651,7 +654,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                       </div>
                     )}
                   </div>
-                ) : null}
+                )}
               </CardContent>
             </Card>
           </div>
@@ -765,40 +768,40 @@ export default function ProcessoDetalhesPage({ params }: Props) {
               ) : (
                 <div className="space-y-3">
                   {processo.decisoes
-                    .sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
-                      return new Date(String(a.dataDecisao)).getTime() - new Date(String(b.dataDecisao)).getTime()
+                    .sort((a: ProcessoDecisao, b: ProcessoDecisao) => {
+                      return new Date(a.dataDecisao).getTime() - new Date(b.dataDecisao).getTime()
                     })
-                    .map((decisao: Record<string, unknown>, index: number) => {
-                      const processoPauta = processo.pautas?.find((p: Record<string, unknown>) => (p as Record<string, unknown>).pauta?.id === (decisao.sessao as Record<string, unknown>)?.pauta?.id)
+                    .map((decisao: ProcessoDecisao, index: number) => {
+                      const processoPauta = processo.pautas?.find((p: ProcessoPautaWithDetails) => p.pauta?.id === decisao.sessao?.pauta?.id)
                       const cardBackground = getCardBackground(decisao)
 
                       return (
                         <div
-                          key={String(decisao.id)}
+                          key={decisao.id}
                           className={`border rounded-lg p-4 ${cardBackground}`}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${String(decisao.tipoResultado) === 'JULGADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                              <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${decisao.tipoResultado === 'JULGADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
                                 }`}>
                                 {index + 1}
                               </span>
                               <div>
                                 <Link
-                                  href={`/sessoes/${(decisao.sessao as Record<string, unknown>)?.id}`}
+                                  href={`/sessoes/${decisao.sessao?.id || ''}`}
                                   className="font-medium hover:text-blue-600"
                                 >
-                                  Sessão de {(decisao.sessao as Record<string, unknown>)?.pauta ? new Date(String(((decisao.sessao as Record<string, unknown>).pauta as Record<string, unknown>).dataPauta)).toLocaleDateString('pt-BR') : new Date(String(decisao.dataDecisao)).toLocaleDateString('pt-BR')}
+                                  Sessão de {decisao.sessao?.pauta ? new Date(decisao.sessao.pauta.dataPauta).toLocaleDateString('pt-BR') : new Date(decisao.dataDecisao).toLocaleDateString('pt-BR')}
                                 </Link>
                                 <p className="text-sm text-gray-600">
-                                  Pauta: {((decisao.sessao as Record<string, unknown>)?.pauta as Record<string, unknown>)?.numero || 'N/A'}
+                                  Pauta: {decisao.sessao?.pauta?.numero || 'N/A'}
                                 </p>
-                                {(processoPauta as Record<string, unknown>)?.relator && (
-                                  <p className="text-sm text-blue-600">Relator: {String((processoPauta as Record<string, unknown>).relator)}</p>
+                                {processoPauta?.relator && (
+                                  <p className="text-sm text-blue-600">Relator: {processoPauta.relator}</p>
                                 )}
-                                {(processoPauta as Record<string, unknown>)?.revisores && Array.isArray((processoPauta as Record<string, unknown>).revisores) && ((processoPauta as Record<string, unknown>).revisores as unknown[]).length > 0 && (
+                                {processoPauta?.revisores && Array.isArray(processoPauta.revisores) && processoPauta.revisores.length > 0 && (
                                   <p className="text-sm text-blue-600">
-                                    Revisor{((processoPauta as Record<string, unknown>).revisores as unknown[]).length > 1 ? 'es' : ''}: {((processoPauta as Record<string, unknown>).revisores as string[]).join(', ')}
+                                    Revisor{processoPauta.revisores.length > 1 ? 'es' : ''}: {processoPauta.revisores.join(', ')}
                                   </p>
                                 )}
                               </div>
@@ -813,21 +816,21 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                           <div className="mt-3 space-y-2">
                             <div className="p-3 bg-white rounded border">
                               <h5 className="text-sm font-medium mb-2">Ata:</h5>
-                              <p className="text-sm text-gray-700">{String((processoPauta as Record<string, unknown>)?.ataTexto) || 'Texto da ata não informado'}</p>
+                              <p className="text-sm text-gray-700">{processoPauta?.ataTexto || 'Texto da ata não informado'}</p>
 
-                              {(decisao.votos as Record<string, unknown>[]) && (decisao.votos as Record<string, unknown>[]).length > 0 && (
+                              {decisao.votos && decisao.votos.length > 0 && (
                                 <div className="mt-3 pt-2 border-t">
                                   <h6 className="text-xs font-medium text-gray-600 mb-3">Votos registrados:</h6>
 
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Relatores/Revisores */}
-                                    {(decisao.votos as Record<string, unknown>[]).filter((voto: Record<string, unknown>) => ['RELATOR', 'REVISOR'].includes(String(voto.tipoVoto))).length > 0 && (
+                                    {decisao.votos.filter((voto: ProcessoVoto) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto)).length > 0 && (
                                       <Card className="p-3">
                                         <div className="font-medium text-gray-800 mb-2 text-sm">Relatores/Revisores</div>
                                         <div className="space-y-1">
                                           {decisao.votos
-                                            .filter((voto: Record<string, unknown>) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto as string))
-                                            .map((voto: Record<string, unknown>, index: number) => (
+                                            .filter((voto: ProcessoVoto) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto))
+                                            .map((voto: ProcessoVoto, index: number) => (
                                               <div key={index} className="flex items-center justify-between text-xs">
                                                 <div className="flex items-center gap-2">
                                                   <Badge variant={voto.tipoVoto === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
@@ -842,7 +845,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                                         'text-blue-600'
                                                   }`}>
                                                   {voto.acompanhaVoto
-                                                    ? `Acomp. ${voto.acompanhaVoto?.split(' ')[0]}`
+                                                    ? `Acomp. ${voto.acompanhaVoto.split(' ')[0]}`
                                                     : voto.posicaoVoto}
                                                 </span>
                                               </div>
@@ -857,9 +860,9 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                       <div className="max-h-24 overflow-y-auto space-y-1">
                                         {/* Votos válidos agrupados */}
                                         {['DEFERIDO', 'INDEFERIDO', 'PARCIAL'].map(posicao => {
-                                          const conselheirosComEssePosicao = decisao.votos
-                                            .filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
-                                            .map((voto: Record<string, unknown>) => voto.nomeVotante)
+                                          const conselheirosComEssePosicao = (decisao.votos || [])
+                                            .filter((voto: ProcessoVoto) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                            .map((voto: ProcessoVoto) => voto.nomeVotante)
 
                                           if (conselheirosComEssePosicao.length === 0) return null
 
@@ -879,12 +882,12 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                         })}
 
                                         {/* Abstenções agrupadas */}
-                                        {decisao.votos.filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(voto.posicaoVoto as string)).length > 0 && (
+                                        {(decisao.votos || []).filter((voto: ProcessoVoto) => voto.tipoVoto === 'CONSELHEIRO' && ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(voto.posicaoVoto)).length > 0 && (
                                           <div className="border-t pt-1 mt-1">
                                             {['AUSENTE', 'IMPEDIDO', 'ABSTENCAO'].map(posicao => {
-                                              const conselheirosComEssePosicao = decisao.votos
-                                                .filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
-                                                .map((voto: Record<string, unknown>) => voto.nomeVotante)
+                                              const conselheirosComEssePosicao = (decisao.votos || [])
+                                                .filter((voto: ProcessoVoto) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                                .map((voto: ProcessoVoto) => voto.nomeVotante)
 
                                               if (conselheirosComEssePosicao.length === 0) return null
 
@@ -909,7 +912,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                               )}
 
                               {/* Voto do Presidente se houve empate */}
-                              {decisao.sessao?.presidente && decisao.votos.find((voto: Record<string, unknown>) =>
+                              {decisao.sessao?.presidente && (decisao.votos || []).find((voto: ProcessoVoto) =>
                                 voto.conselheiroId === decisao.sessao?.presidente?.id ||
                                 voto.nomeVotante === decisao.sessao?.presidente?.nome
                               ) && (
@@ -924,17 +927,17 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                         </Badge>
                                         <span className="truncate font-medium">{decisao.sessao.presidente.nome}</span>
                                       </div>
-                                      <span className={`font-medium text-xs ${decisao.votos.find((voto: Record<string, unknown>) =>
+                                      <span className={`font-medium text-xs ${(decisao.votos || []).find((voto: ProcessoVoto) =>
                                         voto.conselheiroId === decisao.sessao?.presidente?.id ||
                                         voto.nomeVotante === decisao.sessao?.presidente?.nome
                                       )?.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
-                                        decisao.votos.find((voto: Record<string, unknown>) =>
+                                        (decisao.votos || []).find((voto: ProcessoVoto) =>
                                           voto.conselheiroId === decisao.sessao?.presidente?.id ||
                                           voto.nomeVotante === decisao.sessao?.presidente?.nome
                                         )?.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
                                           'text-yellow-600'
                                         }`}>
-                                        {decisao.votos.find((voto: Record<string, unknown>) =>
+                                        {(decisao.votos || []).find((voto: ProcessoVoto) =>
                                           voto.conselheiroId === decisao.sessao?.presidente?.id ||
                                           voto.nomeVotante === decisao.sessao?.presidente?.nome
                                         )?.posicaoVoto}
@@ -962,7 +965,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
             processo={{
               id: processo.id,
               numero: processo.numero,
-              documentos: processo.documentos?.map((doc: Record<string, unknown>) => ({
+              documentos: processo.documentos?.map((doc) => ({
                 id: String(doc.id),
                 nome: String(doc.nome),
                 tipo: String(doc.tipo),
@@ -987,7 +990,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
               {!processo.acordo ? (
                 (() => {
                   // Verificar se há decisão que define acordo
-                  const decisaoComAcordo = processo.decisoes?.find((d: Record<string, unknown>) => d.definirAcordo === true)
+                  const decisaoComAcordo = processo.decisoes?.find((d: ProcessoDecisao) => d.definirAcordo === true)
 
                   if (decisaoComAcordo) {
                     return (
@@ -1110,11 +1113,11 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                 })()
               ) : (
                 <div className="space-y-4">
-                  {processo.acordos.map((acordo) => {
+                  {processo.acordos?.map((acordo) => {
                     // Calcular progresso do pagamento
                     const valorTotal = Number(acordo.valorFinal) || 0
-                    const valorPago = acordo.parcelas.reduce((total, parcela) => {
-                      return total + (parcela.pagamentos || []).reduce((subtotal, pagamento) => {
+                    const valorPago = (acordo.parcelas as ProcessoParcela[]).reduce((total: number, parcela: ProcessoParcela) => {
+                      return total + (parcela.pagamentos || []).reduce((subtotal: number, pagamento: ProcessoPagamento) => {
                         return subtotal + (Number(pagamento.valorPago) || 0)
                       }, 0)
                     }, 0)
@@ -1126,7 +1129,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                       percentual
                     }
 
-                    const vencido = new Date(acordo.dataVencimento) < new Date() && acordo.status === 'ativo'
+                    const vencido = new Date(String(acordo.dataVencimento)) < new Date() && acordo.status === 'ativo'
 
                     // Função para mostrar informações das parcelas
                     const getDisplayParcelasInfo = () => {
@@ -1216,11 +1219,11 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
                                 <div className="flex items-center gap-2">
                                   <Calendar className="h-4 w-4" />
-                                  <span>Assinado: {new Date(acordo.dataAssinatura).toLocaleDateString('pt-BR')}</span>
+                                  <span>Assinado: {new Date(String(acordo.dataAssinatura)).toLocaleDateString('pt-BR')}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <Calendar className="h-4 w-4" />
-                                  <span>Vence: {new Date(acordo.dataVencimento).toLocaleDateString('pt-BR')}</span>
+                                  <span>Vence: {new Date(String(acordo.dataVencimento)).toLocaleDateString('pt-BR')}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <FileText className="h-4 w-4" />
@@ -1245,7 +1248,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                       .map((parcela) => (
                                         <div key={parcela.id} className="text-sm flex items-center justify-between">
                                           <span>
-                                            {parcela.numero === 0 ? 'Entrada' : `Parcela ${parcela.numero}`} - {new Date(parcela.dataVencimento).toLocaleDateString('pt-BR')}
+                                            {parcela.numero === 0 ? 'Entrada' : `Parcela ${parcela.numero}`} - {new Date(String(parcela.dataVencimento)).toLocaleDateString('pt-BR')}
                                           </span>
                                           <span className="font-medium">
                                             R$ {Number(parcela.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -1305,7 +1308,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
             <CardContent>
               <div className="space-y-4">
                 {/* Históricos customizados */}
-                {processo.historicos.map((historico) => {
+                {processo.historicos?.map((historico) => {
                   // Função para obter ícone específico baseado no título da decisão
                   const getDecisaoIcon = (titulo: string) => {
                     if (titulo.includes('Suspenso')) return Pause
@@ -1361,14 +1364,14 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                           historico.tipo === 'DECISAO' ? getDecisaoCor(historico.titulo).bg :
                             historico.tipo === 'TRAMITACAO' || historico.tipo === 'TRAMITACAO_ENTREGUE' ? 'bg-orange-100' :
                               historico.tipo === 'ACORDO' ? 'bg-green-100' :
-                              'bg-blue-100'
+                                'bg-blue-100'
                         }`}>
                         <Icon className={`h-4 w-4 ${historico.tipo === 'SISTEMA' ? 'text-green-600' :
                           historico.tipo === 'PAUTA' || historico.tipo === 'REPAUTAMENTO' ? 'text-purple-600' :
                             historico.tipo === 'DECISAO' ? getDecisaoCor(historico.titulo).text :
                               historico.tipo === 'TRAMITACAO' || historico.tipo === 'TRAMITACAO_ENTREGUE' ? 'text-orange-600' :
                                 historico.tipo === 'ACORDO' ? 'text-green-600' :
-                                'text-blue-600'
+                                  'text-blue-600'
                           }`} />
                       </div>
                       <div className="flex-1">
@@ -1396,13 +1399,13 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                   )
                 })}
 
-                {processo.historicos.length === 0 && (
+                {(processo.historicos?.length || 0) === 0 && (
                   <div className="text-center py-8 text-gray-500">
                     <History className="mx-auto h-12 w-12 text-gray-400 mb-2" />
                     <p>Nenhum histórico adicional registrado</p>
                     {canEdit && (
                       <p className="text-sm mt-1">
-                        Clique em &ldquo;Adicionar Histórico&rdquo; para registrar eventos
+                        Clique em &quot;Adicionar Histórico&quot; para registrar eventos
                       </p>
                     )}
                   </div>

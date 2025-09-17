@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
 import { SessionUser } from '@/types'
+
+type StatusProcesso = 'RECEPCIONADO' | 'EM_ANALISE' | 'AGUARDANDO_DOCUMENTOS' | 'EM_PAUTA' | 'JULGADO' | 'ACORDO_FIRMADO' | 'EM_CUMPRIMENTO' | 'FINALIZADO' | 'ARQUIVADO' | 'SUSPENSO' | 'PEDIDO_VISTA' | 'PEDIDO_DILIGENCIA'
 // Funções auxiliares para histórico
 function getTituloHistoricoDecisao(tipoResultado: string): string {
   switch (tipoResultado) {
@@ -17,25 +19,25 @@ function getTituloHistoricoDecisao(tipoResultado: string): string {
 function getDescricaoHistoricoDecisao(data: Record<string, unknown>): string {
   switch (data.tipoResultado) {
     case 'SUSPENSO':
-      let descSuspenso = data.ataTexto || 'Texto da ata não informado'
+      let descSuspenso = (data.ataTexto as string) || 'Texto da ata não informado'
       if (data.observacoes) {
         descSuspenso += `\n\nObservação: ${data.observacoes}`
       }
       return descSuspenso
     case 'PEDIDO_VISTA':
-      let descVista = data.ataTexto || 'Texto da ata não informado'
+      let descVista = (data.ataTexto as string) || 'Texto da ata não informado'
       if (data.observacoes) {
         descVista += `\n\nObservação: ${data.observacoes}`
       }
       return descVista
     case 'PEDIDO_DILIGENCIA':
-      let descDiligencia = data.ataTexto || 'Texto da ata não informado'
+      let descDiligencia = (data.ataTexto as string) || 'Texto da ata não informado'
       if (data.observacoes) {
         descDiligencia += `\n\nObservação: ${data.observacoes}`
       }
       return descDiligencia
     case 'JULGADO':
-      let descJulgado = data.ataTexto || 'Texto da ata não informado'
+      let descJulgado = (data.ataTexto as string) || 'Texto da ata não informado'
       if (data.observacoes) {
         descJulgado += `\n\nObservação: ${data.observacoes}`
       }
@@ -56,8 +58,8 @@ const votoSchema = z.object({
 })
 const decisaoSchema = z.object({
   processoId: z.string().min(1, 'Processo é obrigatório'),
-  tipoResultado: z.enum(['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO'], {
-    required_error: 'Tipo de resultado é obrigatório'
+  tipoResultado: z.enum(['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO']).refine(val => ['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO'].includes(val), {
+    message: 'Tipo de resultado é obrigatório'
   }),
   // Para JULGADO
   tipoDecisao: z.enum(['DEFERIDO', 'INDEFERIDO', 'PARCIAL']).optional(),
@@ -341,7 +343,7 @@ export async function POST(
         data: updateData
       })
       // Atualizar status do processo baseado no resultado
-      let novoStatusProcesso: string
+      let novoStatusProcesso: StatusProcesso
       switch (data.tipoResultado) {
         case 'SUSPENSO':
           novoStatusProcesso = 'SUSPENSO'
@@ -364,7 +366,7 @@ export async function POST(
       }
       await tx.processo.update({
         where: { id: data.processoId },
-        data: { status: novoStatusProcesso as string }
+        data: { status: novoStatusProcesso }
       })
       // Adicionar histórico do processo
       const tituloHistorico = getTituloHistoricoDecisao(data.tipoResultado)

@@ -27,6 +27,17 @@ interface SessaoPageProps {
   params: Promise<{ id: string }>
 }
 
+interface DecisaoResultado {
+  tipoResultado: string
+}
+
+interface VotoDecisao {
+  tipoVoto: string
+  nomeVotante: string
+  posicaoVoto?: string | null
+  acompanhaVoto?: string | null
+}
+
 async function getSessao(id: string) {
   const sessao = await prisma.sessaoJulgamento.findUnique({
     where: { id },
@@ -242,7 +253,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
     }
   }
 
-  const getCardBackground = (decisao: Record<string, unknown>) => {
+  const getCardBackground = (decisao: DecisaoResultado | null | undefined) => {
     if (!decisao) return 'bg-gray-50'
 
     switch (decisao.tipoResultado) {
@@ -359,8 +370,8 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                 <EditarInformacoesSessaoForm
                   sessaoId={sessao.id}
                   currentData={{
-                    numeroAta: sessao.numeroAta,
-                    presidenteId: sessao.presidenteId,
+                    numeroAta: sessao.numeroAta || undefined,
+                    presidenteId: sessao.presidenteId || undefined,
                     dataInicio: sessao.dataInicio,
                     conselheiros: sessao.conselheiros.map(c => ({ id: c.id, nome: c.nome }))
                   }}
@@ -555,13 +566,13 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                             {/* Layout organizado - mesmo da página de nova decisão */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               {/* Relatores/Revisores */}
-                              {decisao.votos.filter((voto: Record<string, unknown>) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto as string)).length > 0 && (
+                              {decisao.votos.filter((voto: VotoDecisao) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto)).length > 0 && (
                                 <Card className="p-3">
                                   <div className="font-medium text-gray-800 mb-2 text-sm">Relatores/Revisores</div>
                                   <div className="space-y-1">
                                     {decisao.votos
-                                      .filter((voto: Record<string, unknown>) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto as string))
-                                      .map((voto: Record<string, unknown>, index: number) => (
+                                      .filter((voto: VotoDecisao) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto))
+                                      .map((voto: VotoDecisao, index: number) => (
                                         <div key={index} className="flex items-center justify-between text-xs">
                                           <div className="flex items-center gap-2">
                                             <Badge variant={voto.tipoVoto === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
@@ -608,7 +619,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                                           {posicao}:
                                         </span>
                                         <span className="ml-1 text-gray-700">
-                                          {formatarListaNomes(conselheirosComEssePosicao)}
+                                          {formatarListaNomes(conselheirosComEssePosicao as string[])}
                                         </span>
                                       </div>
                                     )
@@ -631,7 +642,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                                                posicao === 'AUSENTE' ? 'AUSENTE' : 'IMPEDIDO'}:
                                             </span>
                                             <span className="ml-1 text-gray-600">
-                                              {formatarListaNomes(conselheirosComEssePosicao)}
+                                              {formatarListaNomes(conselheirosComEssePosicao as string[])}
                                             </span>
                                           </div>
                                         )

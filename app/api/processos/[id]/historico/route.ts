@@ -20,7 +20,17 @@ export async function GET(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
     const { id } = await params
-    const historicos = await prisma.$queryRaw`
+    const historicos = await prisma.$queryRaw<Array<{
+      id: string;
+      titulo: string;
+      descricao: string;
+      tipo: string;
+      createdAt: Date;
+      userId: string;
+      userName: string;
+      userEmail: string;
+      userRole: string;
+    }>>`
       SELECT 
         hp.id,
         hp.titulo,
@@ -122,7 +132,17 @@ export async function POST(
       return novoHistorico.id
     })
     // Buscar o histórico criado com dados do usuário
-    const historico = await prisma.$queryRaw`
+    const historico = await prisma.$queryRaw<Array<{
+      id: string;
+      titulo: string;
+      descricao: string;
+      tipo: string;
+      createdAt: Date;
+      userId: string;
+      userName: string;
+      userEmail: string;
+      userRole: string;
+    }>>`
       SELECT 
         hp.id,
         hp.titulo,

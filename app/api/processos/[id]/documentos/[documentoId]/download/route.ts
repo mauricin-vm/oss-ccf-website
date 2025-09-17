@@ -110,7 +110,7 @@ export async function GET(
       // Preparar nome do arquivo para download (sanitizar)
       const sanitizedFileName = documento.nome.replace(/[^a-zA-Z0-9.-]/g, '_')
       // Retornar arquivo
-      return new NextResponse(fileBuffer, {
+      return new NextResponse(fileBuffer as unknown as ArrayBuffer, {
         status: 200,
         headers: {
           'Content-Type': contentType,

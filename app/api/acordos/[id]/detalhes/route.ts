@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { SessionUser } from '@/types'
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -78,13 +79,13 @@ export async function PATCH(
       )
     }
     // Atualizar o detalhe
-    const dataExecucao = status === 'CONCLUIDO' && detalhe.status !== 'CONCLUIDO'
+    const dataExecucao = status === 'EXECUTADO' && detalhe.status !== 'EXECUTADO'
       ? new Date()
       : detalhe.dataExecucao
     const detalheAtualizado = await prisma.acordoDetalhes.update({
       where: { id: detalheId },
       data: {
-        status: status as string,
+        status: status,
         observacoes,
         dataExecucao
       },
@@ -94,8 +95,8 @@ export async function PATCH(
         credito: true
       }
     })
-    // Se foi marcado como concluído, atualizar situação das inscrições relacionadas
-    if (status === 'CONCLUIDO' && detalhe.status !== 'CONCLUIDO') {
+    // Se foi marcado como executado, atualizar situação das inscrições relacionadas
+    if (status === 'EXECUTADO' && detalhe.status !== 'EXECUTADO') {
       await prisma.acordoInscricao.updateMany({
         where: { acordoDetalheId: detalheId },
         data: { situacao: 'quitado' }
@@ -123,7 +124,7 @@ export async function PATCH(
     const todosDetalhes = await prisma.acordoDetalhes.findMany({
       where: { acordoId: resolvedParams.id }
     })
-    const todosConcluidos = todosDetalhes.every(d => d.status === 'CONCLUIDO')
+    const todosConcluidos = todosDetalhes.every(d => d.status === 'EXECUTADO')
     if (todosConcluidos && todosDetalhes.length > 0) {
       await prisma.acordo.update({
         where: { id: resolvedParams.id },

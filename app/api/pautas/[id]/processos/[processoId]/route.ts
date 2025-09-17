@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { SessionUser } from '@/types'
+
+type StatusProcesso = 'RECEPCIONADO' | 'EM_ANALISE' | 'AGUARDANDO_DOCUMENTOS' | 'EM_PAUTA' | 'JULGADO' | 'ACORDO_FIRMADO' | 'EM_CUMPRIMENTO' | 'FINALIZADO' | 'ARQUIVADO' | 'SUSPENSO' | 'PEDIDO_VISTA' | 'PEDIDO_DILIGENCIA'
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; processoId: string }> }
@@ -78,7 +80,7 @@ export async function DELETE(
         orderBy: { createdAt: 'desc' }
       })
       // Determinar status e distribuição para reverter
-      let novoStatus = 'EM_ANALISE'
+      let novoStatus: StatusProcesso = 'EM_ANALISE'
       let observacaoReversao = ''
       if (ultimaDecisao) {
         // Se há decisão anterior, voltar ao status da decisão
@@ -133,7 +135,7 @@ export async function DELETE(
       // Atualizar status do processo baseado no histórico
       await tx.processo.update({
         where: { id: processoId },
-        data: { status: novoStatus as string }
+        data: { status: novoStatus }
       })
       // Criar histórico no processo
       await tx.historicoProcesso.create({

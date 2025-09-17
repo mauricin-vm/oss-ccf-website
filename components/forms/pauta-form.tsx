@@ -20,12 +20,13 @@ interface PautaFormProps {
   onSuccess?: () => void
 }
 
-interface Processo {
+interface ProcessoWithDataAbertura {
   id: string
   numero: string
   tipo: string
   status: string
   valorOriginal: number
+  dataAbertura?: string
   contribuinte: {
     nome: string
   }
@@ -52,11 +53,11 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [processos, setProcessos] = useState<Processo[]>([])
+  const [processos, setProcessos] = useState<ProcessoWithDataAbertura[]>([])
   const [conselheiros, setConselheiros] = useState<Conselheiro[]>([])
   const [searchProcess, setSearchProcess] = useState('')
   const [selectedProcessos, setSelectedProcessos] = useState<Array<{
-    processo: Processo
+    processo: ProcessoWithDataAbertura
     ordem: number
     relator: string // Campo usado para armazenar distribuição (relator ou revisor)
   }>>([])
@@ -75,7 +76,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
 
   // Buscar processos elegíveis para pauta
   useEffect(() => {
-    const fetchProcessos = async () => {
+    const fetchProcessoWithDataAberturas = async () => {
       if (searchProcess.length < 3) {
         setProcessos([])
         return
@@ -92,7 +93,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
       }
     }
 
-    const timeoutId = setTimeout(fetchProcessos, 300)
+    const timeoutId = setTimeout(fetchProcessoWithDataAberturas, 300)
     return () => clearTimeout(timeoutId)
   }, [searchProcess])
 
@@ -171,7 +172,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
     }
   }
 
-  const handleAddProcesso = (processo: Processo) => {
+  const handleAddProcessoWithDataAbertura = (processo: ProcessoWithDataAbertura) => {
     if (selectedProcessos.find(item => item.processo.id === processo.id)) {
       return // Já foi adicionado
     }
@@ -187,14 +188,14 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
     setProcessos([])
   }
 
-  const handleRemoveProcesso = (processoId: string) => {
+  const handleRemoveProcessoWithDataAbertura = (processoId: string) => {
     setSelectedProcessos(prev =>
       prev.filter(item => item.processo.id !== processoId)
         .map((item, index) => ({ ...item, ordem: index + 1 }))
     )
   }
 
-  const handleReorderProcesso = (startIndex: number, endIndex: number) => {
+  const handleReorderProcessoWithDataAbertura = (startIndex: number, endIndex: number) => {
     setSelectedProcessos(prev => {
       const result = Array.from(prev)
       const [removed] = result.splice(startIndex, 1)
@@ -212,18 +213,18 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
     )
   }
 
-  const onDragEnd = (result: { destination?: { index: number }; source: { index: number } }) => {
+  const onDragEnd = (result: { destination?: { index: number } | null; source: { index: number } }) => {
     if (!result.destination) return
-    handleReorderProcesso(result.source.index, result.destination.index)
+    handleReorderProcessoWithDataAbertura(result.source.index, result.destination.index)
   }
 
-  const tipoProcessoMap = {
+  const tipoProcessoWithDataAberturaMap = {
     COMPENSACAO: 'Compensação',
     DACAO_PAGAMENTO: 'Dação em Pagamento',
     TRANSACAO_EXCEPCIONAL: 'Transação Excepcional'
   }
 
-  const statusProcessoMap = {
+  const statusProcessoWithDataAberturaMap = {
     RECEPCIONADO: { label: 'Recepcionado', color: 'bg-gray-100 text-gray-800' },
     EM_ANALISE: { label: 'Em Análise', color: 'bg-blue-100 text-blue-800' },
     EM_PAUTA: { label: 'Em Pauta', color: 'bg-purple-100 text-purple-800' },
@@ -238,13 +239,13 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
   }
 
   // Função para obter informações da última pauta
-  const getUltimaPautaInfo = (processo: Processo) => {
+  const getUltimaPautaInfo = (processo: ProcessoWithDataAbertura) => {
     if (!processo.pautas || processo.pautas.length === 0) return null
     return processo.pautas[0] // Já vem ordenado por data desc na API
   }
 
   // Função para obter o último conselheiro para distribuição
-  const getConselheiroParaDistribuicao = (processo: Processo) => {
+  const getConselheiroParaDistribuicao = (processo: ProcessoWithDataAbertura) => {
     const ultimaPauta = getUltimaPautaInfo(processo)
     if (!ultimaPauta) return ''
 
@@ -329,16 +330,16 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
         </CardContent>
       </Card>
 
-      {/* Seleção de Processos */}
+      {/* Seleção de ProcessoWithDataAberturas */}
       <Card>
         <CardHeader>
-          <CardTitle>Processos para Julgamento</CardTitle>
+          <CardTitle>ProcessoWithDataAberturas para Julgamento</CardTitle>
           <CardDescription>
             Adicione os processos que serão julgados nesta pauta
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Busca de Processos */}
+          {/* Busca de ProcessoWithDataAberturas */}
           <div className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -356,21 +357,21 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                 {processos.map((processo) => (
                   <div
                     key={processo.id}
-                    onClick={() => handleAddProcesso(processo)}
+                    onClick={() => handleAddProcessoWithDataAbertura(processo)}
                     className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <p className="font-medium">{processo.numero}</p>
-                          <Badge className={statusProcessoMap[processo.status as keyof typeof statusProcessoMap]?.color || 'bg-gray-100 text-gray-800'}>
-                            {statusProcessoMap[processo.status as keyof typeof statusProcessoMap]?.label || processo.status}
+                          <Badge className={statusProcessoWithDataAberturaMap[processo.status as keyof typeof statusProcessoWithDataAberturaMap]?.color || 'bg-gray-100 text-gray-800'}>
+                            {statusProcessoWithDataAberturaMap[processo.status as keyof typeof statusProcessoWithDataAberturaMap]?.label || processo.status}
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-600">{processo.contribuinte.nome}</p>
                         <p className="text-xs text-gray-500 mb-1">
-                          {tipoProcessoMap[processo.tipo as keyof typeof tipoProcessoMap]} -
-                          {new Date(processo.dataAbertura).toLocaleDateString('pt-BR')}
+                          {tipoProcessoWithDataAberturaMap[processo.tipo as keyof typeof tipoProcessoWithDataAberturaMap]} -
+                          {new Date((processo as ProcessoWithDataAbertura).dataAbertura || '').toLocaleDateString('pt-BR')}
                         </p>
                         {(() => {
                           const ultimaPauta = getUltimaPautaInfo(processo)
@@ -406,10 +407,10 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
             )}
           </div>
 
-          {/* Lista de Processos Selecionados */}
+          {/* Lista de ProcessoWithDataAberturas Selecionados */}
           {selectedProcessos.length > 0 && (
             <div className="space-y-3">
-              <h4 className="font-medium">Processos Selecionados ({selectedProcessos.length})</h4>
+              <h4 className="font-medium">ProcessoWithDataAberturas Selecionados ({selectedProcessos.length})</h4>
 
               <DragDropContext onDragEnd={onDragEnd}>
                 <Droppable droppableId="processos">
@@ -444,14 +445,14 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-2">
                                     <h5 className="font-medium">{item.processo.numero}</h5>
-                                    <Badge className={statusProcessoMap[item.processo.status as keyof typeof statusProcessoMap]?.color || 'bg-gray-100 text-gray-800'}>
-                                      {statusProcessoMap[item.processo.status as keyof typeof statusProcessoMap]?.label || item.processo.status}
+                                    <Badge className={statusProcessoWithDataAberturaMap[item.processo.status as keyof typeof statusProcessoWithDataAberturaMap]?.color || 'bg-gray-100 text-gray-800'}>
+                                      {statusProcessoWithDataAberturaMap[item.processo.status as keyof typeof statusProcessoWithDataAberturaMap]?.label || item.processo.status}
                                     </Badge>
                                   </div>
                                   <p className="text-sm text-gray-600">{item.processo.contribuinte.nome}</p>
                                   <p className="text-xs text-gray-500 mb-1">
-                                    {tipoProcessoMap[item.processo.tipo as keyof typeof tipoProcessoMap]} -
-                                    {new Date(item.processo.dataAbertura).toLocaleDateString('pt-BR')}
+                                    {tipoProcessoWithDataAberturaMap[item.processo.tipo as keyof typeof tipoProcessoWithDataAberturaMap]} -
+                                    {new Date((item.processo as ProcessoWithDataAbertura).dataAbertura || '').toLocaleDateString('pt-BR')}
                                   </p>
                                   {(() => {
                                     const ultimaPauta = getUltimaPautaInfo(item.processo)
@@ -498,7 +499,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                                     type="button"
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => handleReorderProcesso(index, index - 1)}
+                                    onClick={() => handleReorderProcessoWithDataAbertura(index, index - 1)}
                                     disabled={index === 0}
                                     className="p-1 h-6 w-6 cursor-pointer hover:bg-gray-100 disabled:cursor-not-allowed"
                                     title="Mover para cima"
@@ -509,7 +510,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                                     type="button"
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => handleReorderProcesso(index, index + 1)}
+                                    onClick={() => handleReorderProcessoWithDataAbertura(index, index + 1)}
                                     disabled={index === selectedProcessos.length - 1}
                                     className="p-1 h-6 w-6 cursor-pointer hover:bg-gray-100 disabled:cursor-not-allowed"
                                     title="Mover para baixo"
@@ -522,7 +523,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleRemoveProcesso(item.processo.id)}
+                                  onClick={() => handleRemoveProcessoWithDataAbertura(item.processo.id)}
                                   className="text-red-500 hover:text-red-700 hover:bg-red-50 cursor-pointer"
                                   title="Remover processo"
                                 >

@@ -139,78 +139,6 @@ export default function VotacaoModal({
     }
   }, [isOpen, processo.relator, processo.revisores, relatoresRevisores, votosRelatores.length])
 
-  // Recalcular empate sempre que os votos mudam
-  useEffect(() => {
-    if (etapaAtual === 2 && votosConselheiros.length > 0) {
-      calcularResultado() // Isso atualiza o estado de empate
-    }
-  }, [votosConselheiros, votosRelatores, etapaAtual, calcularResultado])
-
-  const adicionarRevisor = (nomeConselheiro: string) => {
-    if (!revisoresAdicionais.includes(nomeConselheiro)) {
-      const novosRevisores = [...revisoresAdicionais, nomeConselheiro]
-      setRevisoresAdicionais(novosRevisores)
-
-      // Adicionar voto para o novo revisor imediatamente
-      const novoVotoRevisor: VotoRelator = {
-        nome: nomeConselheiro,
-        tipo: 'REVISOR',
-        posicao: 'DEFERIDO'
-      }
-      setVotosRelatores([...votosRelatores, novoVotoRevisor])
-
-      // Remover o conselheiro da lista de votação (já que agora é revisor)
-      setVotosConselheiros(votosConselheiros.filter(voto => voto.nome !== nomeConselheiro))
-    }
-  }
-
-  const removerRevisor = (nomeConselheiro: string) => {
-    setRevisoresAdicionais(revisoresAdicionais.filter(nome => nome !== nomeConselheiro))
-    // Remover também o voto correspondente
-    const novosVotosRelatores = votosRelatores.filter(voto => voto.nome !== nomeConselheiro)
-    setVotosRelatores(novosVotosRelatores)
-
-    // Se não há mais revisores, resetar votos "ACOMPANHA" para "DEFERIDO"
-    const temRevisores = novosVotosRelatores.some(v => v.tipo === 'REVISOR')
-    if (!temRevisores) {
-      setVotosRelatores(novosVotosRelatores.map(voto =>
-        voto.posicao === 'ACOMPANHA'
-          ? { ...voto, posicao: 'DEFERIDO', acompanhaVoto: undefined }
-          : voto
-      ))
-    }
-
-    // Adicionar o conselheiro de volta à lista de votação (já que não é mais revisor)
-    const conselheiro = conselheiros.find(c => c.nome === nomeConselheiro)
-    if (conselheiro && !votosConselheiros.find(v => v.nome === nomeConselheiro)) {
-      const novoVotoConselheiro: VotoConselheiro = {
-        conselheiroId: conselheiro.id,
-        nome: conselheiro.nome,
-        posicao: 'DEFERIDO'
-      }
-      setVotosConselheiros([...votosConselheiros, novoVotoConselheiro])
-    }
-  }
-
-  const atualizarVotoRelator = (index: number, posicao: string, acompanhaVoto?: string) => {
-    const novosVotos = [...votosRelatores]
-    novosVotos[index] = {
-      ...novosVotos[index],
-      posicao: posicao as string,
-      acompanhaVoto: posicao === 'ACOMPANHA' ? acompanhaVoto : undefined
-    }
-    setVotosRelatores(novosVotos)
-  }
-
-  const atualizarVotoConselheiro = (index: number, posicao: string) => {
-    const novosVotos = [...votosConselheiros]
-    novosVotos[index] = {
-      ...novosVotos[index],
-      posicao: posicao as string
-    }
-    setVotosConselheiros(novosVotos)
-  }
-
   // Função auxiliar para resolver a posição real de um voto (incluindo "acompanha")
   const resolverPosicaoVoto = useCallback((voto: VotoRelator): string => {
     if (voto.posicao === 'ACOMPANHA' && voto.acompanhaVoto) {
@@ -296,6 +224,78 @@ export default function VotacaoModal({
 
     return { deferidos, indeferidos, parciais, abstencoes, ausentes, impedidos, decisaoFinal }
   }, [votosRelatores, votosConselheiros, setTemEmpate, presidente, resolverPosicaoVoto, temEmpate, votoPresidente])
+
+  // Recalcular empate sempre que os votos mudam
+  useEffect(() => {
+    if (etapaAtual === 2 && votosConselheiros.length > 0) {
+      calcularResultado() // Isso atualiza o estado de empate
+    }
+  }, [votosConselheiros, votosRelatores, etapaAtual, calcularResultado])
+
+  const adicionarRevisor = (nomeConselheiro: string) => {
+    if (!revisoresAdicionais.includes(nomeConselheiro)) {
+      const novosRevisores = [...revisoresAdicionais, nomeConselheiro]
+      setRevisoresAdicionais(novosRevisores)
+
+      // Adicionar voto para o novo revisor imediatamente
+      const novoVotoRevisor: VotoRelator = {
+        nome: nomeConselheiro,
+        tipo: 'REVISOR',
+        posicao: 'DEFERIDO'
+      }
+      setVotosRelatores([...votosRelatores, novoVotoRevisor])
+
+      // Remover o conselheiro da lista de votação (já que agora é revisor)
+      setVotosConselheiros(votosConselheiros.filter(voto => voto.nome !== nomeConselheiro))
+    }
+  }
+
+  const removerRevisor = (nomeConselheiro: string) => {
+    setRevisoresAdicionais(revisoresAdicionais.filter(nome => nome !== nomeConselheiro))
+    // Remover também o voto correspondente
+    const novosVotosRelatores = votosRelatores.filter(voto => voto.nome !== nomeConselheiro)
+    setVotosRelatores(novosVotosRelatores)
+
+    // Se não há mais revisores, resetar votos "ACOMPANHA" para "DEFERIDO"
+    const temRevisores = novosVotosRelatores.some(v => v.tipo === 'REVISOR')
+    if (!temRevisores) {
+      setVotosRelatores(novosVotosRelatores.map(voto =>
+        voto.posicao === 'ACOMPANHA'
+          ? { ...voto, posicao: 'DEFERIDO', acompanhaVoto: undefined }
+          : voto
+      ))
+    }
+
+    // Adicionar o conselheiro de volta à lista de votação (já que não é mais revisor)
+    const conselheiro = conselheiros.find(c => c.nome === nomeConselheiro)
+    if (conselheiro && !votosConselheiros.find(v => v.nome === nomeConselheiro)) {
+      const novoVotoConselheiro: VotoConselheiro = {
+        conselheiroId: conselheiro.id,
+        nome: conselheiro.nome,
+        posicao: 'DEFERIDO'
+      }
+      setVotosConselheiros([...votosConselheiros, novoVotoConselheiro])
+    }
+  }
+
+  const atualizarVotoRelator = (index: number, posicao: string, acompanhaVoto?: string) => {
+    const novosVotos = [...votosRelatores]
+    novosVotos[index] = {
+      ...novosVotos[index],
+      posicao: posicao as 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL' | 'ACOMPANHA',
+      acompanhaVoto: posicao === 'ACOMPANHA' ? acompanhaVoto : undefined
+    }
+    setVotosRelatores(novosVotos)
+  }
+
+  const atualizarVotoConselheiro = (index: number, posicao: string) => {
+    const novosVotos = [...votosConselheiros]
+    novosVotos[index] = {
+      ...novosVotos[index],
+      posicao: posicao as 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL' | 'ABSTENCAO' | 'AUSENTE' | 'IMPEDIDO'
+    }
+    setVotosConselheiros(novosVotos)
+  }
 
   const podeAvancar = () => {
     if (etapaAtual === 1) {
@@ -525,7 +525,7 @@ export default function VotacaoModal({
     const marcarTodosColuna = (posicao: string) => {
       const novosVotos = votosConselheiros.map(voto => ({
         ...voto,
-        posicao: posicao as string
+        posicao: posicao as 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL' | 'ABSTENCAO' | 'AUSENTE' | 'IMPEDIDO'
       }))
       setVotosConselheiros(novosVotos)
     }
@@ -715,7 +715,7 @@ export default function VotacaoModal({
             <div className="flex justify-center">
               <RadioGroup
                 value={votoPresidente || ''}
-                onValueChange={(value) => setVotoPresidente(value as string)}
+                onValueChange={(value) => setVotoPresidente(value as 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL' | null)}
                 className="flex items-center gap-6"
               >
                 {colunasComRelatores.map(({ posicao }) => (

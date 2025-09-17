@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
         let revisores: string[] = []
         if (ultimaDistribuicao) {
           // Se existe histórico, manter o relator original
-          relator = ultimaDistribuicao.relator
+          relator = ultimaDistribuicao.relator || processoPauta.relator
           revisores = [...(ultimaDistribuicao.revisores || [])]
           // Se o conselheiro escolhido não é relator nem revisor existente, adiciona aos revisores
           if (processoPauta.relator !== relator && !revisores.includes(processoPauta.relator)) {

@@ -14,10 +14,38 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Loader2, AlertCircle, Plus, Trash2, FileText, Calculator, Edit } from 'lucide-react'
 import { toast } from 'sonner'
 
+// Tipos para dados carregados da API
+interface InscricaoOferecidaData {
+  numeroInscricao: string
+  tipoInscricao: 'imobiliaria' | 'economica'
+  valor: number
+  dataVencimento?: string
+  descricao?: string
+}
+
+interface DebitoData {
+  descricao: string
+  valor: number
+  dataVencimento: string
+}
+
+interface InscricaoCompensarData {
+  numeroInscricao: string
+  tipoInscricao: 'imobiliaria' | 'economica'
+  debitos: DebitoData[]
+}
+
+// Tipos para estruturas do formulário
+interface DebitoFormData {
+  descricao: string
+  valor: string
+  dataVencimento: string
+}
+
 const inscricaoOferecidaSchema = z.object({
   numeroInscricao: z.string().min(1, 'Número da inscrição é obrigatório'),
   tipoInscricao: z.enum(['imobiliaria', 'economica'], {
-    required_error: 'Tipo de inscrição é obrigatório'
+    message: 'Tipo de inscrição é obrigatório'
   }),
   valor: z.union([
     z.string(),
@@ -79,7 +107,7 @@ const debitoSchema = z.object({
 const inscricaoCompensarSchema = z.object({
   numeroInscricao: z.string().min(1, 'Número da inscrição é obrigatório'),
   tipoInscricao: z.enum(['imobiliaria', 'economica'], {
-    required_error: 'Tipo de inscrição é obrigatório'
+    message: 'Tipo de inscrição é obrigatório'
   }),
   debitos: z.array(debitoSchema).min(1, 'Pelo menos um débito deve ser informado')
 })
@@ -127,7 +155,7 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
     handleSubmit,
     watch,
     setValue
-  } = useForm<ValoresDacaoInput>({
+  } = useForm({
     resolver: zodResolver(valoresDacaoSchema),
     defaultValues: {
       inscricoesOferecidas: [],
@@ -191,16 +219,13 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
 
           // Carregar inscrições oferecidas
           if (data.inscricoesOferecidas && data.inscricoesOferecidas.length > 0) {
-            data.inscricoesOferecidas.forEach((inscricao: Record<string, unknown>) => {
-              // Formatar valor monetário ao carregar
-              const valorFormatado = inscricao.valor
-                ? (inscricao.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                : ''
+            data.inscricoesOferecidas.forEach((inscricao: InscricaoOferecidaData) => {
+              // Usar valor direto da inscrição sem formatação
 
               appendInscricaoOferecida({
                 numeroInscricao: inscricao.numeroInscricao,
                 tipoInscricao: inscricao.tipoInscricao,
-                valor: valorFormatado,
+                valor: inscricao.valor,
                 dataVencimento: inscricao.dataVencimento || '',
                 descricao: inscricao.descricao || ''
               })
@@ -209,12 +234,10 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
 
           // Carregar inscrições a compensar
           if (data.inscricoesCompensar && data.inscricoesCompensar.length > 0) {
-            data.inscricoesCompensar.forEach((inscricao: Record<string, unknown>) => {
-              const debitosFormatados = (inscricao.debitos as Record<string, unknown>[])?.map((debito: Record<string, unknown>) => ({
+            data.inscricoesCompensar.forEach((inscricao: InscricaoCompensarData) => {
+              const debitosFormatados = inscricao.debitos?.map((debito: DebitoData) => ({
                 descricao: debito.descricao,
-                valor: debito.valor
-                  ? (debito.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                  : '',
+                valor: debito.valor,
                 dataVencimento: debito.dataVencimento || ''
               })) || []
 
@@ -312,9 +335,9 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
     setInscricaoCompensarForm({
       numeroInscricao: inscricao.numeroInscricao,
       tipoInscricao: inscricao.tipoInscricao,
-      debitos: (inscricao.debitos as Record<string, unknown>[])?.map((d: Record<string, unknown>) => ({
+      debitos: (inscricao.debitos as DebitoFormData[])?.map((d: DebitoFormData) => ({
         descricao: d.descricao,
-        valor: d.valor?.toString() || '',
+        valor: d.valor || '',
         dataVencimento: d.dataVencimento || ''
       })) || [{ descricao: '', valor: '', dataVencimento: '' }]
     })
@@ -362,7 +385,7 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
       tipoInscricao: inscricaoCompensarForm.tipoInscricao,
       debitos: debitosValidos.map(d => ({
         descricao: d.descricao,
-        valor: d.valor, // Manter formato de string para o form
+        valor: d.valor, // Manter formato de string pois o schema aceita both
         dataVencimento: d.dataVencimento
       }))
     }
@@ -426,10 +449,11 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
   const calcularTotalCompensar = () => {
     const inscricoes = watch('inscricoesCompensar') || []
     return inscricoes.reduce((total, inscricao) => {
-      return total + ((inscricao.debitos as Record<string, unknown>[])?.reduce((subtotal: number, debito: Record<string, unknown>) => {
-        const valor = typeof debito.valor === 'string' ? parseCurrencyToNumber(debito.valor) : (debito.valor || 0)
+      const debitosTotal = inscricao.debitos?.reduce((subtotal: number, debito: { valor: string | number, [key: string]: unknown }) => {
+        const valor = typeof debito.valor === 'string' ? parseCurrencyToNumber(debito.valor) : (Number(debito.valor) || 0)
         return subtotal + valor
-      }, 0) || 0)
+      }, 0) || 0
+      return total + debitosTotal
     }, 0)
   }
 
@@ -691,8 +715,8 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
 
                       <div className="space-y-1">
                         <p className="text-lg font-bold text-blue-700">
-                          R$ {((inscricao.debitos as Record<string, unknown>[])?.reduce((total: number, debito: Record<string, unknown>) => {
-                            const valor = typeof debito.valor === 'string' ? parseCurrencyToNumber(debito.valor) : (debito.valor || 0)
+                          R$ {(inscricao.debitos?.reduce((total: number, debito: { valor: string | number, [key: string]: unknown }) => {
+                            const valor = typeof debito.valor === 'string' ? parseCurrencyToNumber(debito.valor) : (Number(debito.valor) || 0)
                             return total + valor
                           }, 0) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>

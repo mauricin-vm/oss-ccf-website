@@ -4,7 +4,17 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { hash } from 'bcryptjs'
 import { z } from 'zod'
-import { SessionUser, UserWhereFilter } from '@/types'
+import { SessionUser } from '@/types'
+import { Role } from '@prisma/client'
+
+interface UserWhereInput {
+  OR?: Array<{
+    name?: { contains: string; mode: 'insensitive' }
+    email?: { contains: string; mode: 'insensitive' }
+  }>
+  role?: Role
+  isActive?: boolean
+}
 const userSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: z.string().email('Email inválido'),
@@ -32,7 +42,7 @@ export async function GET(request: NextRequest) {
     const active = searchParams.get('active')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
-    const where: UserWhereFilter = {}
+    const where: UserWhereInput = {}
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
@@ -40,10 +50,10 @@ export async function GET(request: NextRequest) {
       ]
     }
     if (role) {
-      where.role = role
+      where.role = role as Role
     }
     if (active !== null && active !== undefined) {
-      where.active = active === 'true'
+      where.isActive = active === 'true'
     }
     const [users, total] = await Promise.all([
       prisma.user.findMany({

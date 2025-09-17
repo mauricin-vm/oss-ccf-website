@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { tramitacaoSchema, type TramitacaoInput } from '@/lib/validations/processo'
+import { tramitacaoSchema } from '@/lib/validations/processo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -63,13 +63,25 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
     setValue,
     watch,
     formState: { errors }
-  } = useForm<TramitacaoInput>({
-    resolver: zodResolver(tramitacaoSchema),
+  } = useForm<{
+    processoId: string
+    setorOrigem: string
+    setorDestino: string
+    prazoResposta?: string
+    observacoes?: string
+  }>({
+    resolver: zodResolver(tramitacaoSchema) as unknown as Resolver<{
+      processoId: string
+      setorOrigem: string
+      setorDestino: string
+      prazoResposta?: string
+      observacoes?: string
+    }>,
     defaultValues: {
       processoId: processoId || '',
       setorOrigem: 'CCF',
       setorDestino: '',
-      prazoResposta: '',
+      prazoResposta: undefined,
       observacoes: ''
     }
   })
@@ -156,7 +168,13 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
     fetchProcesso()
   }, [processoId, setValue])
 
-  const onSubmit = async (data: TramitacaoInput) => {
+  const onSubmit = async (data: {
+    processoId: string
+    setorOrigem: string
+    setorDestino: string
+    prazoResposta?: string
+    observacoes?: string
+  }) => {
     setIsLoading(true)
     setError(null)
 
@@ -293,7 +311,7 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
                     setValue('processoId', '')
                     setValue('setorOrigem', '')
                     setValue('setorDestino', '')
-                    setValue('prazoResposta', '')
+                    setValue('prazoResposta', undefined)
                   }}
                 >
                   Alterar

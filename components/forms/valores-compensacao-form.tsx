@@ -14,9 +14,30 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Loader2, AlertCircle, Plus, Trash2, FileText, Calculator, Edit, DollarSign } from 'lucide-react'
 import { toast } from 'sonner'
 
+// Tipos para dados carregados da API
+interface CreditoData {
+  tipo: string
+  numero: string
+  valor: number
+  dataVencimento?: string
+  descricao?: string
+}
+
+interface DebitoData {
+  descricao: string
+  valor: number
+  dataVencimento: string
+}
+
+interface InscricaoData {
+  numeroInscricao: string
+  tipoInscricao: string
+  debitos: DebitoData[]
+}
+
 const creditoSchema = z.object({
   tipo: z.enum(['precatorio', 'credito_tributario', 'alvara_judicial', 'outro'], {
-    required_error: 'Tipo de crédito é obrigatório'
+    message: 'Tipo de crédito é obrigatório'
   }),
   numero: z.string().min(1, 'Número do crédito é obrigatório'),
   valor: z.union([
@@ -79,7 +100,7 @@ const debitoSchema = z.object({
 const inscricaoSchema = z.object({
   numeroInscricao: z.string().min(1, 'Número da inscrição é obrigatório'),
   tipoInscricao: z.enum(['imobiliaria', 'economica'], {
-    required_error: 'Tipo de inscrição é obrigatório'
+    message: 'Tipo de inscrição é obrigatório'
   }),
   debitos: z.array(debitoSchema).min(1, 'Pelo menos um débito deve ser informado')
 })
@@ -102,12 +123,12 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
   const [error, setError] = useState<string | null>(null)
   const [showCreditoModal, setShowCreditoModal] = useState(false)
   const [showInscricaoModal, setShowInscricaoModal] = useState(false)
-  const [editingCredito, setEditingCredito] = useState<{ index: number, credito: Record<string, unknown> } | null>(null)
-  const [editingInscricao, setEditingInscricao] = useState<{ index: number, inscricao: Record<string, unknown> } | null>(null)
+  const [editingCredito, setEditingCredito] = useState<{ index: number, credito: z.infer<typeof creditoSchema> } | null>(null)
+  const [editingInscricao, setEditingInscricao] = useState<{ index: number, inscricao: z.infer<typeof inscricaoSchema> } | null>(null)
 
   // Estados para formulários dos modais
   const [creditoForm, setCreditoForm] = useState({
-    tipo: 'precatorio',
+    tipo: 'precatorio' as 'precatorio' | 'credito_tributario' | 'alvara_judicial' | 'outro',
     numero: '',
     valor: '',
     dataVencimento: '',
@@ -116,7 +137,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
 
   const [inscricaoForm, setInscricaoForm] = useState({
     numeroInscricao: '',
-    tipoInscricao: 'imobiliaria',
+    tipoInscricao: 'imobiliaria' as 'imobiliaria' | 'economica',
     debitos: [{ descricao: '', valor: '', dataVencimento: '' }]
   })
 
@@ -125,7 +146,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
     handleSubmit,
     watch,
     setValue
-  } = useForm<ValoresCompensacaoInput>({
+  } = useForm({
     resolver: zodResolver(valoresCompensacaoSchema),
     defaultValues: {
       creditos: [],
@@ -189,16 +210,13 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
 
           // Carregar créditos
           if (data.creditos && data.creditos.length > 0) {
-            data.creditos.forEach((credito: Record<string, unknown>) => {
-              // Formatar valor monetário ao carregar
-              const valorFormatado = credito.valor
-                ? (credito.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                : ''
+            data.creditos.forEach((credito: CreditoData) => {
+              // Usar valor direto do crédito sem formatação
 
               appendCredito({
-                tipo: credito.tipo,
+                tipo: credito.tipo as 'precatorio' | 'credito_tributario' | 'alvara_judicial' | 'outro',
                 numero: credito.numero,
-                valor: valorFormatado,
+                valor: credito.valor,
                 dataVencimento: credito.dataVencimento || '',
                 descricao: credito.descricao || ''
               })
@@ -207,18 +225,16 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
 
           // Carregar inscrições
           if (data.inscricoes && data.inscricoes.length > 0) {
-            data.inscricoes.forEach((inscricao: Record<string, unknown>) => {
-              const debitosFormatados = (inscricao.debitos as Record<string, unknown>[])?.map((debito: Record<string, unknown>) => ({
+            data.inscricoes.forEach((inscricao: InscricaoData) => {
+              const debitosFormatados = inscricao.debitos?.map((debito: DebitoData) => ({
                 descricao: debito.descricao,
-                valor: debito.valor
-                  ? (debito.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                  : '',
+                valor: debito.valor,
                 dataVencimento: debito.dataVencimento || ''
               })) || []
 
               appendInscricao({
                 numeroInscricao: inscricao.numeroInscricao,
-                tipoInscricao: inscricao.tipoInscricao,
+                tipoInscricao: inscricao.tipoInscricao as 'imobiliaria' | 'economica',
                 debitos: debitosFormatados
               })
             })
@@ -268,7 +284,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
   const openCreditoModal = () => {
     setEditingCredito(null)
     setCreditoForm({
-      tipo: 'precatorio',
+      tipo: 'precatorio' as 'precatorio' | 'credito_tributario' | 'alvara_judicial' | 'outro',
       numero: '',
       valor: '',
       dataVencimento: '',
@@ -279,7 +295,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
 
   const openEditCreditoModal = (index: number) => {
     const credito = watch(`creditos.${index}`)
-    setEditingCredito({ index, credito })
+    setEditingCredito({ index, credito: credito as z.infer<typeof creditoSchema> })
     setCreditoForm({
       tipo: credito.tipo,
       numero: credito.numero,
@@ -294,7 +310,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
     setEditingInscricao(null)
     setInscricaoForm({
       numeroInscricao: '',
-      tipoInscricao: 'imobiliaria',
+      tipoInscricao: 'imobiliaria' as 'imobiliaria' | 'economica',
       debitos: [{ descricao: '', valor: '', dataVencimento: '' }]
     })
     setShowInscricaoModal(true)
@@ -302,7 +318,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
 
   const openEditInscricaoModal = (index: number) => {
     const inscricao = watch(`inscricoes.${index}`)
-    setEditingInscricao({ index, inscricao })
+    setEditingInscricao({ index, inscricao: inscricao as z.infer<typeof inscricaoSchema> })
     setInscricaoForm({
       numeroInscricao: inscricao.numeroInscricao,
       tipoInscricao: inscricao.tipoInscricao,
@@ -323,9 +339,9 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
     }
 
     const creditoData = {
-      tipo: creditoForm.tipo,
+      tipo: creditoForm.tipo as 'precatorio' | 'credito_tributario' | 'alvara_judicial' | 'outro',
       numero: creditoForm.numero,
-      valor: creditoForm.valor, // Manter formato de string para o form
+      valor: valor, // Usar o valor numérico convertido
       dataVencimento: creditoForm.dataVencimento,
       descricao: creditoForm.descricao
     }
@@ -363,10 +379,10 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
 
     const inscricaoData = {
       numeroInscricao: inscricaoForm.numeroInscricao,
-      tipoInscricao: inscricaoForm.tipoInscricao,
+      tipoInscricao: inscricaoForm.tipoInscricao as 'imobiliaria' | 'economica',
       debitos: debitosValidos.map(d => ({
         descricao: d.descricao,
-        valor: d.valor, // Manter formato de string para o form
+        valor: parseCurrencyToNumber(d.valor), // Converter para número
         dataVencimento: d.dataVencimento
       }))
     }
@@ -772,7 +788,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
               <select
                 id="modal-tipo"
                 value={creditoForm.tipo}
-                onChange={(e) => setCreditoForm({ ...creditoForm, tipo: e.target.value })}
+                onChange={(e) => setCreditoForm({ ...creditoForm, tipo: e.target.value as 'precatorio' | 'credito_tributario' | 'alvara_judicial' | 'outro' })}
                 className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="precatorio">Precatório</option>
@@ -879,7 +895,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
                 <select
                   id="modal-inscricao-tipo"
                   value={inscricaoForm.tipoInscricao}
-                  onChange={(e) => setInscricaoForm({ ...inscricaoForm, tipoInscricao: e.target.value })}
+                  onChange={(e) => setInscricaoForm({ ...inscricaoForm, tipoInscricao: e.target.value as 'imobiliaria' | 'economica' })}
                   className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
                   <option value="imobiliaria">Imobiliária</option>

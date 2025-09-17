@@ -3,7 +3,21 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { tramitacaoSchema } from '@/lib/validations/processo'
-import { SessionUser, PrismaWhereFilter } from '@/types'
+import { SessionUser } from '@/types'
+
+interface TramitacaoWhereInput {
+  OR?: Array<{
+    processo?: {
+      numero?: { contains: string; mode: 'insensitive' }
+      contribuinte?: { nome: { contains: string; mode: 'insensitive' } }
+    }
+    setorOrigem?: string | { contains: string; mode: 'insensitive' }
+    setorDestino?: string | { contains: string; mode: 'insensitive' }
+    prazoResposta?: null | { gte: Date }
+  }>
+  dataRecebimento?: null | { not: null }
+  prazoResposta?: null | { lt: Date }
+}
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -16,7 +30,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') // 'pendente', 'recebida', 'atrasada'
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
-    const where: PrismaWhereFilter = {}
+    const where: TramitacaoWhereInput = {}
     if (search) {
       where.OR = [
         { processo: { numero: { contains: search, mode: 'insensitive' } } },

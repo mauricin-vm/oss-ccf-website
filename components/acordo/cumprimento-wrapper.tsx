@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import CumprimentoDetalhes from './cumprimento-detalhes'
+import { AcordoDetalhe } from '@/types'
 
 interface CumprimentoWrapperProps {
   acordoId: string
@@ -47,8 +48,7 @@ export default function CumprimentoWrapper({ acordoId, detalhes }: CumprimentoWr
 
   return (
     <CumprimentoDetalhes
-      acordoId={acordoId}
-      detalhes={detalhesAtualizados as AcordoDetalhe[]}
+      detalhes={detalhesAtualizados as unknown as AcordoDetalhe[]}
       onStatusUpdate={handleStatusUpdate}
     />
   )

@@ -123,7 +123,7 @@ export async function POST(
         })
         const novosRevisoresVista = decisoesVista
           .map(d => d.conselheiroPedidoVista)
-          .filter(conselheiro => conselheiro && !novosRevisores.includes(conselheiro))
+          .filter((conselheiro): conselheiro is string => conselheiro !== null && conselheiro !== undefined && !novosRevisores.includes(conselheiro))
         novosRevisores = [...novosRevisores, ...novosRevisoresVista]
       }
       // Definir distribuição padrão

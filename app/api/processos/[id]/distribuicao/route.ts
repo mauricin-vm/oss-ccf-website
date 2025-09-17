@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -25,7 +26,7 @@ export async function GET(
     // Buscar última distribuição do processo
     const ultimaDistribuicao = await prisma.processoPauta.findFirst({
       where: { processoId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { id: 'desc' },
       include: {
         pauta: {
           select: {
@@ -90,7 +91,13 @@ export async function GET(
       }
     })
     // Criar lista de opções para redistribuição
-    const opcoes = []
+    const opcoes: Array<{
+      nome: string;
+      tipo: string;
+      descricao: string;
+      origem?: string;
+      isSugestao: boolean;
+    }> = []
     // Relator original
     if (ultimaDistribuicao.relator) {
       opcoes.push({
@@ -118,7 +125,7 @@ export async function GET(
           nome: conselheiro.nome,
           tipo: 'CONSELHEIRO_ATIVO',
           descricao: conselheiro.cargo ? `${conselheiro.cargo}` : 'Conselheiro',
-          origem: conselheiro.origem,
+          origem: conselheiro.origem || undefined,
           isSugestao: false
         })
       }

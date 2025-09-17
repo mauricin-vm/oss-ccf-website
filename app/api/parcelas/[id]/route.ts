@@ -6,11 +6,11 @@ import { SessionUser } from '@/types'
 import { z } from 'zod'
 const parcelaUpdateSchema = z.object({
   dataVencimento: z.coerce.date({
-    required_error: 'Data de vencimento é obrigatória'
+    message: 'Data de vencimento é obrigatória'
   }),
   dataPagamento: z.coerce.date().optional().nullable(),
-  status: z.enum(['PENDENTE', 'PAGO', 'VENCIDO', 'CANCELADO'], {
-    required_error: 'Status é obrigatório'
+  status: z.enum(['PENDENTE', 'PAGO', 'ATRASADO', 'CANCELADO']).refine(val => ['PENDENTE', 'PAGO', 'ATRASADO', 'CANCELADO'].includes(val), {
+    message: 'Status é obrigatório'
   })
 })
 export async function PUT(

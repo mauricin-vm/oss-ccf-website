@@ -3,7 +3,20 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { processoSchema } from '@/lib/validations/processo'
-import { SessionUser, ProcessoWhereFilter } from '@/types'
+import { SessionUser } from '@/types'
+import { TipoProcesso, StatusProcesso } from '@prisma/client'
+
+interface ProcessoWhereInput {
+  OR?: Array<{
+    numero?: { contains: string; mode: 'insensitive' }
+    contribuinte?: {
+      nome?: { contains: string; mode: 'insensitive' }
+      cpfCnpj?: { contains: string }
+    }
+  }>
+  tipo?: TipoProcesso
+  status?: { in: StatusProcesso[] }
+}
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -16,7 +29,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
-    const where: ProcessoWhereFilter = {}
+    const where: ProcessoWhereInput = {}
     if (search) {
       const cleanedSearch = search.replace(/\D/g, '')
       where.OR = [
@@ -29,7 +42,7 @@ export async function GET(request: NextRequest) {
       }
     }
     if (tipo) {
-      where.tipo = tipo
+      where.tipo = tipo as TipoProcesso
     }
     if (status) {
       // Converter string separada por vírgula em array para usar com 'in'
@@ -38,7 +51,7 @@ export async function GET(request: NextRequest) {
       const validStatuses = ['RECEPCIONADO', 'EM_ANALISE', 'EM_PAUTA', 'SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO', 'ACORDO_FIRMADO', 'EM_CUMPRIMENTO', 'ARQUIVADO']
       const filteredStatuses = statusArray.filter(s => validStatuses.includes(s))
       if (filteredStatuses.length > 0) {
-        where.status = { in: filteredStatuses as string[] }
+        where.status = { in: filteredStatuses as StatusProcesso[] }
       }
     }
     const [processos, total] = await Promise.all([
@@ -177,10 +190,7 @@ export async function POST(request: NextRequest) {
         cidade: contribuinteData.cidade && contribuinteData.cidade.trim() !== '' ? contribuinteData.cidade : null,
         estado: contribuinteData.estado && contribuinteData.estado.trim() !== '' ? contribuinteData.estado : null,
         cep: contribuinteData.cep && contribuinteData.cep.trim() !== '' ? contribuinteData.cep : null,
-      }
-      // Só adicionar cpfCnpj se tiver valor
-      if (cpfCnpjLimpo && cpfCnpjLimpo.length > 0) {
-        dadosContribuinte.cpfCnpj = cpfCnpjLimpo
+        cpfCnpj: cpfCnpjLimpo && cpfCnpjLimpo.length > 0 ? cpfCnpjLimpo : null,
       }
       console.log('Criando contribuinte com dados:', dadosContribuinte)
       try {
@@ -226,6 +236,7 @@ export async function POST(request: NextRequest) {
       processo = await prisma.processo.create({
         data: {
           ...processoData,
+          tipo: processoData.tipo as TipoProcesso,
           contribuinteId: contribuinte.id,
           createdById: user.id
         },

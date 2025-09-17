@@ -44,7 +44,6 @@ export async function GET(
           select: {
             processosCreated: true,
             tramitacoes: true,
-            sessoes: true,
             logs: true
           }
         }
@@ -208,8 +207,7 @@ export async function DELETE(
         _count: {
           select: {
             processosCreated: true,
-            tramitacoes: true,
-            sessoes: true
+            tramitacoes: true
           }
         }
       }
@@ -221,9 +219,8 @@ export async function DELETE(
       )
     }
     // Verificar se usuário tem atividades importantes
-    const hasActivity = userToDelete._count.processosCreated > 0 || 
-                       userToDelete._count.tramitacoes > 0 || 
-                       userToDelete._count.sessoes > 0
+    const hasActivity = userToDelete._count.processosCreated > 0 ||
+                       userToDelete._count.tramitacoes > 0
     if (hasActivity) {
       // Em vez de deletar, apenas desativar
       const deactivatedUser = await prisma.user.update({

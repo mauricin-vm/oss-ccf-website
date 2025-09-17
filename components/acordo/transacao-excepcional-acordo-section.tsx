@@ -44,9 +44,17 @@ interface ValoresTransacao {
   }
 }
 
+interface DadosSelecionadosTransacao {
+  valorTotal: number
+  valorFinal: number
+  metodoPagamento?: string
+  numeroParcelas?: number
+  [key: string]: unknown
+}
+
 interface TransacaoExcepcionalAcordoSectionProps {
   valoresTransacao: ValoresTransacao
-  onSelectionChange: (dadosSelecionados: Record<string, unknown>) => void
+  onSelectionChange: (dadosSelecionados: DadosSelecionadosTransacao) => void
 }
 
 export default function TransacaoExcepcionalAcordoSection({
@@ -82,15 +90,15 @@ export default function TransacaoExcepcionalAcordoSection({
 
   // Calcular totais baseado nas inscrições em memória
   useEffect(() => {
-    const dadosAcordo = {
-      inscricoesAcordo: inscricoesAcordo,
-      valorInscricoes: valorTotalInscricoes,
-      propostaFinal: propostaFinal,
+    const dadosAcordo: DadosSelecionadosTransacao = {
       valorTotal: propostaFinal.valorTotalProposto,
       valorFinal: propostaFinal.valorTotalProposto,
       metodoPagamento: propostaFinal.metodoPagamento,
-      valorEntrada: propostaFinal.valorEntrada,
       numeroParcelas: propostaFinal.quantidadeParcelas,
+      inscricoesAcordo: inscricoesAcordo,
+      valorInscricoes: valorTotalInscricoes,
+      propostaFinal: propostaFinal,
+      valorEntrada: propostaFinal.valorEntrada,
       observacoesAcordo: observacoesAcordo
     }
 

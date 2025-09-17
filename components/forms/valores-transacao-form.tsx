@@ -13,6 +13,16 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Loader2, AlertCircle, Plus, Trash2, FileText, Calculator, DollarSign, Edit, CreditCard, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 
+interface InscricaoData {
+  numeroInscricao: string
+  tipoInscricao: 'imobiliaria' | 'economica'
+  debitos: Array<{
+    descricao: string
+    valor: number
+    dataVencimento: string
+  }>
+}
+
 const debitoSchema = z.object({
   descricao: z.string().min(1, 'Descrição do débito é obrigatória'),
   valor: z.number().min(0.01, 'Valor deve ser maior que zero'),
@@ -21,71 +31,19 @@ const debitoSchema = z.object({
 
 const inscricaoSchema = z.object({
   numeroInscricao: z.string().min(1, 'Número da inscrição é obrigatório'),
-  tipoInscricao: z.enum(['imobiliaria', 'economica'], {
-    required_error: 'Tipo de inscrição é obrigatório'
+  tipoInscricao: z.enum(['imobiliaria', 'economica']).refine((val) => ['imobiliaria', 'economica'].includes(val), {
+    message: 'Tipo de inscrição é obrigatório'
   }),
   debitos: z.array(debitoSchema).min(1, 'Pelo menos um débito deve ser informado')
 })
 
 const propostaSchema = z.object({
-  valorTotalProposto: z.union([
-    z.string(),
-    z.number()
-  ])
-    .refine((val) => {
-      if (typeof val === 'number') return val > 0
-      if (typeof val === 'string') {
-        if (val === '') return false
-        const cleanValue = val.replace(/[^\d,]/g, '')
-        const numericValue = cleanValue.replace(',', '.')
-        const num = parseFloat(numericValue)
-        return !isNaN(num) && num >= 0.01
-      }
-      return false
-    }, 'Valor total proposto é obrigatório e deve ser maior que zero')
-    .transform((val) => {
-      if (typeof val === 'number') return val
-      if (typeof val === 'string') {
-        const cleanValue = val.replace(/[^\d,]/g, '')
-        const numericValue = cleanValue.replace(',', '.')
-        return parseFloat(numericValue)
-      }
-      return 0
-    }),
-  metodoPagamento: z.enum(['a_vista', 'parcelado'], {
-    required_error: 'Método de pagamento é obrigatório'
+  valorTotalProposto: z.number().min(0.01, 'Valor total proposto é obrigatório e deve ser maior que zero'),
+  metodoPagamento: z.enum(['a_vista', 'parcelado']).refine((val) => ['a_vista', 'parcelado'].includes(val), {
+    message: 'Método de pagamento é obrigatório'
   }),
-  valorEntrada: z.union([
-    z.string(),
-    z.number()
-  ])
-    .optional()
-    .transform((val) => {
-      if (!val || val === '') return 0
-      if (typeof val === 'number') return val
-      if (typeof val === 'string') {
-        const cleanValue = val.replace(/[^\d,]/g, '')
-        const numericValue = cleanValue.replace(',', '.')
-        const num = parseFloat(numericValue)
-        return isNaN(num) ? 0 : num
-      }
-      return 0
-    }),
-  quantidadeParcelas: z.union([
-    z.string(),
-    z.number()
-  ])
-    .optional()
-    .transform((val) => {
-      if (!val || val === '') return 1
-      if (typeof val === 'number') return val
-      if (typeof val === 'string') {
-        const num = parseInt(val)
-        return isNaN(num) ? 1 : num
-      }
-      return 1
-    })
-    .refine((val) => val >= 1 && val <= 120, 'Quantidade de parcelas deve ser entre 1 e 120')
+  valorEntrada: z.number().min(0, 'Valor de entrada deve ser positivo'),
+  quantidadeParcelas: z.number().min(1, 'Quantidade de parcelas deve ser pelo menos 1').max(120, 'Quantidade de parcelas deve ser no máximo 120')
 })
 
 const valoresTransacaoSchema = z.object({
@@ -153,7 +111,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
 
           // Carregar inscrições
           if (data.inscricoes && data.inscricoes.length > 0) {
-            data.inscricoes.forEach((inscricao: Record<string, unknown>) => {
+            data.inscricoes.forEach((inscricao: InscricaoData) => {
               appendInscricao({
                 numeroInscricao: inscricao.numeroInscricao,
                 tipoInscricao: inscricao.tipoInscricao,
@@ -175,13 +133,13 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
             setValue('proposta.valorTotalProposto', valorTotalFormatado)
             setValue('proposta.metodoPagamento', data.proposta.metodoPagamento || 'parcelado')
             setValue('proposta.valorEntrada', valorEntradaFormatado)
-            setValue('proposta.quantidadeParcelas', (data.proposta.quantidadeParcelas || 1).toString())
+            setValue('proposta.quantidadeParcelas', Number(data.proposta.quantidadeParcelas) || 1)
           }
 
           // Carregar resumo (se disponível da nova estrutura do banco)
-          if (data.resumo) {
-            setResumoData(data.resumo)
-          }
+          // if (data.resumo) {
+          //   setResumoData(data.resumo)
+          // }
         }
       } catch (error) {
         console.error('Erro ao carregar valores existentes:', error)
@@ -248,10 +206,10 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
     setInscricaoForm({
       numeroInscricao: inscricao.numeroInscricao,
       tipoInscricao: inscricao.tipoInscricao,
-      debitos: (inscricao.debitos as Record<string, unknown>[])?.map((d: Record<string, unknown>) => ({
-        descricao: d.descricao,
-        valor: formatValue(d.valor),
-        dataVencimento: d.dataVencimento || ''
+      debitos: (inscricao.debitos as Array<{descricao: string, valor: number, dataVencimento: string}>)?.map((d: {descricao: string, valor: number, dataVencimento: string}) => ({
+        descricao: d.descricao as string,
+        valor: formatValue(d.valor as number),
+        dataVencimento: (d.dataVencimento as string) || ''
       })) || [{ descricao: '', valor: '', dataVencimento: '' }]
     })
     setShowInscricaoModal(true)
@@ -354,8 +312,8 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
 
   // Função para formatar campos de valor da proposta
   const handlePropostaValueChange = (field: string, value: string) => {
-    const formattedValue = formatCurrency(value)
-    setValue(`proposta.${field}` as keyof typeof defaultValues.proposta, formattedValue)
+    const numericValue = parseCurrencyToNumber(value)
+    setValue(`proposta.${field}` as `proposta.${keyof ValoresTransacaoInput['proposta']}`, numericValue)
   }
 
   const calcularTotalDebitos = () => {
@@ -387,7 +345,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
   const calcularValorParcela = () => {
     const valorPropostoStr = watch('proposta.valorTotalProposto') || ''
     const valorEntradaStr = watch('proposta.valorEntrada') || ''
-    const quantidadeParcelas = parseInt(watch('proposta.quantidadeParcelas') || '1')
+    const quantidadeParcelas = Number(watch('proposta.quantidadeParcelas')) || 1
     const metodoPagamento = watch('proposta.metodoPagamento')
 
     // Converter valores formatados para números

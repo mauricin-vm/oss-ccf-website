@@ -15,7 +15,67 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, AlertCircle, Gavel, Clock, Pause, Search, CheckCircle, Users } from 'lucide-react'
 import VotacaoModal from '@/components/modals/votacao-modal'
+
+// Importar tipos do modal de votação para compatibilidade
+type ResultadoVotacaoModal = {
+  relatores: Array<{
+    nome: string
+    tipo: 'RELATOR' | 'REVISOR'
+    posicao: 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL' | 'ACOMPANHA'
+    acompanhaVoto?: string
+  }>
+  conselheiros: Array<{
+    conselheiroId: string
+    nome: string
+    posicao: 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL' | 'ABSTENCAO' | 'AUSENTE' | 'IMPEDIDO'
+    isPresidente?: boolean
+  }>
+  resultado: {
+    deferidos: number
+    indeferidos: number
+    parciais: number
+    abstencoes: number
+    ausentes: number
+    impedidos: number
+    decisaoFinal: 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL'
+  }
+}
 import { toast } from 'sonner'
+
+// Tipos para votação
+interface VotoResultado {
+  tipo: string
+  nome: string
+  posicao: string
+  acompanhaVoto?: string
+  conselheiroId?: string
+  isPresidente?: boolean
+}
+
+interface ResultadoVotacao {
+  relatores: VotoResultado[]
+  conselheiros: VotoResultado[]
+  resultado: {
+    decisaoFinal: string
+    deferidos: number
+    indeferidos: number
+    parciais: number
+  }
+}
+
+
+// Interface para votos que vêm do backend (incluindo campos desconhecidos)
+interface VotoBackend {
+  tipoVoto?: string
+  nomeVotante?: string
+  conselheiroId?: string
+  textoVoto?: string
+  posicaoVoto?: string
+  acompanhaVoto?: string
+  ordemApresentacao?: number
+  isPresidente?: boolean
+  [key: string]: unknown
+}
 
 const votoSchema = z.object({
   tipoVoto: z.enum(['RELATOR', 'REVISOR', 'CONSELHEIRO']),
@@ -31,7 +91,7 @@ const votoSchema = z.object({
 const decisaoSchema = z.object({
   processoId: z.string().min(1, 'Processo é obrigatório'),
   tipoResultado: z.enum(['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO'], {
-    required_error: 'Tipo de resultado é obrigatório'
+    message: 'Tipo de resultado é obrigatório'
   }),
   tipoDecisao: z.enum(['DEFERIDO', 'INDEFERIDO', 'PARCIAL']).optional(),
   observacoes: z.string().optional(),
@@ -135,7 +195,7 @@ export default function EditarDecisaoForm({
   const [isLoading, setIsLoading] = useState(false)
   const [votos, setVotos] = useState<VotoInput[]>([])
   const [showVotacaoModal, setShowVotacaoModal] = useState(false)
-  const [votacaoResultado, setVotacaoResultado] = useState<Record<string, unknown> | null>(null)
+  const [votacaoResultado, setVotacaoResultado] = useState<ResultadoVotacao | null>(null)
 
   const {
     register,
@@ -173,12 +233,12 @@ export default function EditarDecisaoForm({
   // Inicializar votos se existirem
   useEffect(() => {
     if (decisaoAtual.votos && decisaoAtual.votos.length > 0) {
-      const votosConvertidos: VotoInput[] = decisaoAtual.votos.map((voto: Record<string, unknown>) => ({
-        tipoVoto: voto.tipoVoto,
-        nomeVotante: voto.nomeVotante,
+      const votosConvertidos: VotoInput[] = (decisaoAtual.votos as VotoBackend[]).map((voto: VotoBackend) => ({
+        tipoVoto: (voto.tipoVoto as 'RELATOR' | 'REVISOR' | 'CONSELHEIRO') || 'CONSELHEIRO',
+        nomeVotante: voto.nomeVotante || '',
         conselheiroId: voto.conselheiroId || undefined,
         textoVoto: voto.textoVoto || undefined,
-        posicaoVoto: voto.posicaoVoto || undefined,
+        posicaoVoto: (voto.posicaoVoto as 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL') || undefined,
         acompanhaVoto: voto.acompanhaVoto || undefined,
         ordemApresentacao: voto.ordemApresentacao || undefined,
         isPresidente: voto.isPresidente || false
@@ -200,22 +260,27 @@ export default function EditarDecisaoForm({
         }
 
         // Criar estrutura de relatores com propriedades corretas
-        const relatores = votosConvertidos
+        const relatores: VotoResultado[] = votosConvertidos
           .filter(v => v.tipoVoto === 'RELATOR' || v.tipoVoto === 'REVISOR')
           .map(voto => ({
-            nome: voto.nomeVotante,
             tipo: voto.tipoVoto,
-            posicao: voto.acompanhaVoto ? 'ACOMPANHA' : voto.posicaoVoto,
-            acompanhaVoto: voto.acompanhaVoto
+            nome: voto.nomeVotante,
+            posicao: voto.acompanhaVoto ? 'ACOMPANHA' : (voto.posicaoVoto || 'DEFERIDO'),
+            acompanhaVoto: voto.acompanhaVoto,
+            conselheiroId: voto.conselheiroId,
+            isPresidente: voto.isPresidente
           }))
 
         // Criar estrutura de conselheiros com propriedades corretas
-        const conselheiros = votosConvertidos
+        const conselheiros: VotoResultado[] = votosConvertidos
           .filter(v => v.tipoVoto === 'CONSELHEIRO')
           .map(voto => ({
+            tipo: voto.tipoVoto,
             nome: voto.nomeVotante,
+            posicao: voto.posicaoVoto || 'DEFERIDO',
             conselheiroId: voto.conselheiroId,
-            posicao: voto.posicaoVoto || 'DEFERIDO'
+            acompanhaVoto: voto.acompanhaVoto,
+            isPresidente: voto.isPresidente
           }))
 
         setVotacaoResultado({
@@ -268,31 +333,55 @@ export default function EditarDecisaoForm({
     }
   }
 
-  const handleVotacaoConfirm = (resultado: Record<string, unknown>) => {
-    setVotacaoResultado(resultado)
+  const handleVotacaoConfirm = (resultado: ResultadoVotacaoModal) => {
+    // Converter ResultadoVotacaoModal para ResultadoVotacao
+    const resultadoConvertido: ResultadoVotacao = {
+      relatores: resultado.relatores.map(relator => ({
+        tipo: relator.tipo,
+        nome: relator.nome,
+        posicao: relator.posicao,
+        acompanhaVoto: relator.acompanhaVoto
+      })),
+      conselheiros: resultado.conselheiros.map(conselheiro => ({
+        tipo: 'CONSELHEIRO',
+        nome: conselheiro.nome,
+        posicao: conselheiro.posicao,
+        conselheiroId: conselheiro.conselheiroId,
+        isPresidente: conselheiro.isPresidente
+      })),
+      resultado: {
+        decisaoFinal: resultado.resultado.decisaoFinal,
+        deferidos: resultado.resultado.deferidos,
+        indeferidos: resultado.resultado.indeferidos,
+        parciais: resultado.resultado.parciais
+      }
+    }
+    setVotacaoResultado(resultadoConvertido)
     // Converter resultado para o formato de votos esperado
     const novosVotos: VotoInput[] = []
 
     // Adicionar votos dos relatores/revisores
-    resultado.relatores.forEach((relator: Record<string, unknown>, index: number) => {
+    const relatores = resultado.relatores || []
+    relatores.forEach((relator: VotoResultado, index: number) => {
       novosVotos.push({
         tipoVoto: relator.tipo as 'RELATOR' | 'REVISOR' | 'CONSELHEIRO',
-        nomeVotante: relator.nome as string,
+        nomeVotante: relator.nome,
         posicaoVoto: relator.posicao === 'ACOMPANHA' ? 'DEFERIDO' : relator.posicao as 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL',
-        acompanhaVoto: relator.acompanhaVoto as string,
+        acompanhaVoto: relator.acompanhaVoto,
         ordemApresentacao: index + 1
       })
     })
 
     // Adicionar votos dos conselheiros
-    resultado.conselheiros.forEach((conselheiro: Record<string, unknown>, index: number) => {
+    const conselheiros = resultado.conselheiros || []
+    conselheiros.forEach((conselheiro, index: number) => {
       if (conselheiro.posicao !== 'ABSTENCAO') {
         novosVotos.push({
           tipoVoto: 'CONSELHEIRO',
-          nomeVotante: conselheiro.nome as string,
-          conselheiroId: conselheiro.conselheiroId as string,
+          nomeVotante: conselheiro.nome,
+          conselheiroId: conselheiro.conselheiroId,
           posicaoVoto: conselheiro.posicao as 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL',
-          ordemApresentacao: resultado.relatores.length + index + 1,
+          ordemApresentacao: relatores.length + index + 1,
           isPresidente: conselheiro.isPresidente || false
         })
       }
@@ -300,7 +389,7 @@ export default function EditarDecisaoForm({
 
     setVotos(novosVotos)
     // Definir tipo de decisão baseado no resultado
-    setValue('tipoDecisao', (resultado.resultado as Record<string, unknown>).decisaoFinal as 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL')
+    setValue('tipoDecisao', resultado.resultado.decisaoFinal as 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL')
   }
 
   const getTipoProcessoLabel = (tipo: string) => {
@@ -650,7 +739,7 @@ export default function EditarDecisaoForm({
                       <Card className="p-3">
                         <div className="font-medium text-gray-800 mb-2 text-sm">Relatores/Revisores</div>
                         <div className="space-y-1">
-                          {votacaoResultado.relatores.map((relator: Record<string, unknown>, index: number) => (
+                          {votacaoResultado.relatores.map((relator: VotoResultado, index: number) => (
                             <div key={index} className="flex items-center justify-between text-xs">
                               <div className="flex items-center gap-2">
                                 <Badge variant={relator.tipo === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
@@ -678,7 +767,7 @@ export default function EditarDecisaoForm({
                       <div className="max-h-24 overflow-y-auto space-y-1">
                         {/* Votos válidos agrupados */}
                         {['DEFERIDO', 'INDEFERIDO', 'PARCIAL'].map(posicao => {
-                          const conselheirosComEssePosicao = votacaoResultado.conselheiros?.filter((conselheiro: Record<string, unknown>) => conselheiro.posicao === posicao) || []
+                          const conselheirosComEssePosicao = (votacaoResultado.conselheiros || []).filter((conselheiro: VotoResultado) => conselheiro.posicao === posicao)
                           if (conselheirosComEssePosicao.length === 0) return null
 
                           return (
@@ -690,17 +779,17 @@ export default function EditarDecisaoForm({
                                 {posicao}:
                               </span>
                               <span className="ml-1 text-gray-700">
-                                {formatarListaNomes(conselheirosComEssePosicao.map((conselheiro: Record<string, unknown>) => conselheiro.nome as string))}
+                                {formatarListaNomes(conselheirosComEssePosicao.map((conselheiro: VotoResultado) => conselheiro.nome))}
                               </span>
                             </div>
                           )
                         })}
 
                         {/* Abstenções agrupadas */}
-                        {votacaoResultado.conselheiros?.filter((conselheiro: Record<string, unknown>) => ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(conselheiro.posicao as string)).length > 0 && (
+                        {(votacaoResultado.conselheiros || []).filter((conselheiro: VotoResultado) => ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(conselheiro.posicao)).length > 0 && (
                           <div className="border-t pt-1 mt-1">
                             {['AUSENTE', 'IMPEDIDO', 'ABSTENCAO'].map(posicao => {
-                              const conselheirosComEssePosicao = votacaoResultado.conselheiros?.filter((conselheiro: Record<string, unknown>) => conselheiro.posicao === posicao) || []
+                              const conselheirosComEssePosicao = (votacaoResultado.conselheiros || []).filter((conselheiro: VotoResultado) => conselheiro.posicao === posicao)
                               if (conselheirosComEssePosicao.length === 0) return null
 
                               return (
@@ -710,7 +799,7 @@ export default function EditarDecisaoForm({
                                       posicao === 'AUSENTE' ? 'AUSENTE' : 'IMPEDIDO'}:
                                   </span>
                                   <span className="ml-1 text-gray-600">
-                                    {formatarListaNomes(conselheirosComEssePosicao.map((conselheiro: Record<string, unknown>) => conselheiro.nome as string))}
+                                    {formatarListaNomes(conselheirosComEssePosicao.map((conselheiro: VotoResultado) => conselheiro.nome))}
                                   </span>
                                 </div>
                               )
@@ -724,7 +813,7 @@ export default function EditarDecisaoForm({
                   {/* Voto do Presidente (se houve empate e presidente votou) */}
                   {(() => {
                     // Verifica se existe um voto do presidente (conselheiro com mesmo nome/id do presidente)
-                    const votoPresidente = presidente && votacaoResultado.conselheiros?.find((conselheiro: Record<string, unknown>) =>
+                    const votoPresidente = presidente && (votacaoResultado.conselheiros || []).find((conselheiro: VotoResultado) =>
                       conselheiro.conselheiroId === presidente.id ||
                       conselheiro.nome === presidente.nome
                     )

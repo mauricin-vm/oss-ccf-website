@@ -34,9 +34,15 @@ interface ValoresCompensacao {
   inscricoes: InscricaoCompensacao[]
 }
 
+interface DadosSelecionadosCompensacao {
+  valorTotal: number
+  valorFinal: number
+  [key: string]: unknown
+}
+
 interface CompensacaoSectionProps {
   valoresCompensacao: ValoresCompensacao
-  onSelectionChange: (dadosSelecionados: Record<string, unknown>) => void
+  onSelectionChange: (dadosSelecionados: DadosSelecionadosCompensacao) => void
 }
 
 export default function CompensacaoSection({
@@ -61,15 +67,15 @@ export default function CompensacaoSection({
     const valorCompensacao = Math.min(valorCreditosSelecionados, valorInscricoesSelecionadas)
     const saldoFinal = Math.abs(valorCreditosSelecionados - valorInscricoesSelecionadas)
 
-    const dadosSelecionados = {
+    const dadosSelecionados: DadosSelecionadosCompensacao = {
+      valorTotal: valorCompensacao,
+      valorFinal: saldoFinal,
       creditosSelecionados: creditosSelecionados,
       inscricoesSelecionadas: inscricoesSelecionadas,
       valorCreditos: valorCreditosSelecionados,
       valorDebitos: valorInscricoesSelecionadas,
       valorCompensacao: valorCompensacao,
-      saldoFinal: saldoFinal,
-      valorTotal: valorCompensacao,
-      valorFinal: saldoFinal
+      saldoFinal: saldoFinal
     }
 
     onSelectionChange(dadosSelecionados)

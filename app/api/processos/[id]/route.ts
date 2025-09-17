@@ -4,6 +4,15 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { processoSchema } from '@/lib/validations/processo'
 import { SessionUser } from '@/types'
+import { Decimal } from '@prisma/client/runtime/library'
+
+
+interface ParcelaPrisma {
+  valor: Decimal
+  [key: string]: unknown
+}
+
+type TipoProcesso = 'COMPENSACAO' | 'DACAO_PAGAMENTO' | 'TRANSACAO_EXCEPCIONAL'
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -112,10 +121,32 @@ export async function GET(
       )
     }
     // Buscar históricos separadamente usando query raw
-    let historicos = []
+    let historicos: Array<{
+      id: string;
+      titulo: string;
+      descricao: string;
+      tipo: string;
+      createdAt: Date;
+      usuario: {
+        id: string;
+        name: string;
+        email: string;
+        role: string;
+      };
+    }> = []
     try {
-      historicos = await prisma.$queryRaw`
-        SELECT 
+      const rawHistoricos = await prisma.$queryRaw<Array<{
+        id: string;
+        titulo: string;
+        descricao: string;
+        tipo: string;
+        createdAt: Date;
+        userId: string;
+        userName: string;
+        userEmail: string;
+        userRole: string;
+      }>>`
+        SELECT
           hp.id,
           hp.titulo,
           hp.descricao,
@@ -123,14 +154,14 @@ export async function GET(
           hp."createdAt",
           u.id as "userId",
           u.name as "userName",
-          u.email as "userEmail", 
+          u.email as "userEmail",
           u.role as "userRole"
         FROM "HistoricoProcesso" hp
         LEFT JOIN "User" u ON u.id = hp."usuarioId"
         WHERE hp."processoId" = ${id}
         ORDER BY hp."createdAt" DESC
       `
-      historicos = historicos.map(h => ({
+      historicos = rawHistoricos.map(h => ({
         id: h.id,
         titulo: h.titulo,
         descricao: h.descricao,
@@ -211,10 +242,10 @@ export async function GET(
       ...processo,
       historicos,
       valoresEspecificos,
-      acordo: processo.acordo ? {
-        ...processo.acordo,
-        valorTotal: Number(processo.acordo.valorTotal),
-        parcelas: processo.acordo.parcelas.map(parcela => ({
+      acordo: processo.acordos && processo.acordos[0] ? {
+        ...processo.acordos[0],
+        valorTotal: Number(processo.acordos[0].valorTotal),
+        parcelas: processo.acordos[0].parcelas.map((parcela: ParcelaPrisma) => ({
           ...parcela,
           valor: Number(parcela.valor)
         }))
@@ -302,6 +333,7 @@ export async function PUT(
       where: { id },
       data: {
         ...processoData,
+        tipo: processoData.tipo as TipoProcesso,
         updatedAt: new Date()
       },
       include: {

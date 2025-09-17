@@ -17,6 +17,206 @@ import TransacaoExcepcionalAcordoSection from '@/components/acordo/transacao-exc
 import CompensacaoSection from '@/components/acordo/compensacao-section'
 import DacaoSection from '@/components/acordo/dacao-section'
 
+// Importar tipos dos componentes específicos
+type ValoresTransacao = {
+  inscricoes: Array<{
+    id: string
+    numeroInscricao: string
+    tipoInscricao: string
+    debitos: Array<{
+      id: string
+      descricao: string
+      valor: number
+      dataVencimento: string
+      valorOriginal?: number
+    }>
+    selecionada?: boolean
+    debitosSelecionados?: string[]
+  }>
+  proposta: {
+    valorTotalProposto: number
+    metodoPagamento: string
+    valorEntrada: number
+    quantidadeParcelas: number
+  }
+  resumo: {
+    valorTotalInscricoes: number
+    valorTotalProposto: number
+    valorDesconto: number
+    percentualDesconto: number
+  }
+}
+
+type ValoresCompensacao = {
+  creditos: Array<{
+    id: string
+    tipo: string
+    numero: string
+    valor: number
+    dataVencimento?: string
+    descricao?: string
+  }>
+  inscricoes: Array<{
+    id: string
+    numeroInscricao: string
+    tipoInscricao: string
+    debitos: Array<{
+      descricao: string
+      valor: number
+      dataVencimento: string
+    }>
+  }>
+}
+
+type ValoresDacao = {
+  inscricoesOferecidas: Array<{
+    id: string
+    numeroInscricao: string
+    tipoInscricao: string
+    valor: number
+    dataVencimento?: string
+    descricao?: string
+  }>
+  inscricoesCompensar: Array<{
+    id: string
+    numeroInscricao: string
+    tipoInscricao: string
+    debitos: Array<{
+      descricao: string
+      valor: number
+      dataVencimento: string
+    }>
+  }>
+}
+
+interface ProcessoElegivel {
+  id: string
+  numero: string
+  tipo: string
+  valor: number
+  status: string
+  tipoDecisao?: string
+  contribuinte: {
+    id: string
+    nome: string
+    documento: string
+    email: string
+  }
+  acordos?: Array<{
+    status: string
+  }>
+  valoresEspecificos?: {
+    configurado: boolean
+    valorOriginal: number
+    valorFinal: number
+    detalhes?: ValoresTransacaoForm | ValoresCompensacaoForm
+  }
+}
+
+interface AcordoExistente {
+  status: string
+}
+
+interface CreditoData {
+  tipo: string
+  numero: string
+  valor: number
+  dataVencimento?: string
+  descricao?: string
+}
+
+interface DebitoData {
+  descricao: string
+  valor: number
+  dataVencimento: string
+}
+
+interface InscricaoData {
+  numeroInscricao: string
+  tipoInscricao: string
+  debitos?: DebitoData[]
+}
+
+interface ImovelData {
+  valorAvaliacao?: number
+  descricao?: string
+}
+
+interface ValoresTransacaoForm {
+  inscricoes: InscricaoData[]
+  proposta: {
+    valorTotalProposto: number
+    metodoPagamento: string
+    valorEntrada: number
+    quantidadeParcelas: number
+  }
+  resumo?: {
+    valorTotalInscricoes: number
+    valorTotalProposto: number
+  }
+}
+
+interface ValoresCompensacaoForm {
+  creditos: CreditoData[]
+  inscricoes: InscricaoData[]
+}
+
+interface PropostaFinal {
+  valorTotalProposto: number
+  metodoPagamento?: string
+  valorEntrada?: number
+  quantidadeParcelas?: number
+}
+
+interface ValoresDacaoForm {
+  inscricoesOferecidas: InscricaoData[]
+  inscricoesCompensar: InscricaoData[]
+}
+
+interface DecisaoResponse {
+  tipoDecisao: string
+  [key: string]: unknown
+}
+
+interface DadosSelecionadosTransacao {
+  valorTotal: number
+  valorFinal: number
+  metodoPagamento?: string
+  numeroParcelas?: number
+  [key: string]: unknown
+}
+
+interface DadosSelecionadosCompensacao {
+  valorTotal: number
+  valorFinal: number
+  [key: string]: unknown
+}
+
+interface DadosSelecionadosDacao {
+  valorTotal: number
+  valorFinal: number
+  [key: string]: unknown
+}
+
+interface DadosEspecificos {
+  valorInscricoes?: number
+  propostaFinal?: PropostaFinal
+  creditos?: CreditoData[]
+  inscricoes?: InscricaoData[]
+  inscricoesOferecidas?: InscricaoData[]
+  inscricoesCompensar?: InscricaoData[]
+  imoveis?: ImovelData[]
+  valorCreditos?: number
+  valorDebitos?: number
+  valorCompensacao?: number
+  valorCompensar?: number
+  valorDacao?: number
+  observacoesAcordo?: string
+}
+
+
+
+
 interface AcordoFormProps {
   onSuccess?: () => void
   processoId?: string
@@ -38,7 +238,7 @@ interface Processo {
     configurado: boolean
     valorOriginal: number
     valorFinal: number
-    detalhes?: Record<string, unknown>
+    detalhes?: ValoresTransacaoForm | ValoresCompensacaoForm | ValoresDacaoForm
   }
 }
 
@@ -51,7 +251,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
   const [processos, setProcessos] = useState<Processo[]>([])
   const [selectedProcesso, setSelectedProcesso] = useState<Processo | null>(null)
   const [searchProcesso, setSearchProcesso] = useState('')
-  const [dadosEspecificos, setDadosEspecificos] = useState<Record<string, unknown> | null>(null)
+  const [dadosEspecificos, setDadosEspecificos] = useState<DadosEspecificos | null>(null)
 
   const {
     register,
@@ -74,7 +274,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
       const response = await fetch(`/api/processos/${processoId}/decisoes`)
       if (response.ok) {
         const data = await response.json()
-        const decisaoDeferida = data.decisoes?.find((decisao: Record<string, unknown>) =>
+        const decisaoDeferida = data.decisoes?.find((decisao: DecisaoResponse) =>
           ['DEFERIDO', 'PARCIAL'].includes(decisao.tipoDecisao)
         )
         return decisaoDeferida ? decisaoDeferida.tipoDecisao : null
@@ -107,9 +307,10 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
       if (valoresResponse && valoresResponse.ok) {
         const valoresData = await valoresResponse.json()
         processo.valoresEspecificos = {
+          valorOriginal: 0,
+          valorFinal: 0,
           configurado: true,
-          detalhes: valoresData,
-          tipo: processo.tipo
+          detalhes: valoresData
         }
       }
 
@@ -131,10 +332,10 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
 
           // Filtrar processos elegíveis
           const processosElegiveis = await Promise.all(
-            (data.processos || []).map(async (processo) => {
+            (data.processos || []).map(async (processo: ProcessoElegivel) => {
               // Verificar se já tem acordo
               // Verificar se já tem acordo ativo
-              if (processo.acordos && processo.acordos.some(acordo => acordo.status === 'ativo')) {
+              if (processo.acordos && processo.acordos.some((acordo: AcordoExistente) => acordo.status === 'ativo')) {
                 return null
               }
 
@@ -198,16 +399,16 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                 valorOriginal = processo.valoresEspecificos.transacao.valorTotalInscricoes
                 valorFinal = processo.valoresEspecificos.transacao.valorTotalProposto
               } else if (processo.tipo === 'COMPENSACAO' && processo.valoresEspecificos.creditos && processo.valoresEspecificos.inscricoes) {
-                const totalCreditos = processo.valoresEspecificos.creditos.reduce((total, credito) => total + credito.valor, 0)
-                const totalDebitos = processo.valoresEspecificos.inscricoes.reduce((total, inscricao) =>
-                  total + (inscricao.debitos?.reduce((subtotal, debito) => subtotal + debito.valor, 0) || 0), 0
+                const totalCreditos = processo.valoresEspecificos.creditos.reduce((total: number, credito: CreditoData) => total + credito.valor, 0)
+                const totalDebitos = processo.valoresEspecificos.inscricoes.reduce((total: number, inscricao: InscricaoData) =>
+                  total + (inscricao.debitos?.reduce((subtotal: number, debito: DebitoData) => subtotal + debito.valor, 0) || 0), 0
                 )
                 valorOriginal = Math.max(totalCreditos, totalDebitos)
                 valorFinal = Math.min(totalCreditos, totalDebitos) // O que será pago é o menor valor (compensação)
               } else if (processo.tipo === 'DACAO_PAGAMENTO' && processo.valoresEspecificos.imoveis && processo.valoresEspecificos.inscricoes) {
-                const totalImoveis = processo.valoresEspecificos.imoveis.reduce((total, imovel) => total + (imovel.valorAvaliacao || 0), 0)
-                const totalDebitos = processo.valoresEspecificos.inscricoes.reduce((total, inscricao) =>
-                  total + (inscricao.debitos?.reduce((subtotal, debito) => subtotal + debito.valor, 0) || 0), 0
+                const totalImoveis = processo.valoresEspecificos.imoveis.reduce((total: number, imovel: ImovelData) => total + (imovel.valorAvaliacao || 0), 0)
+                const totalDebitos = processo.valoresEspecificos.inscricoes.reduce((total: number, inscricao: InscricaoData) =>
+                  total + (inscricao.debitos?.reduce((subtotal: number, debito: DebitoData) => subtotal + debito.valor, 0) || 0), 0
                 )
                 valorOriginal = totalDebitos
                 valorFinal = Math.min(totalImoveis, totalDebitos) // O que será quitado com dação
@@ -274,7 +475,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
           ...data,
           valorTotal: dadosEspecificos.valorInscricoes, // Valor original das inscrições
           valorFinal: dadosEspecificos.propostaFinal?.valorTotalProposto || data.valorTotal,
-          valorDesconto: dadosEspecificos.valorInscricoes - (dadosEspecificos.propostaFinal?.valorTotalProposto || data.valorTotal),
+          valorDesconto: Number(dadosEspecificos.valorInscricoes) - (dadosEspecificos.propostaFinal?.valorTotalProposto || data.valorTotal),
           dadosEspecificos
         }
       } else {
@@ -522,11 +723,11 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
           <CardContent>
             {selectedProcesso.valoresEspecificos?.detalhes ? (
               <TransacaoExcepcionalAcordoSection
-                valoresTransacao={selectedProcesso.valoresEspecificos.detalhes}
-                onSelectionChange={(dadosSelecionados) => {
+                valoresTransacao={selectedProcesso.valoresEspecificos.detalhes as ValoresTransacao}
+                onSelectionChange={(dadosSelecionados: DadosSelecionadosTransacao) => {
                   // Atualizar valores do formulário baseado na seleção
-                  setValue('valorTotal', dadosSelecionados.valorTotal)
-                  setValue('valorFinal', dadosSelecionados.valorFinal)
+                  setValue('valorTotal', dadosSelecionados.valorTotal as number)
+                  setValue('valorFinal', dadosSelecionados.valorFinal as number)
 
                   // Configurar modalidade de pagamento baseada na proposta
                   if (dadosSelecionados.metodoPagamento) {
@@ -536,11 +737,11 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
 
                   // Configurar número de parcelas
                   if (dadosSelecionados.numeroParcelas) {
-                    setValue('numeroParcelas', dadosSelecionados.numeroParcelas)
+                    setValue('numeroParcelas', Number(dadosSelecionados.numeroParcelas))
                   }
 
                   // Capturar dados específicos
-                  setDadosEspecificos(dadosSelecionados)
+                  setDadosEspecificos(dadosSelecionados as DadosEspecificos)
                 }}
               />
             ) : (
@@ -573,13 +774,13 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
           <CardContent>
             {selectedProcesso.valoresEspecificos?.detalhes ? (
               <CompensacaoSection
-                valoresCompensacao={selectedProcesso.valoresEspecificos.detalhes}
-                onSelectionChange={(dadosSelecionados) => {
+                valoresCompensacao={selectedProcesso.valoresEspecificos.detalhes as ValoresCompensacao}
+                onSelectionChange={(dadosSelecionados: DadosSelecionadosCompensacao) => {
                   // Atualizar valores do formulário baseado na seleção
-                  setValue('valorTotal', dadosSelecionados.valorTotal)
-                  setValue('valorFinal', dadosSelecionados.valorFinal)
+                  setValue('valorTotal', dadosSelecionados.valorTotal as number)
+                  setValue('valorFinal', dadosSelecionados.valorFinal as number)
                   // Capturar dados específicos
-                  setDadosEspecificos(dadosSelecionados)
+                  setDadosEspecificos(dadosSelecionados as DadosEspecificos)
                 }}
               />
             ) : (
@@ -612,13 +813,13 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
           <CardContent>
             {selectedProcesso.valoresEspecificos?.detalhes ? (
               <DacaoSection
-                valoresDacao={selectedProcesso.valoresEspecificos.detalhes}
-                onSelectionChange={(dadosSelecionados) => {
+                valoresDacao={selectedProcesso.valoresEspecificos.detalhes as ValoresDacao}
+                onSelectionChange={(dadosSelecionados: DadosSelecionadosDacao) => {
                   // Atualizar valores do formulário baseado na seleção
-                  setValue('valorTotal', dadosSelecionados.valorTotal)
-                  setValue('valorFinal', dadosSelecionados.valorFinal)
+                  setValue('valorTotal', dadosSelecionados.valorTotal as number)
+                  setValue('valorFinal', dadosSelecionados.valorFinal as number)
                   // Capturar dados específicos
-                  setDadosEspecificos(dadosSelecionados)
+                  setDadosEspecificos(dadosSelecionados as DadosEspecificos)
                 }}
               />
             ) : (
@@ -700,7 +901,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                   <RadioGroup
                     value={modalidadePagamento}
                     onValueChange={(value) => {
-                      setValue('modalidadePagamento', value)
+                      setValue('modalidadePagamento', value as 'avista' | 'parcelado')
                       // Se mudar para à vista, definir parcelas como 1
                       if (value === 'avista') {
                         setValue('numeroParcelas', 1)

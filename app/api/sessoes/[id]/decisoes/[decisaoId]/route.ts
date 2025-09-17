@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
 import { SessionUser } from '@/types'
+
+type StatusProcesso = 'RECEPCIONADO' | 'EM_ANALISE' | 'AGUARDANDO_DOCUMENTOS' | 'EM_PAUTA' | 'JULGADO' | 'ACORDO_FIRMADO' | 'EM_CUMPRIMENTO' | 'FINALIZADO' | 'ARQUIVADO' | 'SUSPENSO' | 'PEDIDO_VISTA' | 'PEDIDO_DILIGENCIA'
 // Funções auxiliares para histórico
 function getTituloHistoricoDecisao(tipoResultado: string): string {
   switch (tipoResultado) {
@@ -34,7 +36,7 @@ function getDescricaoHistoricoDecisao(data: Record<string, unknown>): string {
       if (data.definirAcordo) {
         descJulgado += ` (Acordo Firmado)`
       }
-      if (data.votos && data.votos.length > 0) {
+      if (data.votos && Array.isArray(data.votos) && data.votos.length > 0) {
         descJulgado += `. Votação registrada com ${data.votos.length} voto(s)`
       }
       return descJulgado
@@ -54,8 +56,8 @@ const votoSchema = z.object({
 })
 const atualizarDecisaoSchema = z.object({
   processoId: z.string().min(1, 'Processo é obrigatório'),
-  tipoResultado: z.enum(['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO'], {
-    required_error: 'Tipo de resultado é obrigatório'
+  tipoResultado: z.enum(['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO']).refine(val => ['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO'].includes(val), {
+    message: 'Tipo de resultado é obrigatório'
   }),
   // Para JULGADO
   tipoDecisao: z.enum(['DEFERIDO', 'INDEFERIDO', 'PARCIAL']).optional(),
@@ -154,6 +156,12 @@ export async function PUT(
       )
     }
     // Verificar se a sessão está ativa
+    if (!decisaoExistente.sessao) {
+      return NextResponse.json(
+        { error: 'Sessão não encontrada' },
+        { status: 404 }
+      )
+    }
     if (decisaoExistente.sessao.dataFim) {
       return NextResponse.json(
         { error: 'Não é possível atualizar decisões de sessões finalizadas' },
@@ -251,7 +259,7 @@ export async function PUT(
         }
       })
       // Atualizar status do processo baseado no resultado
-      let novoStatusProcesso: string
+      let novoStatusProcesso: StatusProcesso
       switch (data.tipoResultado) {
         case 'SUSPENSO':
           novoStatusProcesso = 'SUSPENSO'
@@ -274,7 +282,7 @@ export async function PUT(
       }
       await tx.processo.update({
         where: { id: data.processoId },
-        data: { status: novoStatusProcesso as string }
+        data: { status: novoStatusProcesso }
       })
       // Remover histórico anterior relacionado a esta decisão
       await tx.historicoProcesso.deleteMany({
@@ -388,6 +396,12 @@ export async function DELETE(
       )
     }
     // Verificar se a sessão está ativa
+    if (!decisaoExistente.sessao) {
+      return NextResponse.json(
+        { error: 'Sessão não encontrada' },
+        { status: 404 }
+      )
+    }
     if (decisaoExistente.sessao.dataFim) {
       return NextResponse.json(
         { error: 'Não é possível excluir decisões de sessões finalizadas' },
@@ -432,7 +446,7 @@ export async function DELETE(
       // Resetar status do processo para EM_PAUTA
       await tx.processo.update({
         where: { id: decisaoExistente.processoId },
-        data: { status: 'EM_PAUTA' as string }
+        data: { status: 'EM_PAUTA' }
       })
       // Remover histórico relacionado a esta decisão
       await tx.historicoProcesso.deleteMany({

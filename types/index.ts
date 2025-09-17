@@ -11,10 +11,11 @@ export type ProcessoWithRelations = Processo & {
     parcelas: Parcela[]
     detalhes?: Record<string, unknown>[]
   }
-  decisoes?: Record<string, unknown>[]
-  acordos?: Record<string, unknown>[]
-  documentos?: Record<string, unknown>[]
-  pautas?: Record<string, unknown>[]
+  decisoes?: ProcessoDecisao[]
+  acordos?: ProcessoAcordo[]
+  documentos?: ProcessoDocumento[]
+  pautas?: ProcessoPautaWithDetails[]
+  historicos?: ProcessoHistorico[]
   imoveis?: Record<string, unknown>[]
   creditos?: Record<string, unknown>[]
   valoresEspecificos?: {
@@ -211,4 +212,116 @@ export interface TramitacaoUpdateData {
   observacoes?: string
   dataRecebimento?: Date
   updatedAt?: Date
+}
+
+// Tipos específicos para evitar Record<string, unknown>
+export interface ProcessoDecisao {
+  id: string
+  tipoResultado: 'JULGADO' | 'SUSPENSO' | 'PEDIDO_VISTA' | 'PEDIDO_DILIGENCIA'
+  tipoDecisao?: 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL'
+  dataDecisao: string
+  definirAcordo?: boolean
+  tipoAcordo?: string
+  sessao?: {
+    id: string
+    pauta?: {
+      id: string
+      numero: string
+      dataPauta: string
+    }
+    presidente?: {
+      id: string
+      nome: string
+    }
+  }
+  votos?: ProcessoVoto[]
+}
+
+export interface ProcessoVoto {
+  id: string
+  tipoVoto: 'RELATOR' | 'REVISOR' | 'CONSELHEIRO'
+  posicaoVoto: 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL' | 'ABSTENCAO' | 'AUSENTE' | 'IMPEDIDO'
+  nomeVotante: string
+  conselheiroId?: string
+  acompanhaVoto?: string
+}
+
+export interface ProcessoAcordo {
+  id: string
+  numeroTermo: string
+  status: 'ativo' | 'cancelado' | 'cumprido' | 'vencido'
+  dataAssinatura: string
+  dataVencimento: string
+  modalidadePagamento: 'avista' | 'parcelado'
+  numeroParcelas: number
+  valorFinal: number
+  parcelas: ProcessoParcela[]
+}
+
+export interface ProcessoParcela {
+  id: string
+  numero: number
+  valor: number
+  dataVencimento: string
+  status: 'PENDENTE' | 'PAGA' | 'VENCIDA' | 'CANCELADA'
+  pagamentos?: ProcessoPagamento[]
+}
+
+export interface ProcessoPagamento {
+  id: string
+  valorPago: number
+  dataPagamento: string
+}
+
+export interface ProcessoDocumento {
+  id: string
+  nome: string
+  tipo: string
+  url: string
+  tamanho: number
+  createdAt: string
+}
+
+export interface ProcessoPautaWithDetails {
+  id: string
+  ordem: number
+  relator?: string
+  revisores?: string[]
+  distribuidoPara?: string
+  ataTexto?: string
+  pauta: {
+    id: string
+    numero: string
+    dataPauta: string
+  }
+}
+
+export interface ProcessoHistorico {
+  id: string
+  tipo: 'EVENTO' | 'OBSERVACAO' | 'ALTERACAO' | 'COMUNICACAO' | 'DECISAO' | 'SISTEMA' | 'PAUTA' | 'REPAUTAMENTO' | 'TRAMITACAO' | 'TRAMITACAO_ENTREGUE' | 'ACORDO'
+  titulo: string
+  descricao: string
+  createdAt: string
+  usuario: {
+    name: string
+  }
+}
+
+export interface AcordoDetalhe {
+  id: string
+  tipo: string
+  descricao: string
+  valorOriginal: number
+  valorNegociado: number
+  status: string
+  dataExecucao?: string
+  observacoes?: string
+  inscricoes?: Array<{
+    id: string
+    numeroInscricao: string
+    tipoInscricao: string
+    valorDebito: number
+    valorAbatido: number
+    situacao: string
+  }>
 }

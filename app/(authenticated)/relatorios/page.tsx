@@ -155,8 +155,10 @@ export default async function RelatoriosPage() {
     return colors[status] || 'bg-gray-100 text-gray-800'
   }
 
-  const percentualRecebido = dashboardData.valores.totalAcordos > 0 
-    ? Math.round((dashboardData.valores.recebido / dashboardData.valores.totalAcordos) * 100)
+  const totalAcordos = Number(dashboardData.valores.totalAcordos)
+  const recebido = Number(dashboardData.valores.recebido)
+  const percentualRecebido = totalAcordos > 0
+    ? Math.round((recebido / totalAcordos) * 100)
     : 0
 
   return (
@@ -325,7 +327,7 @@ export default async function RelatoriosPage() {
             <div className="text-center">
               <p className="text-sm text-gray-600">Valor Pendente</p>
               <p className="text-2xl font-bold text-yellow-600">
-                R$ {(dashboardData.valores.totalAcordos - dashboardData.valores.recebido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {(totalAcordos - recebido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
           </div>

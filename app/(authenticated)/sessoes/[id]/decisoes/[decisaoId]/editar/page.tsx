@@ -13,6 +13,7 @@ interface EditarDecisaoPageProps {
   params: Promise<{ id: string; decisaoId: string }>
 }
 
+
 export default async function EditarDecisaoPage({ params }: EditarDecisaoPageProps) {
   const { id, decisaoId } = await params
   const session = await getServerSession(authOptions)
@@ -77,14 +78,14 @@ export default async function EditarDecisaoPage({ params }: EditarDecisaoPagePro
   }
 
   // Verificar se a sessão está ativa
-  const isActive = !decisao.sessao.dataFim
+  const isActive = !decisao.sessao?.dataFim
 
   if (!isActive) {
     redirect(`/sessoes/${id}`)
   }
 
   // Buscar o processo na pauta para obter relator e revisores
-  const processoNaPauta = decisao.sessao.pauta.processos.find(
+  const processoNaPauta = decisao.sessao?.pauta.processos.find(
     p => p.processo.id === decisao.processoId
   )
 
@@ -128,13 +129,27 @@ export default async function EditarDecisaoPage({ params }: EditarDecisaoPagePro
             }}
             processo={processoNaPauta ? {
               ...processoNaPauta,
+              relator: processoNaPauta.relator || '',
+              ataTexto: processoNaPauta.ataTexto || undefined,
               processo: {
-                ...decisao.processo,
-                contribuinte: decisao.processo.contribuinte
+                ...processoNaPauta.processo,
+                valorOriginal: 0,
+                contribuinte: {
+                  ...processoNaPauta.processo.contribuinte,
+                  email: processoNaPauta.processo.contribuinte.email || undefined
+                }
               }
             } : null}
-            conselheiros={decisao.sessao.conselheiros}
-            presidente={decisao.sessao.presidente}
+            conselheiros={decisao.sessao?.conselheiros?.map(c => ({
+              ...c,
+              email: c.email || undefined,
+              cargo: c.cargo || undefined
+            })) || []}
+            presidente={decisao.sessao?.presidente ? {
+              ...decisao.sessao.presidente,
+              email: decisao.sessao.presidente.email || undefined,
+              cargo: decisao.sessao.presidente.cargo || undefined
+            } : null}
           />
         </CardContent>
       </Card>

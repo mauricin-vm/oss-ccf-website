@@ -340,8 +340,8 @@ export default function ProcessosPage() {
                       <Badge className={tipoProcessoMap[processo.tipo].color}>
                         {tipoProcessoMap[processo.tipo].label}
                       </Badge>
-                      <Badge className={statusMap[processo.status].color}>
-                        {statusMap[processo.status].label}
+                      <Badge className={statusMap[processo.status as keyof typeof statusMap]?.color || 'bg-gray-100 text-gray-800'}>
+                        {statusMap[processo.status as keyof typeof statusMap]?.label || processo.status}
                       </Badge>
                     </div>
                     

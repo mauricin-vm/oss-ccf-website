@@ -197,7 +197,7 @@ export default function AnexarDocumentoModal({
       // Simular evento de input
       const mockEvent = {
         target: { files }
-      } as React.ChangeEvent<HTMLInputElement>
+      } as unknown as React.ChangeEvent<HTMLInputElement>
       handleFileSelect(mockEvent)
     }
   }
