@@ -239,6 +239,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
               })
             })
           }
+
         }
       } catch (error) {
         console.error('Erro ao carregar valores existentes:', error)
@@ -299,7 +300,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
     setCreditoForm({
       tipo: credito.tipo,
       numero: credito.numero,
-      valor: credito.valor?.toString() || '',
+      valor: credito.valor ? credito.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
       dataVencimento: credito.dataVencimento || '',
       descricao: credito.descricao || ''
     })
@@ -324,7 +325,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
       tipoInscricao: inscricao.tipoInscricao,
       debitos: inscricao.debitos?.map(d => ({
         descricao: d.descricao,
-        valor: d.valor?.toString() || '',
+        valor: d.valor ? d.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
         dataVencimento: d.dataVencimento || ''
       })) || [{ descricao: '', valor: '', dataVencimento: '' }]
     })

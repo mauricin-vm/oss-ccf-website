@@ -19,6 +19,8 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { SessionUser } from '@/types'
+import { getStatusInfo } from '@/lib/constants/status'
+import { getTipoProcessoInfo } from '@/lib/constants/tipos-processo'
 
 interface Processo {
   id: string
@@ -117,24 +119,7 @@ export default function ProcessosPage() {
     return searchMatch && statusMatch && tipoMatch
   })
 
-  const tipoProcessoMap = {
-    COMPENSACAO: { label: 'Compensação', color: 'bg-blue-100 text-blue-800' },
-    DACAO_PAGAMENTO: { label: 'Dação em Pagamento', color: 'bg-purple-100 text-purple-800' },
-    TRANSACAO_EXCEPCIONAL: { label: 'Transação Excepcional', color: 'bg-orange-100 text-orange-800' }
-  }
 
-  const statusMap = {
-    RECEPCIONADO: { label: 'Recepcionado', color: 'bg-gray-100 text-gray-800' },
-    EM_ANALISE: { label: 'Em Análise', color: 'bg-blue-100 text-blue-800' },
-    EM_PAUTA: { label: 'Em Pauta', color: 'bg-purple-100 text-purple-800' },
-    SUSPENSO: { label: 'Suspenso', color: 'bg-yellow-100 text-yellow-800' },
-    PEDIDO_VISTA: { label: 'Pedido de Vista', color: 'bg-orange-100 text-orange-800' },
-    PEDIDO_DILIGENCIA: { label: 'Pedido de Diligência', color: 'bg-red-100 text-red-800' },
-    JULGADO: { label: 'Julgado', color: 'bg-indigo-100 text-indigo-800' },
-    ACORDO_FIRMADO: { label: 'Acordo Firmado', color: 'bg-green-100 text-green-800' },
-    EM_CUMPRIMENTO: { label: 'Em Cumprimento', color: 'bg-orange-100 text-orange-800' },
-    ARQUIVADO: { label: 'Arquivado', color: 'bg-gray-100 text-gray-800' }
-  }
 
   const canCreate = user?.role === 'ADMIN' || user?.role === 'FUNCIONARIO'
 
@@ -337,11 +322,11 @@ export default function ProcessosPage() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold text-lg">{processo.numero}</h3>
-                      <Badge className={tipoProcessoMap[processo.tipo].color}>
-                        {tipoProcessoMap[processo.tipo].label}
+                      <Badge className={getTipoProcessoInfo(processo.tipo).color}>
+                        {getTipoProcessoInfo(processo.tipo).label}
                       </Badge>
-                      <Badge className={statusMap[processo.status as keyof typeof statusMap]?.color || 'bg-gray-100 text-gray-800'}>
-                        {statusMap[processo.status as keyof typeof statusMap]?.label || processo.status}
+                      <Badge className={getStatusInfo(processo.status).color}>
+                        {getStatusInfo(processo.status).label}
                       </Badge>
                     </div>
                     

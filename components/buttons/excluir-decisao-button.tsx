@@ -24,12 +24,10 @@ export default function ExcluirDecisaoButton({
     setIsDeleting(true)
 
     try {
-      console.log(`Excluindo decisão: /api/sessoes/${sessaoId}/decisoes/${decisaoId}`)
       const response = await fetch(`/api/sessoes/${sessaoId}/decisoes/${decisaoId}`, {
         method: 'DELETE'
       })
 
-      console.log('Response status:', response.status)
 
       if (response.ok) {
         toast.success('Decisão excluída com sucesso!')
@@ -40,7 +38,6 @@ export default function ExcluirDecisaoButton({
         }
       } else {
         const errorData = await response.json()
-        console.log('Erro da API:', errorData)
         toast.error('Erro ao excluir decisão: ' + errorData.error)
       }
     } catch (error) {

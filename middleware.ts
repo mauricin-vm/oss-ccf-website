@@ -35,7 +35,7 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token }) => {
-        // Permite acesso se há token válido
+        // Simplesmente verifica se há token
         return !!token
       }
     }
@@ -44,6 +44,7 @@ export default withAuth(
 
 export const config = {
   matcher: [
+    // Protege apenas rotas específicas para evitar loop
     '/dashboard/:path*',
     '/admin/:path*',
     '/processos/:path*',

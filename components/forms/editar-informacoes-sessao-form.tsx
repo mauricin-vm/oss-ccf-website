@@ -113,7 +113,7 @@ export default function EditarInformacoesSessaoForm({
         body: JSON.stringify({
           numeroAta: data.numeroAta,
           presidenteId: data.presidenteId === '' ? null : data.presidenteId,
-          dataInicio: new Date(`${data.dataInicio}T${data.horario}:00.000Z`)
+          dataInicio: new Date(`${data.dataInicio}T${data.horario}:00.000`)
         })
       })
 

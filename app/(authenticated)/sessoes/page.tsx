@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { SessionUser } from '@/types'
+import { getResultadoBadge } from '@/lib/constants/status'
 
 interface Sessao {
   id: string
@@ -42,7 +43,7 @@ interface Sessao {
   }
   decisoes: Array<{
     id: string
-    tipoResultado: 'SUSPENSO' | 'PEDIDO_VISTA' | 'PEDIDO_DILIGENCIA' | 'JULGADO'
+    tipoResultado: 'SUSPENSO' | 'PEDIDO_VISTA' | 'PEDIDO_DILIGENCIA' | 'EM_NEGOCIACAO' | 'JULGADO'
     tipoDecisao?: 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL'
     processo: {
       id: string
@@ -407,31 +408,22 @@ export default function SessoesPage() {
                             Últimos Resultados:
                           </h4>
                           <div className="space-y-1">
-                            {sessao.decisoes.slice(0, 2).map((decisao) => (
-                              <div key={decisao.id} className="text-sm flex items-center justify-between">
-                                <Link 
-                                  href={`/processos/${decisao.processo.id}`}
-                                  className="text-blue-600 hover:text-blue-800"
-                                >
-                                  {decisao.processo.numero}
-                                </Link>
-                                <Badge 
-                                  className={
-                                    decisao.tipoResultado === 'JULGADO' ? 'bg-green-100 text-green-800' :
-                                    decisao.tipoResultado === 'PEDIDO_VISTA' ? 'bg-blue-100 text-blue-800' :
-                                    decisao.tipoResultado === 'PEDIDO_DILIGENCIA' ? 'bg-orange-100 text-orange-800' :
-                                    decisao.tipoResultado === 'SUSPENSO' ? 'bg-gray-100 text-gray-800' :
-                                    'bg-gray-100 text-gray-800'
-                                  }
-                                >
-                                  {decisao.tipoResultado === 'JULGADO' ? 'Julgado' :
-                                   decisao.tipoResultado === 'PEDIDO_VISTA' ? 'Pedido de vista' :
-                                   decisao.tipoResultado === 'PEDIDO_DILIGENCIA' ? 'Pedido de diligência' :
-                                   decisao.tipoResultado === 'SUSPENSO' ? 'Suspenso' :
-                                   'Julgado'}
-                                </Badge>
-                              </div>
-                            ))}
+                            {sessao.decisoes.slice(0, 2).map((decisao) => {
+                              const badge = getResultadoBadge(decisao.tipoResultado, decisao.tipoDecisao)
+                              return (
+                                <div key={decisao.id} className="text-sm flex items-center justify-between">
+                                  <Link
+                                    href={`/processos/${decisao.processo.id}`}
+                                    className="text-blue-600 hover:text-blue-800"
+                                  >
+                                    {decisao.processo.numero}
+                                  </Link>
+                                  <Badge className={badge.color}>
+                                    {badge.label}
+                                  </Badge>
+                                </div>
+                              )
+                            })}
                             {sessao.decisoes.length > 2 && (
                               <div className="text-xs text-gray-500">
                                 ... e mais {sessao.decisoes.length - 2} {sessao.decisoes.length - 2 !== 1 ? 'resultados' : 'resultado'}

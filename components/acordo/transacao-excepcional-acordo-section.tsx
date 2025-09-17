@@ -104,7 +104,8 @@ export default function TransacaoExcepcionalAcordoSection({
 
 
     onSelectionChange(dadosAcordo)
-  }, [inscricoesAcordo, propostaFinal, observacoesAcordo, valorTotalInscricoes, onSelectionChange])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inscricoesAcordo, propostaFinal, observacoesAcordo, valorTotalInscricoes])
 
   const openInscricaoModal = () => {
     setEditingInscricao(null)

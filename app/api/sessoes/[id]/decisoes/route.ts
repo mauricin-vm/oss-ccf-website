@@ -5,13 +5,14 @@ import { prisma } from '@/lib/db'
 import { z } from 'zod'
 import { SessionUser } from '@/types'
 
-type StatusProcesso = 'RECEPCIONADO' | 'EM_ANALISE' | 'AGUARDANDO_DOCUMENTOS' | 'EM_PAUTA' | 'JULGADO' | 'ACORDO_FIRMADO' | 'EM_CUMPRIMENTO' | 'FINALIZADO' | 'ARQUIVADO' | 'SUSPENSO' | 'PEDIDO_VISTA' | 'PEDIDO_DILIGENCIA'
+type StatusProcesso = 'RECEPCIONADO' | 'EM_ANALISE' | 'AGUARDANDO_DOCUMENTOS' | 'EM_PAUTA' | 'JULGADO' | 'ACORDO_FIRMADO' | 'EM_CUMPRIMENTO' | 'FINALIZADO' | 'ARQUIVADO' | 'SUSPENSO' | 'PEDIDO_VISTA' | 'PEDIDO_DILIGENCIA' | 'EM_NEGOCIACAO'
 // Funções auxiliares para histórico
 function getTituloHistoricoDecisao(tipoResultado: string): string {
   switch (tipoResultado) {
     case 'SUSPENSO': return 'Processo Suspenso'
     case 'PEDIDO_VISTA': return 'Pedido de Vista'
     case 'PEDIDO_DILIGENCIA': return 'Pedido de Diligência'
+    case 'EM_NEGOCIACAO': return 'Processo em Negociação'
     case 'JULGADO': return 'Processo Julgado'
     default: return 'Decisão Registrada'
   }
@@ -36,6 +37,15 @@ function getDescricaoHistoricoDecisao(data: Record<string, unknown>): string {
         descDiligencia += `\n\nObservação: ${data.observacoes}`
       }
       return descDiligencia
+    case 'EM_NEGOCIACAO':
+      let descNegociacao = (data.ataTexto as string) || 'Texto da ata não informado'
+      if (data.detalhesNegociacao) {
+        descNegociacao += `\n\nDetalhes da Negociação: ${data.detalhesNegociacao}`
+      }
+      if (data.observacoes) {
+        descNegociacao += `\n\nObservação: ${data.observacoes}`
+      }
+      return descNegociacao
     case 'JULGADO':
       let descJulgado = (data.ataTexto as string) || 'Texto da ata não informado'
       if (data.observacoes) {
@@ -58,7 +68,7 @@ const votoSchema = z.object({
 })
 const decisaoSchema = z.object({
   processoId: z.string().min(1, 'Processo é obrigatório'),
-  tipoResultado: z.enum(['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO']).refine(val => ['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO'].includes(val), {
+  tipoResultado: z.enum(['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'EM_NEGOCIACAO', 'JULGADO']).refine(val => ['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'EM_NEGOCIACAO', 'JULGADO'].includes(val), {
     message: 'Tipo de resultado é obrigatório'
   }),
   // Para JULGADO
@@ -67,6 +77,8 @@ const decisaoSchema = z.object({
   observacoes: z.string().optional(),
   // Para SUSPENSO
   motivoSuspensao: z.string().optional(),
+  // Para EM_NEGOCIACAO
+  detalhesNegociacao: z.string().optional(),
   // Para PEDIDO_VISTA
   conselheiroPedidoVista: z.string().optional(),
   prazoVista: z.string().optional(), // ISO date string
@@ -244,6 +256,7 @@ export async function POST(
           tipoDecisao: data.tipoResultado === 'JULGADO' ? (data.tipoDecisao || null) : null,
           observacoes: data.observacoes || '',
           motivoSuspensao: data.motivoSuspensao || null,
+          detalhesNegociacao: data.detalhesNegociacao || null,
           conselheiroPedidoVista: data.conselheiroPedidoVista || null,
           prazoVista: data.prazoVista ? new Date(data.prazoVista) : null,
           especificacaoDiligencia: data.especificacaoDiligencia || null,
@@ -353,6 +366,9 @@ export async function POST(
           break
         case 'PEDIDO_DILIGENCIA':
           novoStatusProcesso = 'PEDIDO_DILIGENCIA'
+          break
+        case 'EM_NEGOCIACAO':
+          novoStatusProcesso = 'EM_NEGOCIACAO'
           break
         case 'JULGADO':
           if (data.definirAcordo) {

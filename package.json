@@ -7,7 +7,7 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:clear": "tsx prisma/clear-database.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

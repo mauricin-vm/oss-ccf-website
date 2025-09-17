@@ -15,11 +15,9 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) {
-            console.log('Credenciais faltando')
             return null
           }
 
-          console.log('Tentando login com:', credentials.email)
 
           const user = await prisma.user.findUnique({
             where: {
@@ -28,12 +26,10 @@ export const authOptions: NextAuthOptions = {
           })
 
           if (!user) {
-            console.log('Usuário não encontrado')
             return null
           }
 
           if (!user.active) {
-            console.log('Usuário inativo')
             return null
           }
 
@@ -43,11 +39,9 @@ export const authOptions: NextAuthOptions = {
           )
 
           if (!isPasswordValid) {
-            console.log('Senha inválida')
             return null
           }
 
-          console.log('Login bem sucedido para:', user.email)
 
           return {
             id: user.id,
@@ -70,7 +64,7 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email
         token.name = user.name
       }
-      
+
       return token
     },
     async session({ session, token }) {
@@ -80,7 +74,7 @@ export const authOptions: NextAuthOptions = {
         session.user.email = token.email as string
         session.user.name = token.name as string
       }
-      
+
       return session
     }
   },

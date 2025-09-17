@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, AlertCircle, Search, Calendar, X, Plus, ChevronUp, ChevronDown } from 'lucide-react'
+import { getStatusInfo } from '@/lib/constants/status'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 
 interface PautaFormProps {
@@ -224,19 +225,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
     TRANSACAO_EXCEPCIONAL: 'Transação Excepcional'
   }
 
-  const statusProcessoWithDataAberturaMap = {
-    RECEPCIONADO: { label: 'Recepcionado', color: 'bg-gray-100 text-gray-800' },
-    EM_ANALISE: { label: 'Em Análise', color: 'bg-blue-100 text-blue-800' },
-    EM_PAUTA: { label: 'Em Pauta', color: 'bg-purple-100 text-purple-800' },
-    SUSPENSO: { label: 'Suspenso', color: 'bg-yellow-100 text-yellow-800' },
-    PEDIDO_VISTA: { label: 'Pedido de vista', color: 'bg-blue-100 text-blue-800' },
-    PEDIDO_DILIGENCIA: { label: 'Pedido de diligência', color: 'bg-orange-100 text-orange-800' },
-    JULGADO: { label: 'Julgado', color: 'bg-indigo-100 text-indigo-800' },
-    ACORDO_FIRMADO: { label: 'Acordo Firmado', color: 'bg-green-100 text-green-800' },
-    EM_CUMPRIMENTO: { label: 'Em Cumprimento', color: 'bg-orange-100 text-orange-800' },
-    ARQUIVADO: { label: 'Arquivado', color: 'bg-gray-100 text-gray-800' },
-    AGUARDANDO_DOCUMENTOS: { label: 'Aguardando Docs', color: 'bg-yellow-100 text-yellow-800' }
-  }
+  // Removido statusProcessoWithDataAberturaMap local - agora usa getStatusInfo das constantes
 
   // Função para obter informações da última pauta
   const getUltimaPautaInfo = (processo: ProcessoWithDataAbertura) => {
@@ -333,7 +322,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
       {/* Seleção de ProcessoWithDataAberturas */}
       <Card>
         <CardHeader>
-          <CardTitle>ProcessoWithDataAberturas para Julgamento</CardTitle>
+          <CardTitle>Processos para Julgamento</CardTitle>
           <CardDescription>
             Adicione os processos que serão julgados nesta pauta
           </CardDescription>
@@ -364,8 +353,8 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <p className="font-medium">{processo.numero}</p>
-                          <Badge className={statusProcessoWithDataAberturaMap[processo.status as keyof typeof statusProcessoWithDataAberturaMap]?.color || 'bg-gray-100 text-gray-800'}>
-                            {statusProcessoWithDataAberturaMap[processo.status as keyof typeof statusProcessoWithDataAberturaMap]?.label || processo.status}
+                          <Badge className={getStatusInfo(processo.status).color}>
+                            {getStatusInfo(processo.status).label}
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-600">{processo.contribuinte.nome}</p>
@@ -410,7 +399,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
           {/* Lista de ProcessoWithDataAberturas Selecionados */}
           {selectedProcessos.length > 0 && (
             <div className="space-y-3">
-              <h4 className="font-medium">ProcessoWithDataAberturas Selecionados ({selectedProcessos.length})</h4>
+              <h4 className="font-medium">Processos Selecionados ({selectedProcessos.length})</h4>
 
               <DragDropContext onDragEnd={onDragEnd}>
                 <Droppable droppableId="processos">
@@ -445,8 +434,8 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-2">
                                     <h5 className="font-medium">{item.processo.numero}</h5>
-                                    <Badge className={statusProcessoWithDataAberturaMap[item.processo.status as keyof typeof statusProcessoWithDataAberturaMap]?.color || 'bg-gray-100 text-gray-800'}>
-                                      {statusProcessoWithDataAberturaMap[item.processo.status as keyof typeof statusProcessoWithDataAberturaMap]?.label || item.processo.status}
+                                    <Badge className={getStatusInfo(item.processo.status).color}>
+                                      {getStatusInfo(item.processo.status).label}
                                     </Badge>
                                   </div>
                                   <p className="text-sm text-gray-600">{item.processo.contribuinte.nome}</p>

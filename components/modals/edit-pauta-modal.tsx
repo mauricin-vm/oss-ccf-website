@@ -84,7 +84,11 @@ export default function EditPautaModal({
         },
         body: JSON.stringify({
           ...data,
-          dataPauta: new Date(data.dataPauta)
+          dataPauta: (() => {
+            // Criar data no timezone local para evitar problemas de UTC
+            const [year, month, day] = data.dataPauta.split('-')
+            return new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+          })()
         })
       })
 

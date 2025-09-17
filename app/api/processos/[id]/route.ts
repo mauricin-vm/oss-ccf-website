@@ -175,7 +175,6 @@ export async function GET(
         }
       }))
     } catch (error) {
-      console.log('Error fetching historicos:', error)
       historicos = []
     }
     // Os valores específicos já estão nas relações creditos e imoveis do processo

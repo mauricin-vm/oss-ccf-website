@@ -22,6 +22,7 @@ import EditarInformacoesSessaoForm from '@/components/forms/editar-informacoes-s
 import AssuntosAdministrativosForm from '@/components/forms/assuntos-administrativos-form'
 import EditarConselheirosForm from '@/components/forms/editar-conselheiros-sessao-form'
 import { formatLocalDate } from '@/lib/utils/date'
+import { getResultadoBadge, getTipoResultadoInfo, getPosicaoVotoInfo, getCardBackground as getCardBackgroundFromConstants } from '@/lib/constants/status'
 
 interface SessaoPageProps {
   params: Promise<{ id: string }>
@@ -180,21 +181,23 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
     const processosJulgados = sessao.decisoes.length
     const percentual = totalProcessos > 0 ? Math.round((processosJulgados / totalProcessos) * 100) : 0
 
-    // Contar processos por categoria
+    // Contar processos por categoria usando as constantes padronizadas
     const contadores = {
       pendentes: 0,
       suspensos: 0,
       diligencias: 0,
       vistas: 0,
+      negociacao: 0,
       julgados: 0
     }
 
     sessao.pauta.processos.forEach(processoPauta => {
       const decisao = sessao.decisoes.find(d => d.processoId === processoPauta.processo.id)
-      
+
       if (!decisao) {
         contadores.pendentes++
       } else {
+        // Usando as constantes para garantir consistência
         switch (decisao.tipoResultado) {
           case 'SUSPENSO':
             contadores.suspensos++
@@ -204,6 +207,9 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
             break
           case 'PEDIDO_VISTA':
             contadores.vistas++
+            break
+          case 'EM_NEGOCIACAO':
+            contadores.negociacao++
             break
           case 'JULGADO':
             contadores.julgados++
@@ -223,51 +229,16 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
     }
   }
 
-  const getResultadoBadge = (decisao: Record<string, unknown>) => {
-    if (!decisao) return null
+  const getResultadoBadgeComponent = (decisao: Record<string, unknown>) => {
+    if (!decisao) return <Badge variant="outline">Aguardando</Badge>
 
-    switch (decisao.tipoResultado) {
-      case 'SUSPENSO':
-        return <Badge className="bg-yellow-100 text-yellow-800">Suspenso</Badge>
-      case 'PEDIDO_VISTA':
-        return <Badge className="bg-blue-100 text-blue-800">Pedido de Vista</Badge>
-      case 'PEDIDO_DILIGENCIA':
-        return <Badge className="bg-orange-100 text-orange-800">Pedido de Diligência</Badge>
-      case 'JULGADO':
-        const tipoDecisao = decisao.tipoDecisao
-        return (
-          <Badge
-            className={
-              tipoDecisao === 'DEFERIDO' ? 'bg-green-100 text-green-800' :
-              tipoDecisao === 'INDEFERIDO' ? 'bg-red-100 text-red-800' :
-              'bg-yellow-100 text-yellow-800'
-            }
-          >
-            {tipoDecisao === 'DEFERIDO' ? 'Deferido' :
-             tipoDecisao === 'INDEFERIDO' ? 'Indeferido' :
-             'Parcial'}
-          </Badge>
-        )
-      default:
-        return <Badge variant="outline">Aguardando</Badge>
-    }
+    const badge = getResultadoBadge(String(decisao.tipoResultado), String(decisao.tipoDecisao))
+    return <Badge className={badge.color}>{badge.label}</Badge>
   }
 
   const getCardBackground = (decisao: DecisaoResultado | null | undefined) => {
     if (!decisao) return 'bg-gray-50'
-
-    switch (decisao.tipoResultado) {
-      case 'SUSPENSO':
-        return 'bg-yellow-50 border-yellow-200'
-      case 'PEDIDO_VISTA':
-        return 'bg-blue-50 border-blue-200'
-      case 'PEDIDO_DILIGENCIA':
-        return 'bg-orange-50 border-orange-200'
-      case 'JULGADO':
-        return 'bg-green-50 border-green-200'
-      default:
-        return 'bg-gray-50'
-    }
+    return getCardBackgroundFromConstants(decisao.tipoResultado)
   }
 
 
@@ -439,22 +410,26 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                 style={{ width: `${progresso.percentual}%` }}
               />
             </div>
-            <div className="grid grid-cols-5 gap-3 text-center">
+            <div className="grid grid-cols-6 gap-3 text-center">
               <div>
-                <p className="text-xl font-bold text-yellow-600">{progresso.contadores.pendentes}</p>
+                <p className="text-xl font-bold text-gray-600">{progresso.contadores.pendentes}</p>
                 <p className="text-xs text-gray-600">Pendentes</p>
               </div>
               <div>
-                <p className="text-xl font-bold text-orange-600">{progresso.contadores.suspensos}</p>
+                <p className="text-xl font-bold text-red-600">{progresso.contadores.suspensos}</p>
                 <p className="text-xs text-gray-600">Suspensos</p>
               </div>
               <div>
-                <p className="text-xl font-bold text-red-600">{progresso.contadores.diligencias}</p>
+                <p className="text-xl font-bold text-purple-600">{progresso.contadores.diligencias}</p>
                 <p className="text-xs text-gray-600">Diligências</p>
               </div>
               <div>
                 <p className="text-xl font-bold text-blue-600">{progresso.contadores.vistas}</p>
                 <p className="text-xs text-gray-600">Vistas</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold text-amber-600">{progresso.contadores.negociacao}</p>
+                <p className="text-xs text-gray-600">Negociação</p>
               </div>
               <div>
                 <p className="text-xl font-bold text-green-600">{progresso.contadores.julgados}</p>
@@ -489,8 +464,8 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                        isJulgado ? 
-                          (decisao.tipoResultado === 'JULGADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800') 
+                        isJulgado ?
+                          getTipoResultadoInfo(decisao.tipoResultado).color
                           : 'bg-blue-100 text-blue-800'
                         }`}>
                         {processoPauta.ordem}
@@ -519,7 +494,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                     <div className="text-right space-y-2">
                       {isJulgado ? (
                         <div className="space-y-2">
-                          {getResultadoBadge(decisao)}
+                          {getResultadoBadgeComponent(decisao)}
                           {canEdit && isActive && (
                             <div className="flex items-center justify-end gap-2">
                               <Link
@@ -582,10 +557,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                                           </div>
                                           <span className={`font-medium text-xs ${
                                             voto.acompanhaVoto ? 'text-blue-600' :
-                                            voto.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
-                                            voto.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
-                                            voto.posicaoVoto === 'PARCIAL' ? 'text-yellow-600' :
-                                            'text-blue-600'
+                                            getPosicaoVotoInfo(voto.posicaoVoto || '').color
                                           }`}>
                                             {voto.acompanhaVoto
                                               ? `Acomp. ${voto.acompanhaVoto?.split(' ')[0]}`
@@ -611,11 +583,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
 
                                     return (
                                       <div key={posicao} className="text-xs">
-                                        <span className={`font-medium ${
-                                          posicao === 'DEFERIDO' ? 'text-green-600' :
-                                          posicao === 'INDEFERIDO' ? 'text-red-600' :
-                                          'text-yellow-600'
-                                        }`}>
+                                        <span className={`font-medium ${getPosicaoVotoInfo(posicao).color}`}>
                                           {posicao}:
                                         </span>
                                         <span className="ml-1 text-gray-700">
@@ -672,15 +640,10 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                                 <span className="truncate font-medium">{sessao.presidente.nome}</span>
                               </div>
                               <span className={`font-medium text-xs ${
-                                decisao.votos.find((voto: Record<string, unknown>) =>
+                                getPosicaoVotoInfo(String(decisao.votos.find((voto: Record<string, unknown>) =>
                                   voto.conselheiroId === sessao.presidente?.id ||
                                   voto.nomeVotante === sessao.presidente?.nome
-                                )?.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
-                                decisao.votos.find((voto: Record<string, unknown>) =>
-                                  voto.conselheiroId === sessao.presidente?.id ||
-                                  voto.nomeVotante === sessao.presidente?.nome
-                                )?.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
-                                'text-yellow-600'
+                                )?.posicaoVoto || '')).color
                               }`}>
                                 {decisao.votos.find((voto: Record<string, unknown>) =>
                                   voto.conselheiroId === sessao.presidente?.id ||

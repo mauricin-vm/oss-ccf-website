@@ -22,6 +22,7 @@ import {
 import Link from 'next/link'
 import { SessionUser } from '@/types'
 import { formatarCpfCnpj } from '@/lib/utils'
+import { getTipoProcessoInfo } from '@/lib/constants/tipos-processo'
 
 interface Acordo {
   id: string
@@ -61,6 +62,10 @@ interface Acordo {
     descricao: string
     valorOriginal: number
     valorNegociado: number
+    observacoes?: string
+    imovel?: {
+      valorAvaliado: number
+    }
     inscricoes: Array<{
       valorDebito: number
       valorAbatido: number
@@ -142,22 +147,6 @@ export default function AcordosPage() {
     })
   }
 
-  // Estatísticas baseadas nos acordos filtrados
-  const totalAcordos = filteredAcordos.length
-  const acordosAtivos = filteredAcordos.filter(a => a.status === 'ativo').length
-  const acordosVencidos = filteredAcordos.filter(a => {
-    const hoje = new Date()
-    return a.status === 'ativo' && new Date(a.dataVencimento) < hoje
-  }).length
-
-  const valorTotalAcordos = filteredAcordos
-    .filter(acordo => acordo.status === 'ativo' || acordo.status === 'cumprido')
-    .reduce((total, acordo) => {
-      return total + (Number(acordo.valorFinal) || 0)
-    }, 0)
-
-
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ativo': return 'bg-green-100 text-green-800'
@@ -180,20 +169,101 @@ export default function AcordosPage() {
     }
   }
 
-  const getProgressoPagamento = (acordo: Acordo) => {
-    const valorTotal = Number(acordo.valorFinal) || 0
-    const valorPago = (acordo.parcelas || []).reduce((total: number, parcela) => {
-      return total + (parcela.pagamentos || []).reduce((subtotal: number, pagamento) => {
-        return subtotal + (Number(pagamento.valorPago) || 0)
-      }, 0)
+  // Função para calcular o valor correto do acordo baseado no tipo
+  const getValorAcordo = (acordo: Acordo) => {
+    const tipoProcesso = acordo.processo?.tipo
+
+    // Para transação excepcional, usar valorFinal padrão
+    if (tipoProcesso === 'TRANSACAO_EXCEPCIONAL') {
+      return Number(acordo.valorFinal) || 0
+    }
+
+    // Para compensação e dação, calcular baseado nos detalhes
+    if (!acordo.detalhes || acordo.detalhes.length === 0) {
+      return Number(acordo.valorFinal) || 0
+    }
+
+    let valorTotal = 0
+
+    acordo.detalhes.forEach((detalhe) => {
+      if (detalhe.tipo === 'compensacao') {
+        // Para compensação: extrair valor total dos créditos das observações
+        try {
+          const observacoes = detalhe.observacoes
+          if (observacoes) {
+            const dadosCreditos = JSON.parse(observacoes)
+            if (dadosCreditos.valorTotalCreditos) {
+              valorTotal += Number(dadosCreditos.valorTotalCreditos || 0)
+            }
+          }
+        } catch (e) {
+          // Se não conseguir fazer parse, usar valor original como fallback
+          valorTotal += Number(detalhe.valorOriginal || 0)
+        }
+      } else if (detalhe.tipo === 'dacao') {
+        // Para dação: usar valor avaliado do imóvel
+        if (detalhe.imovel && detalhe.imovel.valorAvaliado) {
+          valorTotal += Number(detalhe.imovel.valorAvaliado || 0)
+        } else {
+          // Fallback para valor original
+          valorTotal += Number(detalhe.valorOriginal || 0)
+        }
+      }
+    })
+
+    return valorTotal > 0 ? valorTotal : Number(acordo.valorFinal) || 0
+  }
+
+  // Estatísticas baseadas nos acordos filtrados
+  const totalAcordos = filteredAcordos.length
+  const acordosAtivos = filteredAcordos.filter(a => a.status === 'ativo').length
+  const acordosVencidos = filteredAcordos.filter(a => {
+    const hoje = new Date()
+    return a.status === 'ativo' && new Date(a.dataVencimento) < hoje
+  }).length
+
+  const valorTotalAcordos = filteredAcordos
+    .filter(acordo => acordo.status === 'ativo' || acordo.status === 'cumprido')
+    .reduce((total, acordo) => {
+      return total + getValorAcordo(acordo)
     }, 0)
-    const percentual = valorTotal > 0 ? Math.round((valorPago / valorTotal) * 100) : 0
+
+  const getProgressoPagamento = (acordo: Acordo) => {
+    const tipoProcesso = acordo.processo?.tipo
+    const valorTotal = getValorAcordo(acordo)
+
+    // Para transação excepcional, calcular progresso baseado em pagamentos
+    if (tipoProcesso === 'TRANSACAO_EXCEPCIONAL') {
+      const valorPago = (acordo.parcelas || []).reduce((total: number, parcela) => {
+        return total + (parcela.pagamentos || []).reduce((subtotal: number, pagamento) => {
+          return subtotal + (Number(pagamento.valorPago) || 0)
+        }, 0)
+      }, 0)
+      const percentual = valorTotal > 0 ? Math.round((valorPago / valorTotal) * 100) : 0
+
+      return {
+        valorTotal,
+        valorPago,
+        valorPendente: valorTotal - valorPago,
+        percentual
+      }
+    }
+
+    // Para compensação e dação, progresso baseado no status
+    if (acordo.status === 'cumprido') {
+      return {
+        valorTotal,
+        valorPago: valorTotal,
+        valorPendente: 0,
+        percentual: 100
+      }
+    }
 
     return {
       valorTotal,
-      valorPago,
-      valorPendente: valorTotal - valorPago,
-      percentual
+      valorPago: 0,
+      valorPendente: valorTotal,
+      percentual: 0
     }
   }
 
@@ -228,7 +298,7 @@ export default function AcordosPage() {
             Gerencie os acordos de pagamento e acompanhe o cumprimento
           </p>
         </div>
-        
+
         {canCreate && (
           <Link href="/acordos/novo">
             <Button className="cursor-pointer">
@@ -383,7 +453,7 @@ export default function AcordosPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Valor Total</p>
                 <p className="text-2xl font-bold">
-                  {formatarMoeda(valorTotalAcordos)}
+                  {valorTotalAcordos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
@@ -440,26 +510,10 @@ export default function AcordosPage() {
                             Vencido
                           </Badge>
                         )}
-                        <Badge variant="outline">
-                          {acordo.modalidadePagamento === 'avista' ? 'À Vista' :
-                           `${acordo.numeroParcelas}x`}
-                        </Badge>
                         {/* Badge para tipo de processo */}
-                        {acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' && (
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                            Transação Excepcional
-                          </Badge>
-                        )}
-                        {acordo.processo?.tipo === 'DACAO_PAGAMENTO' && (
-                          <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                            Dação em Pagamento
-                          </Badge>
-                        )}
-                        {acordo.processo?.tipo === 'COMPENSACAO' && (
-                          <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            Compensação
-                          </Badge>
-                        )}
+                        <Badge variant="outline" className={getTipoProcessoInfo(acordo.processo?.tipo || '').color}>
+                          {getTipoProcessoInfo(acordo.processo?.tipo || '').label}
+                        </Badge>
                       </div>
 
                       {/* Informações do Contribuinte */}
@@ -472,35 +526,57 @@ export default function AcordosPage() {
                       {/* Valores e Progresso */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Progresso do Pagamento</span>
+                          <span className="text-gray-600">
+                            {acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' ? 'Progresso do Pagamento' : 'Progresso do Acordo'}
+                          </span>
                           <span className="font-medium">{progresso.percentual}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
+                          <div
                             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                             style={{ width: `${progresso.percentual}%` }}
                           />
                         </div>
-                        <div className="grid grid-cols-3 gap-2 text-xs">
-                          <div>
-                            <span className="text-gray-500">Total:</span>
-                            <p className="font-medium">
-                              {formatarMoeda(progresso.valorTotal)}
-                            </p>
+                        {acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' ? (
+                          <div className="grid grid-cols-3 gap-2 text-xs">
+                            <div>
+                              <span className="text-gray-500">Total:</span>
+                              <p className="font-medium">
+                                {formatarMoeda(progresso.valorTotal)}
+                              </p>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Pago:</span>
+                              <p className="font-medium text-green-600">
+                                {formatarMoeda(progresso.valorPago)}
+                              </p>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Pendente:</span>
+                              <p className="font-medium text-yellow-600">
+                                {formatarMoeda(progresso.valorPendente)}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-gray-500">Pago:</span>
-                            <p className="font-medium text-green-600">
-                              {formatarMoeda(progresso.valorPago)}
-                            </p>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <span className="text-gray-500">
+                                {acordo.processo?.tipo === 'COMPENSACAO' ? 'Valor dos Créditos:' :
+                                  acordo.processo?.tipo === 'DACAO_PAGAMENTO' ? 'Valor do Imóvel:' : 'Valor Total:'}
+                              </span>
+                              <p className="font-medium">
+                                {formatarMoeda(progresso.valorTotal)}
+                              </p>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Status:</span>
+                              <p className={`font-medium ${acordo.status === 'cumprido' ? 'text-green-600' : acordo.status === 'ativo' ? 'text-yellow-600' : 'text-red-600'}`}>
+                                {getStatusLabel(acordo.status)}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-gray-500">Pendente:</span>
-                            <p className="font-medium text-yellow-600">
-                              {formatarMoeda(progresso.valorPendente)}
-                            </p>
-                          </div>
-                        </div>
+                        )}
                       </div>
 
                       {/* Informações do Acordo */}
@@ -509,22 +585,26 @@ export default function AcordosPage() {
                           <Calendar className="h-4 w-4" />
                           <span>Assinado: {new Date(acordo.dataAssinatura).toLocaleDateString('pt-BR')}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          <span>Vence: {new Date(acordo.dataVencimento).toLocaleDateString('pt-BR')}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          <span>{getDisplayParcelasInfo(acordo)}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4" />
-                          <span>{(acordo.parcelas || []).reduce((total, p) => total + (p.pagamentos?.length || 0), 0)} pagamento{(acordo.parcelas || []).reduce((total, p) => total + (p.pagamentos?.length || 0), 0) !== 1 ? 's' : ''}</span>
-                        </div>
+                        {acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' && (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              <span>Vence: {new Date(acordo.dataVencimento).toLocaleDateString('pt-BR')}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4" />
+                              <span>{getDisplayParcelasInfo(acordo)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="h-4 w-4" />
+                              <span>{(acordo.parcelas || []).reduce((total, p) => total + (p.pagamentos?.length || 0), 0)} pagamento{(acordo.parcelas || []).reduce((total, p) => total + (p.pagamentos?.length || 0), 0) !== 1 ? 's' : ''}</span>
+                            </div>
+                          </>
+                        )}
                       </div>
 
-                      {/* Próximas Parcelas */}
-                      {(acordo.parcelas || []).filter(p => p.status === 'pendente').length > 0 && (
+                      {/* Próximas Parcelas - apenas para transação excepcional */}
+                      {acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' && (acordo.parcelas || []).filter(p => p.status === 'pendente').length > 0 && (
                         <div className="border-t pt-3">
                           <h4 className="text-sm font-medium text-gray-900 mb-2">
                             Próximas Parcelas:
@@ -552,7 +632,7 @@ export default function AcordosPage() {
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Ações */}
                     <div className="flex flex-col gap-2 ml-4">
                       <Link href={`/acordos/${acordo.id}`}>
@@ -566,7 +646,7 @@ export default function AcordosPage() {
                           Ver Processo
                         </Button>
                       </Link>
-                      
+
                     </div>
                   </div>
                 </CardContent>
@@ -596,11 +676,11 @@ export default function AcordosPage() {
                 .map((acordo) => {
                   const progresso = getProgressoPagamento(acordo)
                   const diasVencido = Math.floor((new Date().getTime() - new Date(acordo.dataVencimento).getTime()) / (1000 * 60 * 60 * 24))
-                  
+
                   return (
                     <div key={acordo.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
-                        <Link 
+                        <Link
                           href={`/acordos/${acordo.id}`}
                           className="font-medium hover:text-blue-600"
                         >

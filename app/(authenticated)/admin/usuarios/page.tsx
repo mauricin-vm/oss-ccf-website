@@ -66,7 +66,7 @@ const roleColors = {
 
 export default function UsuariosAdminPage() {
   const { data: session, status } = useSession()
-  const [users, setUsers] = useState<User[]>([])
+  const [allUsers, setAllUsers] = useState<User[]>([])
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -100,38 +100,65 @@ export default function UsuariosAdminPage() {
     }
   }, [session, status])
 
-  // Carregar usuários
-  const loadUsers = useCallback(async () => {
+  // Carregar todos os usuários uma vez
+  const loadAllUsers = useCallback(async () => {
     try {
       setLoading(true)
-      const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString()
-      })
-      
-      if (search) params.append('search', search)
-      if (roleFilter && roleFilter !== 'all') params.append('role', roleFilter)
-      if (activeFilter && activeFilter !== 'all') params.append('active', activeFilter)
-
-      const response = await fetch(`/api/users?${params}`)
+      // Buscar todos os usuários sem filtros
+      const response = await fetch('/api/users?limit=1000')
       if (!response.ok) {
         throw new Error('Erro ao carregar usuários')
       }
 
       const data: UsersResponse = await response.json()
-      setUsers(data.users)
-      setPagination(data.pagination)
+      setAllUsers(data.users)
     } catch (error) {
       toast.error('Erro ao carregar usuários')
       console.error(error)
     } finally {
       setLoading(false)
     }
-  }, [pagination.page, pagination.limit, search, roleFilter, activeFilter])
+  }, [])
 
   useEffect(() => {
-    loadUsers()
-  }, [loadUsers])
+    loadAllUsers()
+  }, [loadAllUsers])
+
+  // Filtragem local (client-side)
+  const filteredUsers = allUsers.filter((user) => {
+    // Filtro por texto de busca
+    const searchMatch = !search ||
+      user.name.toLowerCase().includes(search.toLowerCase()) ||
+      user.email.toLowerCase().includes(search.toLowerCase())
+
+    // Filtro por role
+    const roleMatch = roleFilter === 'all' || user.role === roleFilter
+
+    // Filtro por status ativo
+    const activeMatch = activeFilter === 'all' ||
+      (activeFilter === 'true' && user.active) ||
+      (activeFilter === 'false' && !user.active)
+
+    return searchMatch && roleMatch && activeMatch
+  })
+
+  // Paginação local
+  const totalFilteredUsers = filteredUsers.length
+  const totalPages = Math.ceil(totalFilteredUsers / pagination.limit)
+  const startIndex = (pagination.page - 1) * pagination.limit
+  const endIndex = startIndex + pagination.limit
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex)
+
+  // Atualizar paginação quando filtros mudarem
+  useEffect(() => {
+    const newTotalPages = Math.ceil(filteredUsers.length / pagination.limit)
+    setPagination(prev => ({
+      ...prev,
+      total: filteredUsers.length,
+      pages: newTotalPages,
+      page: 1 // Reset to first page when filters change
+    }))
+  }, [filteredUsers.length, pagination.limit])
 
   // Criar usuário
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -159,7 +186,7 @@ export default function UsuariosAdminPage() {
         role: 'FUNCIONARIO',
         active: true
       })
-      loadUsers()
+      loadAllUsers()
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao criar usuário'
       toast.error(errorMessage)
@@ -193,7 +220,7 @@ export default function UsuariosAdminPage() {
       toast.success('Usuário atualizado com sucesso')
       setShowEditDialog(false)
       setSelectedUser(null)
-      loadUsers()
+      loadAllUsers()
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar usuário'
       toast.error(errorMessage)
@@ -218,7 +245,7 @@ export default function UsuariosAdminPage() {
 
       const result = await response.json()
       toast.success(result.message)
-      loadUsers()
+      loadAllUsers()
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao deletar usuário'
       toast.error(errorMessage)
@@ -243,10 +270,10 @@ export default function UsuariosAdminPage() {
   }
 
   const stats = {
-    total: pagination.total,
-    active: users.filter(u => u.active).length,
-    inactive: users.filter(u => !u.active).length,
-    admins: users.filter(u => u.role === 'ADMIN').length
+    total: filteredUsers.length,
+    active: filteredUsers.filter(u => u.active).length,
+    inactive: filteredUsers.filter(u => !u.active).length,
+    admins: filteredUsers.filter(u => u.role === 'ADMIN').length
   }
 
   return (
@@ -273,7 +300,7 @@ export default function UsuariosAdminPage() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateUser} className="space-y-4">
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="name">Nome</Label>
                 <Input
                   id="name"
@@ -282,7 +309,7 @@ export default function UsuariosAdminPage() {
                   required
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
@@ -292,7 +319,7 @@ export default function UsuariosAdminPage() {
                   required
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="password">Senha</Label>
                 <Input
                   id="password"
@@ -302,10 +329,10 @@ export default function UsuariosAdminPage() {
                   required
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="role">Função</Label>
-                <Select 
-                  value={formData.role || 'FUNCIONARIO'} 
+                <Select
+                  value={formData.role || 'FUNCIONARIO'}
                   onValueChange={(value: 'ADMIN' | 'FUNCIONARIO' | 'VISUALIZADOR') => setFormData({...formData, role: value})}
                   defaultValue="FUNCIONARIO"
                 >
@@ -433,7 +460,7 @@ export default function UsuariosAdminPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {users.map((user) => (
+            {paginatedUsers.map((user) => (
               <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center space-x-4">
                   <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
@@ -488,10 +515,10 @@ export default function UsuariosAdminPage() {
           </div>
 
           {/* Paginação */}
-          {pagination.pages > 1 && (
+          {totalPages > 1 && (
             <div className="flex items-center justify-between pt-4">
               <p className="text-sm text-gray-600">
-                Mostrando {((pagination.page - 1) * pagination.limit) + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} usuários
+                Mostrando {startIndex + 1} a {Math.min(endIndex, totalFilteredUsers)} de {totalFilteredUsers} usuários
               </p>
               <div className="flex gap-2">
                 <Button
@@ -507,7 +534,7 @@ export default function UsuariosAdminPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                  disabled={pagination.page >= pagination.pages}
+                  disabled={pagination.page >= totalPages}
                   className="cursor-pointer"
                 >
                   Próximo
@@ -528,7 +555,7 @@ export default function UsuariosAdminPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditUser} className="space-y-4">
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-name">Nome</Label>
               <Input
                 id="edit-name"
@@ -537,7 +564,7 @@ export default function UsuariosAdminPage() {
                 required
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-email">Email</Label>
               <Input
                 id="edit-email"
@@ -547,7 +574,7 @@ export default function UsuariosAdminPage() {
                 required
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-password">Nova Senha (deixe em branco para manter a atual)</Label>
               <Input
                 id="edit-password"
@@ -556,10 +583,10 @@ export default function UsuariosAdminPage() {
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-role">Função</Label>
-              <Select 
-                value={formData.role || 'FUNCIONARIO'} 
+              <Select
+                value={formData.role || 'FUNCIONARIO'}
                 onValueChange={(value: 'ADMIN' | 'FUNCIONARIO' | 'VISUALIZADOR') => setFormData({...formData, role: value})}
                 defaultValue="FUNCIONARIO"
               >

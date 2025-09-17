@@ -33,6 +33,7 @@ import { User as PrismaUser } from '@prisma/client'
 
 import PautaActions from '@/components/pauta/pauta-actions'
 import { formatLocalDate } from '@/lib/utils/date'
+import { getResultadoBadge, getCardBackground as getCardBackgroundFromConstants, getStatusInfo } from '@/lib/constants/status'
 
 export default function PautaDetalhesPage({
   params
@@ -147,7 +148,7 @@ export default function PautaDetalhesPage({
       const response = await fetch(`/api/processos/${processoId}/distribuicao?status=${encodeURIComponent(status)}`)
       if (response.ok) {
         const data = await response.json()
-        
+
         // Definir sugestão automaticamente se existir
         if (data.sugestao) {
           setConselheiro(data.sugestao)
@@ -155,12 +156,12 @@ export default function PautaDetalhesPage({
       }
     } catch (error) {
       console.error('Erro ao buscar informações de distribuição:', error)
-          }
+    }
   }
 
   const handleSelectProcess = async (processo: ProcessoWithRelations) => {
     setSelectedProcess(processo)
-    
+
     // Preencher automaticamente com conselheiro correto para distribuição
     const conselheiroParaDistribuicao = getConselheiroParaDistribuicao(processo)
     setConselheiro(conselheiroParaDistribuicao)
@@ -219,7 +220,7 @@ export default function PautaDetalhesPage({
       setConselheiro('')
       setSearchProcess('')
       setAvailableProcesses([])
-            setIsAddProcessModalOpen(false)
+      setIsAddProcessModalOpen(false)
 
       // Recarregar dados da pauta
       handleEditSuccess()
@@ -254,65 +255,19 @@ export default function PautaDetalhesPage({
     TRANSACAO_EXCEPCIONAL: 'Transação Excepcional'
   }
 
-  const statusProcessoMap = {
-    RECEPCIONADO: { label: 'Recepcionado', color: 'bg-gray-100 text-gray-800' },
-    EM_ANALISE: { label: 'Em Análise', color: 'bg-blue-100 text-blue-800' },
-    EM_PAUTA: { label: 'Em Pauta', color: 'bg-purple-100 text-purple-800' },
-    SUSPENSO: { label: 'Suspenso', color: 'bg-yellow-100 text-yellow-800' },
-    PEDIDO_VISTA: { label: 'Pedido de vista', color: 'bg-blue-100 text-blue-800' },
-    PEDIDO_DILIGENCIA: { label: 'Pedido de diligência', color: 'bg-orange-100 text-orange-800' },
-    JULGADO: { label: 'Julgado', color: 'bg-indigo-100 text-indigo-800' },
-    ACORDO_FIRMADO: { label: 'Acordo Firmado', color: 'bg-green-100 text-green-800' },
-    EM_CUMPRIMENTO: { label: 'Em Cumprimento', color: 'bg-orange-100 text-orange-800' },
-    ARQUIVADO: { label: 'Arquivado', color: 'bg-gray-100 text-gray-800' }
-  }
+  // Removido statusProcessoMap local - agora usa getStatusInfo das constantes
 
 
-  const getResultadoBadge = (decisao: Record<string, unknown>) => {
-    if (!decisao) return null
+  const getResultadoBadgeComponent = (decisao: Record<string, unknown>) => {
+    if (!decisao) return <Badge variant="outline">Aguardando</Badge>
 
-    switch (decisao.tipoResultado) {
-      case 'SUSPENSO':
-        return <Badge className="bg-yellow-100 text-yellow-800">Suspenso</Badge>
-      case 'PEDIDO_VISTA':
-        return <Badge className="bg-blue-100 text-blue-800">Pedido de vista</Badge>
-      case 'PEDIDO_DILIGENCIA':
-        return <Badge className="bg-orange-100 text-orange-800">Pedido de diligência</Badge>
-      case 'JULGADO':
-        const tipoDecisao = decisao.tipoDecisao
-        return (
-          <Badge
-            className={
-              tipoDecisao === 'DEFERIDO' ? 'bg-green-100 text-green-800' :
-                tipoDecisao === 'INDEFERIDO' ? 'bg-red-100 text-red-800' :
-                  'bg-yellow-100 text-yellow-800'
-            }
-          >
-            {tipoDecisao === 'DEFERIDO' ? 'Deferido' :
-              tipoDecisao === 'INDEFERIDO' ? 'Indeferido' :
-                'Parcial'}
-          </Badge>
-        )
-      default:
-        return <Badge variant="outline">Aguardando</Badge>
-    }
+    const badge = getResultadoBadge(String(decisao.tipoResultado), String(decisao.tipoDecisao))
+    return <Badge className={badge.color}>{badge.label}</Badge>
   }
 
   const getCardBackground = (decisao: Record<string, unknown>) => {
     if (!decisao) return 'bg-gray-50'
-
-    switch (decisao.tipoResultado) {
-      case 'SUSPENSO':
-        return 'bg-yellow-50 border-yellow-200'
-      case 'PEDIDO_VISTA':
-        return 'bg-blue-50 border-blue-200'
-      case 'PEDIDO_DILIGENCIA':
-        return 'bg-orange-50 border-orange-200'
-      case 'JULGADO':
-        return 'bg-green-50 border-green-200'
-      default:
-        return 'bg-gray-50'
-    }
+    return getCardBackgroundFromConstants(String(decisao.tipoResultado))
   }
 
 
@@ -386,7 +341,7 @@ export default function PautaDetalhesPage({
     }
   }
 
-  const dataStatus = getDataStatus(pauta.dataPauta)
+  const dataStatus = getDataStatus(new Date(pauta.dataPauta))
 
   return (
     <div className="space-y-6">
@@ -429,7 +384,7 @@ export default function PautaDetalhesPage({
               id: pauta.id,
               numero: pauta.numero,
               status: pauta.status,
-              dataPauta: pauta.dataPauta.toISOString(),
+              dataPauta: typeof pauta.dataPauta === 'string' ? pauta.dataPauta : new Date(pauta.dataPauta).toISOString(),
               processos: pauta.processos as Record<string, unknown>[]
             }}
             userRole={user.role}
@@ -542,8 +497,8 @@ export default function PautaDetalhesPage({
                             >
                               {processo.numero}
                             </Link>
-                            <Badge className={statusProcessoMap[processo.status as keyof typeof statusProcessoMap]?.color || 'bg-gray-100 text-gray-800'}>
-                              {statusProcessoMap[processo.status as keyof typeof statusProcessoMap]?.label || processo.status}
+                            <Badge className={getStatusInfo(processo.status).color}>
+                              {getStatusInfo(processo.status).label}
                             </Badge>
                           </div>
 
@@ -724,11 +679,19 @@ export default function PautaDetalhesPage({
                                 {processoPauta?.relator && (
                                   <p className="text-sm text-blue-600">Relator: {processoPauta.relator}</p>
                                 )}
+                                {processoPauta?.revisores && Array.isArray(processoPauta.revisores) && processoPauta.revisores.length > 0 && (
+                                  <p className="text-sm text-blue-600">
+                                    Revisor{processoPauta.revisores.length > 1 ? 'es' : ''}: {formatarListaNomes(processoPauta.revisores)}
+                                  </p>
+                                )}
+                                {processoPauta?.distribuidoPara && (
+                                  <p className="text-sm text-green-600">Distribuição: {processoPauta.distribuidoPara}</p>
+                                )}
                               </div>
                             </div>
                             <div className="text-right space-y-2">
                               <div className="space-y-2">
-                                {getResultadoBadge(decisao)}
+                                {getResultadoBadgeComponent(decisao)}
                               </div>
                             </div>
                           </div>
@@ -835,35 +798,35 @@ export default function PautaDetalhesPage({
                                 voto.conselheiroId === (pauta.sessao as Record<string, unknown>).presidenteId ||
                                 voto.nomeVotante === 'Presidente'
                               ) ? (
-                                  <Card className="p-3 mt-4 border-yellow-300 bg-yellow-50">
-                                    <div className="font-medium text-gray-800 mb-2 text-sm flex items-center gap-2">
-                                      ⚖️ Voto de Desempate - Presidente
+                                <Card className="p-3 mt-4 border-yellow-300 bg-yellow-50">
+                                  <div className="font-medium text-gray-800 mb-2 text-sm flex items-center gap-2">
+                                    ⚖️ Voto de Desempate - Presidente
+                                  </div>
+                                  <div className="flex items-center justify-between text-xs">
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700">
+                                        Presidente
+                                      </Badge>
+                                      <span className="truncate font-medium">Presidente</span>
                                     </div>
-                                    <div className="flex items-center justify-between text-xs">
-                                      <div className="flex items-center gap-2">
-                                        <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700">
-                                          Presidente
-                                        </Badge>
-                                        <span className="truncate font-medium">Presidente</span>
-                                      </div>
-                                      <span className={`font-medium text-xs ${(decisao.votos as Record<string, unknown>[]).find((voto: Record<string, unknown>) =>
+                                    <span className={`font-medium text-xs ${(decisao.votos as Record<string, unknown>[]).find((voto: Record<string, unknown>) =>
+                                      voto.conselheiroId === (pauta.sessao as Record<string, unknown>).presidenteId ||
+                                      voto.nomeVotante === 'Presidente'
+                                    )?.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
+                                      (decisao.votos as Record<string, unknown>[]).find((voto: Record<string, unknown>) =>
                                         voto.conselheiroId === (pauta.sessao as Record<string, unknown>).presidenteId ||
                                         voto.nomeVotante === 'Presidente'
-                                      )?.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
-                                        (decisao.votos as Record<string, unknown>[]).find((voto: Record<string, unknown>) =>
-                                          voto.conselheiroId === (pauta.sessao as Record<string, unknown>).presidenteId ||
-                                          voto.nomeVotante === 'Presidente'
-                                        )?.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
-                                          'text-yellow-600'
-                                        }`}>
-                                        {String((decisao.votos as Record<string, unknown>[]).find((voto: Record<string, unknown>) =>
-                                          voto.conselheiroId === (pauta.sessao as Record<string, unknown>)?.presidenteId ||
-                                          voto.nomeVotante === (pauta.sessao as Record<string, unknown>)?.presidenteId
-                                        )?.posicaoVoto || 'N/A')}
-                                      </span>
-                                    </div>
-                                  </Card>
-                                ) : null}
+                                      )?.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
+                                        'text-yellow-600'
+                                      }`}>
+                                      {String((decisao.votos as Record<string, unknown>[]).find((voto: Record<string, unknown>) =>
+                                        voto.conselheiroId === (pauta.sessao as Record<string, unknown>)?.presidenteId ||
+                                        voto.nomeVotante === (pauta.sessao as Record<string, unknown>)?.presidenteId
+                                      )?.posicaoVoto || 'N/A')}
+                                    </span>
+                                  </div>
+                                </Card>
+                              ) : null}
 
                               <p className="text-xs text-gray-500 mt-2">
                                 Registrada em {new Date(String(decisao.dataDecisao)).toLocaleString('pt-BR')}
@@ -948,7 +911,7 @@ export default function PautaDetalhesPage({
           pauta={{
             id: pauta.id,
             numero: pauta.numero,
-            dataPauta: pauta.dataPauta.toISOString().split('T')[0],
+            dataPauta: pauta.dataPauta instanceof Date ? pauta.dataPauta.toISOString().split('T')[0] : (pauta.dataPauta as string).split('T')[0],
             observacoes: pauta.observacoes || undefined
           }}
         />
@@ -993,8 +956,8 @@ export default function PautaDetalhesPage({
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <p className="font-medium">{processo.numero}</p>
-                            <Badge className={statusProcessoMap[processo.status as keyof typeof statusProcessoMap]?.color || 'bg-gray-100 text-gray-800'}>
-                              {statusProcessoMap[processo.status as keyof typeof statusProcessoMap]?.label || processo.status}
+                            <Badge className={getStatusInfo(processo.status).color}>
+                              {getStatusInfo(processo.status).label}
                             </Badge>
                           </div>
                           <p className="text-sm text-gray-600">{processo.contribuinte.nome}</p>
@@ -1040,8 +1003,8 @@ export default function PautaDetalhesPage({
                 <div className="p-3 bg-blue-50 rounded-lg">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-medium">{selectedProcess.numero}</p>
-                    <Badge className={statusProcessoMap[selectedProcess.status as keyof typeof statusProcessoMap]?.color || 'bg-gray-100 text-gray-800'}>
-                      {statusProcessoMap[selectedProcess.status as keyof typeof statusProcessoMap]?.label || selectedProcess.status}
+                    <Badge className={getStatusInfo(selectedProcess.status).color}>
+                      {getStatusInfo(selectedProcess.status).label}
                     </Badge>
                   </div>
                   <p className="text-sm text-gray-600">{selectedProcess.contribuinte.nome}</p>
@@ -1098,7 +1061,7 @@ export default function PautaDetalhesPage({
                 setConselheiro('')
                 setSearchProcess('')
                 setAvailableProcesses([])
-                              }}
+              }}
               className="cursor-pointer"
             >
               Cancelar

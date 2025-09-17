@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, AlertCircle, Gavel, Clock, Pause, Search, CheckCircle, Users } from 'lucide-react'
+import { Loader2, AlertCircle, Gavel, Clock, Pause, Search, CheckCircle, Users, DollarSign } from 'lucide-react'
 import VotacaoModal from '@/components/modals/votacao-modal'
 
 // Importar tipos do modal de votação para compatibilidade
@@ -83,12 +83,13 @@ const votoSchema = z.object({
 
 const decisaoSchema = z.object({
   processoId: z.string().min(1, 'Processo é obrigatório'),
-  tipoResultado: z.enum(['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO'], {
+  tipoResultado: z.enum(['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'EM_NEGOCIACAO', 'JULGADO'], {
     message: 'Tipo de resultado é obrigatório'
   }),
   tipoDecisao: z.enum(['DEFERIDO', 'INDEFERIDO', 'PARCIAL']).optional(),
   observacoes: z.string().optional(),
   motivoSuspensao: z.string().optional(),
+  detalhesNegociacao: z.string().optional(),
   conselheiroPedidoVista: z.string().optional(),
   prazoVista: z.string().optional(),
   especificacaoDiligencia: z.string().optional(),
@@ -355,9 +356,10 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
 
   const getTipoResultadoColor = (tipo: string) => {
     switch (tipo) {
-      case 'SUSPENSO': return 'border-yellow-200 bg-yellow-50'
+      case 'SUSPENSO': return 'border-red-200 bg-red-50'
       case 'PEDIDO_VISTA': return 'border-blue-200 bg-blue-50'
-      case 'PEDIDO_DILIGENCIA': return 'border-orange-200 bg-orange-50'
+      case 'PEDIDO_DILIGENCIA': return 'border-purple-200 bg-purple-50'
+      case 'EM_NEGOCIACAO': return 'border-amber-200 bg-amber-50'
       case 'JULGADO': return 'border-green-200 bg-green-50'
       default: return 'border-gray-200 bg-gray-50'
     }
@@ -506,15 +508,15 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 <div
                   className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${tipoResultado === 'SUSPENSO' ? getTipoResultadoColor('SUSPENSO') : 'border-gray-200 hover:border-gray-300'}`}
                   onClick={() => setValue('tipoResultado', 'SUSPENSO')}
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <Pause className="h-4 w-4 text-yellow-600" />
-                      <span className="font-medium text-yellow-700">Suspenso</span>
+                      <Pause className="h-4 w-4 text-red-600" />
+                      <span className="font-medium text-red-700">Suspenso</span>
                     </div>
                     <p className="text-sm text-gray-600">
                       Processo retirado de pauta por motivo específico
@@ -543,11 +545,26 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-orange-600" />
-                      <span className="font-medium text-orange-700">Pedido de Diligência</span>
+                      <Clock className="h-4 w-4 text-purple-600" />
+                      <span className="font-medium text-purple-700">Pedido de Diligência</span>
                     </div>
                     <p className="text-sm text-gray-600">
                       Relator solicita nova documentação ou análise
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${tipoResultado === 'EM_NEGOCIACAO' ? getTipoResultadoColor('EM_NEGOCIACAO') : 'border-gray-200 hover:border-gray-300'}`}
+                  onClick={() => setValue('tipoResultado', 'EM_NEGOCIACAO')}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-amber-600" />
+                      <span className="font-medium text-amber-700">Em Negociação</span>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Processo em fase de negociação de acordo
                     </p>
                   </div>
                 </div>
@@ -592,6 +609,30 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                   />
                   {errors.motivoSuspensao && (
                     <p className="text-sm text-red-500">{errors.motivoSuspensao.message}</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {tipoResultado === 'EM_NEGOCIACAO' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Detalhes da Negociação</CardTitle>
+                <CardDescription>
+                  Campos opcionais para detalhar a negociação
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Textarea
+                    id="detalhesNegociacao"
+                    placeholder="Descreva detalhes sobre a negociação em andamento..."
+                    rows={4}
+                    {...register('detalhesNegociacao')}
+                  />
+                  {errors.detalhesNegociacao && (
+                    <p className="text-sm text-red-500">{errors.detalhesNegociacao.message}</p>
                   )}
                 </div>
               </CardContent>

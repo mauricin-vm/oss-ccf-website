@@ -53,6 +53,24 @@ export const acordoSchema = z.object({
     inscricoesSelecionadasDetalhes: z.array(z.unknown()).optional(),
     // Compensação
     creditosSelecionados: z.array(z.string()).optional(),
+    creditosAdicionados: z.array(z.object({
+      id: z.string(),
+      tipo: z.string(),
+      numero: z.string(),
+      valor: z.number(),
+      dataVencimento: z.string().optional(),
+      descricao: z.string().optional()
+    })).optional(),
+    inscricoesAdicionadas: z.array(z.object({
+      id: z.string(),
+      numeroInscricao: z.string(),
+      tipoInscricao: z.string(),
+      debitos: z.array(z.object({
+        descricao: z.string(),
+        valor: z.number(),
+        dataVencimento: z.string()
+      }))
+    })).optional(),
     valorCreditos: z.number().optional(),
     valorDebitos: z.number().optional(),
     valorCompensacao: z.number().optional(),
@@ -60,6 +78,8 @@ export const acordoSchema = z.object({
     // Dação em Pagamento
     inscricoesOferecidas: z.array(z.string()).optional(),
     inscricoesCompensar: z.array(z.string()).optional(),
+    inscricoesOferecidasSelecionadas: z.array(z.string()).optional(),
+    inscricoesCompensarSelecionadas: z.array(z.string()).optional(),
     valorOferecido: z.number().optional(),
     valorCompensar: z.number().optional(),
     valorDacao: z.number().optional()

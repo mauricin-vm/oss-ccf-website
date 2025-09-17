@@ -52,6 +52,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
   })
   const [errorEdit, setErrorEdit] = useState<string | null>(null)
   const [detalhesAcordo, setDetalhesAcordo] = useState<Record<string, unknown> | null>(null)
+  const [processandoConclusao, setProcessandoConclusao] = useState(false)
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -268,11 +269,50 @@ export default function AcordoPage({ params }: AcordoPageProps) {
     }
   }
 
+  // Função para concluir acordo (dação e compensação)
+  const handleConcluirAcordo = async () => {
+    if (!window.confirm('Tem certeza que deseja concluir este acordo? Esta ação não pode ser desfeita. O acordo e o processo serão marcados como concluídos.')) {
+      return
+    }
+
+    setProcessandoConclusao(true)
+    try {
+      const response = await fetch(`/api/acordos/${resolvedParams?.id}/concluir`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          atualizarProcesso: true
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erro ao concluir acordo')
+      }
+
+      toast.success('Acordo e processo concluídos com sucesso!')
+
+      // Recarregar dados
+      await loadAcordo()
+    } catch (error) {
+      console.error('Erro ao concluir acordo:', error)
+      toast.error(error instanceof Error ? error.message : 'Erro ao concluir acordo')
+    } finally {
+      setProcessandoConclusao(false)
+    }
+  }
+
   // Helper para acessar propriedades do acordo
   const acordo_data = acordo as Record<string, unknown>
 
   const canEdit = user.role === 'ADMIN' || user.role === 'FUNCIONARIO'
   const canRegisterPayment = canEdit && acordo_data?.status === 'ativo'
+
+  // Verificar se é um tipo de processo que tem parcelas/pagamentos
+  const tipoProcesso = (acordo_data.processo as Record<string, unknown>)?.tipo as string
+  const temParcelas = tipoProcesso === 'TRANSACAO_EXCEPCIONAL'
 
   if (!acordo_data) {
     return (
@@ -357,6 +397,47 @@ export default function AcordoPage({ params }: AcordoPageProps) {
     return new Date(dataVencimento) < new Date() && acordo_data.status === 'ativo'
   }
 
+  // Função para calcular o valor do acordo baseado no tipo (compensação/dação)
+  const getValorAcordo = () => {
+    if (temParcelas) {
+      // Para transação excepcional, usar valorFinal padrão
+      return Number(acordo_data.valorFinal || 0)
+    }
+
+    // Para compensação e dação, usar valorTotal que representa o valor original/base
+    if (tipoProcesso === 'COMPENSACAO' || tipoProcesso === 'DACAO_PAGAMENTO') {
+      // Primeiro tentar o valorTotal que foi corrigido no backend para representar o valor correto
+      if (acordo_data.valorTotal) {
+        return Number(acordo_data.valorTotal)
+      }
+
+    }
+
+    // Fallback para detalhes do acordo
+    if (!detalhesAcordo) {
+      return Number(acordo_data.valorFinal || 0)
+    }
+
+    const detalhes = (detalhesAcordo as Record<string, unknown>).detalhes as Record<string, unknown>[]
+    if (!detalhes || !Array.isArray(detalhes) || detalhes.length === 0) {
+      return Number(acordo_data.valorFinal || 0)
+    }
+
+    let valorTotal = 0
+
+    detalhes.forEach((detalhe: Record<string, unknown>) => {
+      if (detalhe.tipo === 'compensacao') {
+        // Para compensação: usar valorOriginal do detalhe
+        valorTotal += Number(detalhe.valorOriginal || 0)
+      } else if (detalhe.tipo === 'dacao') {
+        // Para dação: usar valorOriginal do detalhe (que representa valor oferecido)
+        valorTotal += Number(detalhe.valorOriginal || 0)
+      }
+    })
+
+    return valorTotal > 0 ? valorTotal : Number(acordo_data.valorFinal || 0)
+  }
+
   const progresso = acordo_data ? getProgressoPagamento() : null
   const vencido = acordo_data ? isVencido(acordo_data.dataVencimento as Date) : false
 
@@ -386,13 +467,32 @@ export default function AcordoPage({ params }: AcordoPageProps) {
           </p>
         </div>
         <div className="flex gap-2">
-          {canRegisterPayment && (progresso?.valorPendente || 0) > 0 && !modoRegistrarPagamento && (
+          {temParcelas && canRegisterPayment && (progresso?.valorPendente || 0) > 0 && !modoRegistrarPagamento && (
             <Button onClick={handleIniciarRegistroPagamento} className="cursor-pointer">
               <DollarSign className="mr-2 h-4 w-4" />
               Registrar Pagamento
             </Button>
           )}
-          {modoRegistrarPagamento && (
+          {!temParcelas && canEdit && acordo_data?.status === 'ativo' && (
+            <Button
+              onClick={handleConcluirAcordo}
+              disabled={processandoConclusao}
+              className="bg-green-600 hover:bg-green-700 cursor-pointer"
+            >
+              {processandoConclusao ? (
+                <>
+                  <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  Concluir Acordo
+                </>
+              )}
+            </Button>
+          )}
+          {temParcelas && modoRegistrarPagamento && (
             <>
               <Button
                 onClick={handleConfirmarPagamento}
@@ -422,7 +522,11 @@ export default function AcordoPage({ params }: AcordoPageProps) {
               </Button>
             </>
           )}
-          {canEdit && (
+          {canEdit && !(
+            !temParcelas &&
+            acordo_data.status === 'cumprido' &&
+            (tipoProcesso === 'COMPENSACAO' || tipoProcesso === 'DACAO_PAGAMENTO')
+          ) && (
             <AcordoActions acordo={acordo as { id: string; status: string; parcelas: { id: string; pagamentos: { id: string; valorPago: number; }[]; }[]; valorFinal: number; }} />
           )}
         </div>
@@ -447,12 +551,15 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                 <span className="text-gray-600">Data de Vencimento:</span>
                 <p className="font-medium">{formatarData(acordo_data.dataVencimento as Date)}</p>
               </div>
-              <div>
-                <span className="text-gray-600">Modalidade:</span>
-                <p className="font-medium">
-                  {acordo_data.modalidadePagamento === 'avista' ? 'À Vista' : `Parcelamento (${acordo_data.numeroParcelas as number}x)`}
-                </p>
-              </div>
+              {/* Mostrar modalidade apenas para transação excepcional */}
+              {temParcelas && (
+                <div>
+                  <span className="text-gray-600">Modalidade:</span>
+                  <p className="font-medium">
+                    {acordo_data.modalidadePagamento === 'avista' ? 'À Vista' : `Parcelamento (${acordo_data.numeroParcelas as number}x)`}
+                  </p>
+                </div>
+              )}
               <div>
                 <span className="text-gray-600">Status:</span>
                 <p className="font-medium">{getStatusLabel(acordo_data.status as string)}</p>
@@ -502,226 +609,275 @@ export default function AcordoPage({ params }: AcordoPageProps) {
             Valores e Progresso
           </CardTitle>
           <CardDescription>
-            Acompanhamento dos valores e pagamentos do acordo
+            {temParcelas
+              ? 'Acompanhamento dos valores e pagamentos do acordo'
+              : tipoProcesso === 'COMPENSACAO'
+                ? 'Detalhes da compensação entre créditos e débitos'
+                : 'Detalhes da dação em pagamento'
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h5 className="font-medium mb-3 text-blue-800">Detalhamento do Acordo:</h5>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 text-sm">
-                <div>
-                  <span className="text-blue-600">Valor Original:</span>
-                  <p className="font-medium text-blue-700">
-                    R$ {Number(acordo_data.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-blue-600">Valor Proposto:</span>
-                  <p className="font-medium text-blue-700">
-                    R$ {Number(acordo_data.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-blue-600">Desconto:</span>
-                  <p className="font-medium text-blue-700">
-                    R$ {Number(acordo_data.valorDesconto || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-blue-600">Valor de Entrada:</span>
-                  <p className="font-medium text-blue-700">
-                    R$ {Number(acordo_data.valorEntrada || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-blue-600">
-                    {acordo_data.modalidadePagamento === 'avista' ? 'Valor Total:' : 'Valor das Parcelas:'}
-                  </span>
-                  <p className="font-medium text-blue-700">
-                    {acordo_data.modalidadePagamento === 'avista'
-                      ? `R$ ${Number(acordo_data.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                      : (acordo_data.numeroParcelas as number) > 0
-                        ? `${acordo_data.numeroParcelas as number}x de R$ ${((Number(acordo_data.valorFinal) - Number(acordo_data.valorEntrada || 0)) / (acordo_data.numeroParcelas as number)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                        : `R$ ${Number(acordo_data.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                    }
-                  </p>
-                </div>
-                <div>
-                  <span className="text-blue-600">Total Final:</span>
-                  <p className="font-bold text-blue-700">
-                    R$ {Number(acordo_data.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
+            {/* Mostrar detalhamento apenas para transação excepcional */}
+            {temParcelas && (
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h5 className="font-medium mb-3 text-blue-800">Detalhamento do Acordo:</h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 text-sm">
+                  <div>
+                    <span className="text-blue-600">Valor Original:</span>
+                    <p className="font-medium text-blue-700">
+                      R$ {Number(acordo_data.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-blue-600">Valor Proposto:</span>
+                    <p className="font-medium text-blue-700">
+                      R$ {Number(acordo_data.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-blue-600">Desconto:</span>
+                    <p className="font-medium text-blue-700">
+                      R$ {Number(acordo_data.valorDesconto || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-blue-600">Valor de Entrada:</span>
+                    <p className="font-medium text-blue-700">
+                      R$ {Number(acordo_data.valorEntrada || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-blue-600">
+                      {acordo_data.modalidadePagamento === 'avista' ? 'Valor Total:' : 'Valor das Parcelas:'}
+                    </span>
+                    <p className="font-medium text-blue-700">
+                      {acordo_data.modalidadePagamento === 'avista'
+                        ? `R$ ${Number(acordo_data.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                        : (acordo_data.numeroParcelas as number) > 0
+                          ? `${acordo_data.numeroParcelas as number}x de R$ ${((Number(acordo_data.valorFinal) - Number(acordo_data.valorEntrada || 0)) / (acordo_data.numeroParcelas as number)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                          : `R$ ${Number(acordo_data.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-blue-600">Total Final:</span>
+                    <p className="font-bold text-blue-700">
+                      R$ {Number(acordo_data.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Progresso do Pagamento</span>
-                <span className="font-medium">{(progresso?.percentual as number) || 0}%</span>
+                <span className="text-gray-600">
+                  {temParcelas ? 'Progresso do Pagamento' : 'Status do Acordo'}
+                </span>
+                <span className="font-medium">
+                  {temParcelas
+                    ? `${(progresso?.percentual as number) || 0}%`
+                    : acordo_data.status === 'cumprido' ? '100%' : '0%'
+                  }
+                </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div
                   className="bg-blue-600 h-3 rounded-full transition-all duration-300"
-                  style={{ width: `${progresso?.percentual || 0}%` }}
+                  style={{
+                    width: temParcelas
+                      ? `${progresso?.percentual || 0}%`
+                      : acordo_data.status === 'cumprido' ? '100%' : '0%'
+                  }}
                 />
               </div>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-lg font-bold text-blue-600">
-                    R$ {(progresso?.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-xs text-gray-600">Total</p>
+              {temParcelas && (
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-lg font-bold text-blue-600">
+                      R$ {(progresso?.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-xs text-gray-600">Total</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-yellow-600">
+                      R$ {(progresso?.valorPendente || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-xs text-gray-600">Pendente</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-green-600">
+                      R$ {(progresso?.valorPago || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-xs text-gray-600">Pago</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-lg font-bold text-yellow-600">
-                    R$ {(progresso?.valorPendente || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-xs text-gray-600">Pendente</p>
+              )}
+              {!temParcelas && (
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div>
+                    <p className="text-lg font-bold text-blue-600">
+                      R$ {getValorAcordo().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      {tipoProcesso === 'COMPENSACAO' ? 'Valor dos Créditos Ofertados' :
+                        tipoProcesso === 'DACAO_PAGAMENTO' ? 'Valor do Imóvel Ofertado' :
+                          'Valor do Acordo'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className={`text-lg font-bold ${acordo_data.status === 'cumprido' ? 'text-green-600' : acordo_data.status === 'ativo' ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {getStatusLabel(acordo_data.status as string)}
+                    </p>
+                    <p className="text-xs text-gray-600">Status Atual</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-lg font-bold text-green-600">
-                    R$ {(progresso?.valorPago || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-xs text-gray-600">Pago</p>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Observações do Acordo */}
             {(acordo_data.observacoes as string) && (
-              <>
-                <div className="border-t pt-4">
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-gray-900">Observações do Acordo</h4>
-                    <p className="text-sm text-gray-600 leading-relaxed">
-                      {acordo_data.observacoes as string}
-                    </p>
-                  </div>
+              <div className="border-t pt-4">
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-gray-900">Observações do Acordo</h4>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    {acordo_data.observacoes as string}
+                  </p>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Parcelas */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Parcelas do Acordo
-          </CardTitle>
-          <CardDescription>
-            Cronograma de pagamento e status das parcelas
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {(acordo_data.parcelas as Record<string, unknown>[]).map((parcela: Record<string, unknown>) => {
-              const isVencidaParcela = new Date(parcela.dataVencimento as string) < new Date() && parcela.status === 'PENDENTE'
-              const totalPagoParcela = (parcela.pagamentos as Record<string, unknown>[]).reduce((total: number, p: Record<string, unknown>) => total + Number(p.valorPago), 0)
-              const restanteParcela = Number(parcela.valor) - totalPagoParcela
+      {/* Parcelas - apenas para transação excepcional */}
+      {temParcelas && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Parcelas do Acordo
+            </CardTitle>
+            <CardDescription>
+              Cronograma de pagamento e status das parcelas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {(acordo_data.parcelas as Record<string, unknown>[]).map((parcela: Record<string, unknown>) => {
+                const isVencidaParcela = new Date(parcela.dataVencimento as string) < new Date() && parcela.status === 'PENDENTE'
+                const totalPagoParcela = (parcela.pagamentos as Record<string, unknown>[]).reduce((total: number, p: Record<string, unknown>) => total + Number(p.valorPago), 0)
+                const restanteParcela = Number(parcela.valor) - totalPagoParcela
 
-              return (
-                <div
-                  key={parcela.id as string}
-                  className={`border rounded-lg p-4 ${parcela.status === 'PAGO' ? 'bg-green-50 border-green-200' :
-                    isVencidaParcela ? 'bg-red-50 border-red-200' :
-                      'bg-gray-50'
-                    }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {modoRegistrarPagamento && parcela.status === 'PENDENTE' && restanteParcela > 0 ? (
-                        <Checkbox
-                          checked={parcelasSelecionadas.has(parcela.id as string)}
-                          onCheckedChange={() => handleToggleParcela(parcela.id as string)}
-                          className="w-6 h-6 cursor-pointer"
-                        />
-                      ) : (
-                        <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${parcela.status === 'PAGO' ? 'bg-green-100 text-green-800' :
-                          isVencidaParcela ? 'bg-red-100 text-red-800' :
-                            'bg-blue-100 text-blue-800'
-                          }`}>
-                          {Number(parcela.numero) === 0 ? 'E' : parcela.numero as string}
-                        </span>
-                      )}
-                      <div>
-                        <p className="font-medium">
-                          {Number(parcela.numero) === 0 ? 'Entrada' : `Parcela ${parcela.numero as string} de ${acordo_data.numeroParcelas as string}`}
+                const isClickable = modoRegistrarPagamento && parcela.status === 'PENDENTE' && restanteParcela > 0
+
+                return (
+                  <div
+                    key={parcela.id as string}
+                    onClick={isClickable ? () => handleToggleParcela(parcela.id as string) : undefined}
+                    className={`border rounded-lg p-4 ${parcela.status === 'PAGO' ? 'bg-green-50 border-green-200' :
+                      isVencidaParcela ? 'bg-red-50 border-red-200' :
+                        'bg-gray-50'
+                      } ${isClickable ? 'cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors' : ''}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {modoRegistrarPagamento && parcela.status === 'PENDENTE' && restanteParcela > 0 ? (
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={parcelasSelecionadas.has(parcela.id as string)}
+                              onCheckedChange={() => handleToggleParcela(parcela.id as string)}
+                              className="w-6 h-6 cursor-pointer"
+                            />
+                          </div>
+                        ) : (
+                          <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${parcela.status === 'PAGO' ? 'bg-green-100 text-green-800' :
+                            isVencidaParcela ? 'bg-red-100 text-red-800' :
+                              'bg-blue-100 text-blue-800'
+                            }`}>
+                            {Number(parcela.numero) === 0 ? 'E' : parcela.numero as string}
+                          </span>
+                        )}
+                        <div>
+                          <p className="font-medium">
+                            {Number(parcela.numero) === 0 ? 'Entrada' : `Parcela ${parcela.numero as string} de ${acordo_data.numeroParcelas as string}`}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Vencimento: {formatarData(parcela.dataVencimento as string)}
+                          </p>
+                          {(parcela.dataPagamento as string) && (
+                            <p className="text-sm text-green-600">
+                              Paga em: {formatarData(parcela.dataPagamento as string)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-center gap-2 justify-end mb-2">
+                          <Badge className={getParcelaStatusColor(parcela.status as string)}>
+                            {getParcelaStatusLabel(parcela.status as string)}
+                          </Badge>
+                          {canEdit && !modoRegistrarPagamento && acordo_data.status !== 'cancelado' && acordo_data.status !== 'cumprido' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEditarParcela(parcela as Record<string, unknown>)
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-sm font-medium">
+                          R$ {Number(parcela.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-sm text-gray-600">
-                          Vencimento: {formatarData(parcela.dataVencimento as string)}
-                        </p>
-                        {(parcela.dataPagamento as string) && (
-                          <p className="text-sm text-green-600">
-                            Paga em: {formatarData(parcela.dataPagamento as string)}
+                        {parcela.status === 'PENDENTE' && totalPagoParcela > 0 && (
+                          <p className="text-xs text-blue-600">
+                            Pago: R$ {totalPagoParcela.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </p>
                         )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="flex items-center gap-2 justify-end mb-2">
-                        <Badge className={getParcelaStatusColor(parcela.status as string)}>
-                          {getParcelaStatusLabel(parcela.status as string)}
-                        </Badge>
-                        {canEdit && !modoRegistrarPagamento && acordo_data.status !== 'cancelado' && acordo_data.status !== 'cumprido' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEditarParcela(parcela as Record<string, unknown>)}
-                            className="cursor-pointer"
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                      <p className="text-sm font-medium">
-                        R$ {Number(parcela.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      {parcela.status === 'PENDENTE' && totalPagoParcela > 0 && (
-                        <p className="text-xs text-blue-600">
-                          Pago: R$ {totalPagoParcela.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Pagamentos da parcela */}
-                  {(parcela.pagamentos as Record<string, unknown>[]).length > 0 && parcela.status !== 'PAGO' && parcelaEditando !== parcela.id && (
-                    <div className="mt-3 pl-11 space-y-2">
-                      <h5 className="text-sm font-medium">Pagamentos:</h5>
-                      {(parcela.pagamentos as Record<string, unknown>[]).map((pagamento: Record<string, unknown>) => (
-                        <div key={pagamento.id as string} className="text-sm bg-white p-2 rounded border">
-                          <div className="flex justify-between items-center">
-                            <span>
-                              {formatarData(pagamento.dataPagamento as string)} -
-                              {(pagamento.formaPagamento as string).replace('_', ' ').toLowerCase()}
-                            </span>
-                            <span className="font-medium">
-                              R$ {Number(pagamento.valorPago).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </span>
+                    {/* Pagamentos da parcela */}
+                    {(parcela.pagamentos as Record<string, unknown>[]).length > 0 && parcela.status !== 'PAGO' && parcelaEditando !== parcela.id && (
+                      <div className="mt-3 pl-11 space-y-2">
+                        <h5 className="text-sm font-medium">Pagamentos:</h5>
+                        {(parcela.pagamentos as Record<string, unknown>[]).map((pagamento: Record<string, unknown>) => (
+                          <div key={pagamento.id as string} className="text-sm bg-white p-2 rounded border">
+                            <div className="flex justify-between items-center">
+                              <span>
+                                {formatarData(pagamento.dataPagamento as string)} -
+                                {(pagamento.formaPagamento as string).replace('_', ' ').toLowerCase()}
+                              </span>
+                              <span className="font-medium">
+                                R$ {Number(pagamento.valorPago).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                            {(pagamento.numeroComprovante as string) && (
+                              <p className="text-xs text-gray-500">
+                                Comprovante: {pagamento.numeroComprovante as string}
+                              </p>
+                            )}
                           </div>
-                          {(pagamento.numeroComprovante as string) && (
-                            <p className="text-xs text-gray-500">
-                              Comprovante: {pagamento.numeroComprovante as string}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Origem do Acordo */}
-      {detalhesAcordo && Array.isArray((detalhesAcordo as Record<string, unknown>).detalhes) && ((detalhesAcordo as Record<string, unknown>).detalhes as Record<string, unknown>[]).length > 0 && (
+      {detalhesAcordo && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -734,85 +890,261 @@ export default function AcordoPage({ params }: AcordoPageProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {((detalhesAcordo as Record<string, unknown>).detalhes as Record<string, unknown>[]).map((detalhe: Record<string, unknown>) => (
-                <div key={detalhe.id as string} className="border rounded-lg p-4">
-                  {/* Inscrições relacionadas */}
-                  {(detalhe.inscricoes as Record<string, unknown>) && Array.isArray(detalhe.inscricoes) && (detalhe.inscricoes as Record<string, unknown>[]).length > 0 && (
-                    <div className="mt-4">
-                      <h5 className="text-sm font-medium text-gray-700 mb-2">Inscrições Incluídas:</h5>
-                      <div className="space-y-3">
-                        {(detalhe.inscricoes as Record<string, unknown>[]).map((inscricao: Record<string, unknown>) => (
-                          <div key={inscricao.id as string} className="p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-3">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                <div>
-                                  <p className="font-medium text-sm">{inscricao.numeroInscricao as string}</p>
-                                  <p className="text-xs text-gray-600 capitalize">
-                                    {(inscricao.tipoInscricao as string) === 'imobiliaria' ? 'Imobiliária' : 'Econômica'}
+              {/* Verificar se tem detalhes */}
+              {(detalhesAcordo as Record<string, unknown>).detalhes && Array.isArray((detalhesAcordo as Record<string, unknown>).detalhes) && ((detalhesAcordo as Record<string, unknown>).detalhes as Record<string, unknown>[]).length > 0 ? (
+                ((detalhesAcordo as Record<string, unknown>).detalhes as Record<string, unknown>[]).map((detalhe: Record<string, unknown>) => (
+                  <div key={detalhe.id as string} className="border rounded-lg p-4">
+                    {/* <div className="flex items-center gap-2 mb-4">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <h4 className="font-medium text-gray-900">
+                        {(detalhe.tipo as string) === 'compensacao' ? '' :
+                          (detalhe.tipo as string) === 'dacao' ? 'Dação em Pagamento' :
+                            detalhe.descricao as string}
+                      </h4>
+                    </div> */}
+
+                    {/* Para Compensação: Mostrar créditos oferecidos separadamente */}
+                    {(detalhe.tipo as string) === 'compensacao' && (
+                      <>
+                        {/* Créditos Oferecidos */}
+                        <div className="mb-6">
+                          <h5 className="text-sm font-medium text-green-700 mb-3 flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            Créditos Oferecidos
+                          </h5>
+                          {(() => {
+                            try {
+                              const observacoes = detalhe.observacoes as string
+                              if (observacoes) {
+                                const dadosCreditos = JSON.parse(observacoes)
+                                if (dadosCreditos.creditosOferecidos && Array.isArray(dadosCreditos.creditosOferecidos)) {
+                                  return (
+                                    <div className="space-y-3">
+                                      {dadosCreditos.creditosOferecidos.map((credito: Record<string, unknown>, idx: number) => (
+                                        <div key={credito.id as string || `credito-${idx}`} className="p-3 bg-green-50 rounded-lg border border-green-200">
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                              <div>
+                                                <p className="font-medium text-sm text-green-900">{credito.numero as string}</p>
+                                                <p className="text-xs text-green-700 capitalize">
+                                                  {(credito.tipo as string).replace('_', ' ')}
+                                                </p>
+                                              </div>
+                                            </div>
+                                            <div className="text-right">
+                                              <p className="text-sm font-medium text-green-900">
+                                                R$ {Number(credito.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                              </p>
+                                            </div>
+                                          </div>
+                                          {(credito.descricao as string) && (
+                                            <p className="text-xs text-green-600 mt-1">{credito.descricao as string}</p>
+                                          )}
+                                        </div>
+                                      ))}
+                                      <div className="p-3 bg-green-100 rounded-lg border border-green-300">
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-sm font-medium text-green-800">Total dos Créditos:</span>
+                                          <span className="text-sm font-bold text-green-900">
+                                            R$ {Number(dadosCreditos.valorTotalCreditos || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )
+                                }
+                              }
+                            } catch (e) {
+                              // Se não conseguir fazer parse ou não tiver dados
+                            }
+                            return (
+                              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                                <p className="text-sm text-green-700">
+                                  Os créditos configurados no momento da criação do acordo foram utilizados para esta compensação.
+                                </p>
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      </>
+                    )}
+
+                    {/* Inscrições Incluídas - Layout padronizado para todos os tipos */}
+                    {(detalhe.inscricoes as Record<string, unknown>) && Array.isArray(detalhe.inscricoes) && (detalhe.inscricoes as Record<string, unknown>[]).length > 0 && (
+                      <div>
+                        <h5 className="text-sm font-medium text-blue-700 mb-3 flex items-center gap-2">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          Inscrições Incluídas
+                        </h5>
+                        <div className="space-y-3">
+                          {(detalhe.inscricoes as Record<string, unknown>[]).map((inscricao: Record<string, unknown>) => (
+                            <div key={inscricao.id as string} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                  <div>
+                                    <p className="font-medium text-sm text-blue-900">{inscricao.numeroInscricao as string}</p>
+                                    <p className="text-xs text-blue-700 capitalize">
+                                      {(inscricao.tipoInscricao as string) === 'imobiliaria' ? 'Imobiliária' : 'Econômica'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-sm font-medium text-blue-900">
+                                    Total: R$ {Number(inscricao.valorDebito || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                   </p>
                                 </div>
                               </div>
-                            </div>
 
-                            {/* Débitos da inscrição */}
-                            {(inscricao.descricaoDebitos as Record<string, unknown>) && Array.isArray(inscricao.descricaoDebitos) && (inscricao.descricaoDebitos as Record<string, unknown>[]).length > 0 && (
-                              <div className="mt-2 pt-2 border-t border-gray-200">
-                                <h6 className="text-xs font-medium text-gray-600 mb-1">Débitos:</h6>
-                                <div className="space-y-1">
-                                  {(inscricao.descricaoDebitos as Record<string, unknown>[]).map((debito: Record<string, unknown>, idx: number) => (
-                                    <div key={(debito.id as string) || `debito-${idx}`} className="flex items-center justify-between text-xs">
-                                      <span className="text-gray-700">{debito.descricao as string}</span>
-                                      <div className="text-right">
-                                        <span className="font-medium">
-                                          R$ {Number(debito.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                        </span>
-                                        {(debito.dataVencimento as string) && (
-                                          <div className="text-gray-500">
-                                            Venc: {new Date(debito.dataVencimento as string).toLocaleDateString('pt-BR')}
+                              {/* Débitos da inscrição */}
+                              {(inscricao.descricaoDebitos as Record<string, unknown>[]) && Array.isArray(inscricao.descricaoDebitos) && (inscricao.descricaoDebitos as Record<string, unknown>[]).length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-blue-300">
+                                  <h6 className="text-xs font-medium text-blue-700 mb-2">Débitos Incluídos:</h6>
+                                  <div className="space-y-2">
+                                    {(inscricao.descricaoDebitos as Record<string, unknown>[]).map((debito: Record<string, unknown>, idx: number) => (
+                                      <div key={(debito.id as string) || `debito-${idx}`} className="flex items-center justify-between text-xs bg-white p-2 rounded">
+                                        <span className="text-gray-700">{debito.descricao as string}</span>
+                                        <div className="text-right">
+                                          <span className="font-medium text-gray-900">
+                                            R$ {Number(debito.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                          </span>
+                                          {(debito.dataVencimento as string) && (
+                                            <div className="text-gray-500">
+                                              Venc: {new Date(debito.dataVencimento as string).toLocaleDateString('pt-BR')}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          {/* Total das Inscrições */}
+                          <div className="p-3 bg-blue-100 rounded-lg border border-blue-300">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-blue-800">Total das Inscrições:</span>
+                              <span className="text-sm font-bold text-blue-900">
+                                R$ {(detalhe.inscricoes as Record<string, unknown>[]).reduce((total: number, inscricao: Record<string, unknown>) => {
+                                  return total + Number(inscricao.valorDebito || 0)
+                                }, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Para Dação em Pagamento: Layout igual à compensação */}
+                    {(detalhe.tipo as string) === 'dacao' && (
+                      <>
+                        {/* Inscrições Oferecidas em Dação (equivalente aos Créditos na compensação) */}
+                        <div className="mb-6">
+                          <h5 className="text-sm font-medium text-green-700 mb-3 flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            Inscrições Oferecidas em Dação
+                          </h5>
+                          {(() => {
+                            try {
+                              const observacoes = detalhe.observacoes as string
+                              if (observacoes) {
+                                const dadosDacao = JSON.parse(observacoes)
+                                if (dadosDacao.inscricoesOferecidas && Array.isArray(dadosDacao.inscricoesOferecidas) && dadosDacao.inscricoesOferecidas.length > 0) {
+                                  return (
+                                    <div className="space-y-3">
+                                      {dadosDacao.inscricoesOferecidas.map((inscricao: Record<string, unknown>, idx: number) => (
+                                        <div key={inscricao.id as string || `inscricao-oferecida-${idx}`} className="p-3 bg-green-50 rounded-lg border border-green-200">
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                              <div>
+                                                <p className="font-medium text-sm text-green-900">{inscricao.numeroInscricao as string}</p>
+                                                <p className="text-xs text-green-700 capitalize">
+                                                  {(inscricao.tipoInscricao as string) === 'imobiliaria' ? 'Imobiliária' : 'Econômica'}
+                                                </p>
+                                              </div>
+                                            </div>
+                                            <div className="text-right">
+                                              <p className="text-sm font-medium text-green-900">
+                                                R$ {Number(inscricao.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                              </p>
+                                              {inscricao.dataVencimento && (
+                                                <p className="text-xs text-green-600">
+                                                  Venc: {new Date(inscricao.dataVencimento as string).toLocaleDateString('pt-BR')}
+                                                </p>
+                                              )}
+                                            </div>
                                           </div>
-                                        )}
+                                          {(inscricao.descricao as string) && (
+                                            <p className="text-xs text-green-600 mt-1">{inscricao.descricao as string}</p>
+                                          )}
+                                        </div>
+                                      ))}
+                                      <div className="p-3 bg-green-100 rounded-lg border border-green-300">
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-sm font-medium text-green-800">Total Oferecido:</span>
+                                          <span className="text-sm font-bold text-green-900">
+                                            R$ {Number(dadosDacao.valorTotalOferecido || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                          </span>
+                                        </div>
                                       </div>
                                     </div>
-                                  ))}
-                                </div>
+                                  )
+                                }
+                              }
+                            } catch (e) {
+                              // Se não conseguir fazer parse ou não tiver dados
+                            }
+                            return (
+                              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                                <p className="text-sm text-green-700">
+                                  Nenhuma inscrição oferecida foi configurada para este acordo de dação.
+                                </p>
                               </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                            )
+                          })()}
+                        </div>
+                      </>
+                    )}
 
-                  {/* Imóvel relacionado (para dação) */}
-                  {(detalhe.imovel as Record<string, unknown>) && (
-                    <div className="mt-4">
-                      <h5 className="text-sm font-medium text-gray-700 mb-2">Imóvel:</h5>
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="font-medium text-sm">{(detalhe.imovel as Record<string, unknown>).matricula as string}</p>
-                        <p className="text-xs text-gray-600">{(detalhe.imovel as Record<string, unknown>).endereco as string}</p>
-                        <p className="text-sm font-medium mt-1">
-                          Valor Avaliado: R$ {Number((detalhe.imovel as Record<string, unknown>).valorAvaliado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
+                    {/* Imóvel relacionado (para dação) */}
+                    {(detalhe.imovel as Record<string, unknown>) && (
+                      <div className="mt-4">
+                        <h5 className="text-sm font-medium text-gray-700 mb-2">Imóvel:</h5>
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <p className="font-medium text-sm">{(detalhe.imovel as Record<string, unknown>).matricula as string}</p>
+                          <p className="text-xs text-gray-600">{(detalhe.imovel as Record<string, unknown>).endereco as string}</p>
+                          <p className="text-sm font-medium mt-1">
+                            Valor Avaliado: R$ {Number((detalhe.imovel as Record<string, unknown>).valorAvaliado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Crédito relacionado (para compensação) */}
-                  {(detalhe.credito as Record<string, unknown>) && (
-                    <div className="mt-4">
-                      <h5 className="text-sm font-medium text-gray-700 mb-2">Crédito:</h5>
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="font-medium text-sm">{(detalhe.credito as Record<string, unknown>).numero as string}</p>
-                        <p className="text-xs text-gray-600 capitalize">{((detalhe.credito as Record<string, unknown>).tipo as string).replace('_', ' ')}</p>
-                        <p className="text-sm font-medium mt-1">
-                          Valor: R$ {Number((detalhe.credito as Record<string, unknown>).valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
+                    {/* Crédito relacionado (para compensação) */}
+                    {(detalhe.credito as Record<string, unknown>) && (
+                      <div className="mt-4">
+                        <h5 className="text-sm font-medium text-gray-700 mb-2">Crédito:</h5>
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <p className="font-medium text-sm">{(detalhe.credito as Record<string, unknown>).numero as string}</p>
+                          <p className="text-xs text-gray-600 capitalize">{((detalhe.credito as Record<string, unknown>).tipo as string).replace('_', ' ')}</p>
+                          <p className="text-sm font-medium mt-1">
+                            Valor: R$ {Number((detalhe.credito as Record<string, unknown>).valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Receipt className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                  <p>Nenhum detalhe específico encontrado para este acordo.</p>
+                  <p className="text-sm mt-1">Os detalhes podem não ter sido configurados ou carregados.</p>
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>

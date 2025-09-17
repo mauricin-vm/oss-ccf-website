@@ -8,7 +8,7 @@ import { existsSync } from 'fs'
 import { join } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads/documentos'
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 // Tipos de arquivo permitidos
 const ALLOWED_TYPES = [
   'application/pdf',
@@ -69,7 +69,7 @@ export async function POST(
     // Validar tamanho do arquivo
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: 'Arquivo muito grande (máximo 10MB)' },
+        { error: 'Arquivo muito grande (máximo 50MB)' },
         { status: 400 }
       )
     }

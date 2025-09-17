@@ -61,13 +61,10 @@ interface DadosEspecificos {
   valorDacao?: number
 }
 async function criarDetalhesEspecificos(acordoId: string, tipoProcesso: string, dadosEspecificos: DadosEspecificos) {
-  console.log('🔍 Criando detalhes específicos para:', { acordoId, tipoProcesso })
-  console.log('📋 Dados específicos recebidos:', JSON.stringify(dadosEspecificos, null, 2))
   switch (tipoProcesso) {
     case 'TRANSACAO_EXCEPCIONAL':
       // Verificar se tem dados de inscrições (novo formato) ou formato antigo
       const inscricoesData = dadosEspecificos.inscricoesAcordo || dadosEspecificos.inscricoesSelecionadas
-      console.log('📝 Inscrições encontradas:', inscricoesData?.length || 0)
       if (inscricoesData && inscricoesData.length > 0) {
         const detalhe = await prisma.acordoDetalhes.create({
           data: {
@@ -111,7 +108,18 @@ async function criarDetalhesEspecificos(acordoId: string, tipoProcesso: string, 
       }
       break
     case 'COMPENSACAO':
-      if ((dadosEspecificos.creditosSelecionados?.length || 0) > 0 || (dadosEspecificos.inscricoesSelecionadas?.length || 0) > 0) {
+      // Usar os nomes corretos enviados pelo CompensacaoSection
+      const creditos = dadosEspecificos.creditosAdicionados || dadosEspecificos.creditosSelecionados || []
+      const inscricoes = dadosEspecificos.inscricoesAdicionadas || dadosEspecificos.inscricoesSelecionadas || []
+
+      if (creditos.length > 0 || inscricoes.length > 0) {
+
+        const creditosData = creditos.length > 0 ? {
+          creditosOferecidos: creditos,
+          valorTotalCreditos: dadosEspecificos.valorCreditos || 0
+        } : null
+
+
         const detalhe = await prisma.acordoDetalhes.create({
           data: {
             acordoId,
@@ -119,22 +127,37 @@ async function criarDetalhesEspecificos(acordoId: string, tipoProcesso: string, 
             descricao: 'Compensação de Créditos e Débitos',
             valorOriginal: Math.max(dadosEspecificos.valorCreditos || 0, dadosEspecificos.valorDebitos || 0),
             valorNegociado: Math.max(dadosEspecificos.valorCreditos || 0, dadosEspecificos.valorDebitos || 0),
-            status: StatusPagamento.PENDENTE
+            status: StatusPagamento.PENDENTE,
+            // Salvar créditos como JSON no campo observacoes
+            observacoes: creditosData ? JSON.stringify(creditosData) : null
           }
         })
-        // Criar registros para inscrições compensadas
-        if ((dadosEspecificos.inscricoesSelecionadas?.length || 0) > 0) {
-          for (const inscricaoId of dadosEspecificos.inscricoesSelecionadas || []) {
-            const numeroInscricao = typeof inscricaoId === 'string' ? inscricaoId : inscricaoId.numeroInscricao
+
+        // Criar registros para cada inscrição a compensar
+        if (inscricoes.length > 0) {
+          for (const inscricao of inscricoes) {
+            // Calcular valor total dos débitos para esta inscrição
+            const valorDebitos = inscricao.debitos?.reduce(
+              (total: number, debito: DebitoAcordo) => total + (Number(debito?.valor) || 0), 0
+            ) || 0
+
+            // Preparar lista de débitos para salvar no JSON
+            const debitosDetalhados = inscricao.debitos?.map((debito: DebitoAcordo) => ({
+              descricao: debito.descricao,
+              valor: Number(debito.valor),
+              dataVencimento: debito.dataVencimento
+            })) || []
+
             await prisma.acordoInscricao.create({
               data: {
                 acordoDetalheId: detalhe.id,
-                numeroInscricao: numeroInscricao,
-                tipoInscricao: 'economica',
-                valorDebito: dadosEspecificos.valorDebitos || 0,
-                valorAbatido: dadosEspecificos.valorCompensacao || 0,
-                percentualAbatido: 0,
-                situacao: 'pendente'
+                numeroInscricao: inscricao.numeroInscricao,
+                tipoInscricao: inscricao.tipoInscricao,
+                valorDebito: valorDebitos,
+                valorAbatido: valorDebitos, // Para compensação, o valor é totalmente abatido
+                percentualAbatido: 100,
+                situacao: 'pendente',
+                descricaoDebitos: JSON.stringify(debitosDetalhados)
               }
             })
           }
@@ -142,33 +165,101 @@ async function criarDetalhesEspecificos(acordoId: string, tipoProcesso: string, 
       }
       break
     case 'DACAO_PAGAMENTO':
-      if ((dadosEspecificos.inscricoesOferecidas?.length || 0) > 0 || (dadosEspecificos.inscricoesCompensar?.length || 0) > 0) {
+      // Usar os nomes corretos enviados pelo DacaoSection
+      let inscricoesOferecidasAdicionadas = dadosEspecificos.inscricoesOferecidasAdicionadas || []
+      let inscricoesCompensarAdicionadas = dadosEspecificos.inscricoesCompensarAdicionadas || []
+
+      console.log('DACAO_PAGAMENTO - dadosEspecificos completo:', JSON.stringify(dadosEspecificos, null, 2))
+
+      console.log('DACAO_PAGAMENTO - Dados completos recebidos:', {
+        inscricoesOferecidasAdicionadas: {
+          quantidade: inscricoesOferecidasAdicionadas.length,
+          primeira: inscricoesOferecidasAdicionadas[0] || 'nenhuma',
+          todas: inscricoesOferecidasAdicionadas
+        },
+        inscricoesCompensarAdicionadas: {
+          quantidade: inscricoesCompensarAdicionadas.length,
+          primeira: inscricoesCompensarAdicionadas[0] || 'nenhuma',
+          todas: inscricoesCompensarAdicionadas
+        },
+        valores: {
+          valorOferecido: dadosEspecificos.valorOferecido,
+          valorCompensar: dadosEspecificos.valorCompensar,
+          valorDacao: dadosEspecificos.valorDacao
+        }
+      })
+
+      // Sempre usar apenas os dados reais enviados pelo frontend
+      // Se não há dados específicos, criar estrutura mínima para manter funcionamento
+      if (inscricoesOferecidasAdicionadas.length === 0 && (!dadosEspecificos.valorOferecido || dadosEspecificos.valorOferecido === 0)) {
+        console.log('Aviso: Nenhuma inscrição oferecida foi adicionada e sem valor oferecido')
+      }
+
+      if (inscricoesCompensarAdicionadas.length === 0 && (!dadosEspecificos.valorCompensar || dadosEspecificos.valorCompensar === 0)) {
+        console.log('Aviso: Nenhuma inscrição a compensar foi adicionada e sem valor a compensar')
+      }
+
+
+      // Sempre criar AcordoDetalhes para dação em pagamento para manter a estrutura
+      if (true) { // Sempre criar, mesmo se arrays estiverem vazios
+        // Para dação, salvar dados seguindo o padrão da compensação:
+        // - "Inscrições oferecidas" nas observações (similar aos créditos)
+        // - "Inscrições a compensar" na tabela acordoInscricao (similar às inscrições incluídas)
+        const dadosTecnicos = {
+          inscricoesOferecidas: inscricoesOferecidasAdicionadas, // Seguir o padrão da compensação
+          valorTotalOferecido: dadosEspecificos.valorOferecido || 0,
+          valorCompensar: dadosEspecificos.valorCompensar || 0,
+          valorDacao: dadosEspecificos.valorDacao || 0,
+          saldoFinal: dadosEspecificos.saldoFinal || 0
+        }
+
         const detalhe = await prisma.acordoDetalhes.create({
           data: {
             acordoId,
             tipo: 'dacao',
             descricao: 'Dação em Pagamento',
-            valorOriginal: dadosEspecificos.valorCompensar || 0,
-            valorNegociado: dadosEspecificos.valorCompensar || 0,
+            valorOriginal: dadosEspecificos.valorOferecido || 0, // Valor das inscrições oferecidas
+            valorNegociado: dadosEspecificos.valorOferecido || 0, // Para dação, usar valor oferecido
+            observacoes: JSON.stringify(dadosTecnicos),
             status: StatusPagamento.PENDENTE
           }
         })
-        // Criar registros para inscrições a compensar
-        if ((dadosEspecificos.inscricoesCompensar?.length || 0) > 0) {
-          for (const inscricaoId of dadosEspecificos.inscricoesCompensar || []) {
+
+
+        // Criar registros para inscrições a compensar (agora sempre tem dados)
+        if (inscricoesCompensarAdicionadas.length > 0) {
+          for (const inscricao of inscricoesCompensarAdicionadas) {
+            // Calcular valor total dos débitos para esta inscrição
+            const valorDebitos = inscricao.debitos?.reduce(
+              (total: number, debito: DebitoAcordo) => total + (Number(debito?.valor) || 0), 0
+            ) || 0
+
+            // Preparar lista de débitos para salvar no JSON
+            const debitosDetalhados = inscricao.debitos?.map((debito: DebitoAcordo) => ({
+              descricao: debito.descricao,
+              valor: Number(debito.valor),
+              dataVencimento: debito.dataVencimento
+            })) || []
+
             await prisma.acordoInscricao.create({
               data: {
                 acordoDetalheId: detalhe.id,
-                numeroInscricao: typeof inscricaoId === 'string' ? inscricaoId : String(inscricaoId),
-                tipoInscricao: 'imobiliaria',
-                valorDebito: dadosEspecificos.valorCompensar || 0,
-                valorAbatido: dadosEspecificos.valorDacao || 0,
-                percentualAbatido: 0,
-                situacao: 'pendente'
+                numeroInscricao: inscricao.numeroInscricao,
+                tipoInscricao: inscricao.tipoInscricao,
+                valorDebito: valorDebitos,
+                valorAbatido: valorDebitos, // Para dação, o valor é totalmente abatido
+                percentualAbatido: 100,
+                situacao: 'pendente',
+                descricaoDebitos: JSON.stringify(debitosDetalhados)
               }
             })
           }
         }
+
+        console.log('Inscrições salvas:', {
+          oferecidas: inscricoesOferecidasAdicionadas.length,
+          compensar: inscricoesCompensarAdicionadas.length
+        })
       }
       break
   }
@@ -217,6 +308,13 @@ export async function GET(request: NextRequest) {
             include: {
               pagamentos: true
             }
+          },
+          detalhes: {
+            include: {
+              imovel: true,
+              credito: true,
+              inscricoes: true
+            }
           }
         },
         orderBy: { createdAt: 'desc' },
@@ -257,44 +355,32 @@ export async function POST(request: NextRequest) {
       )
     }
     const body = await request.json()
-    // DEBUG: Log dos dados recebidos
-    console.log('=== DEBUG ACORDO ===')
-    console.log('Dados recebidos:', JSON.stringify(body, null, 2))
-    console.log('Dados específicos:', JSON.stringify(body.dadosEspecificos, null, 2))
-    console.log('==================')
-    console.log('📅 Iniciando conversão de datas...')
-    console.log('📅 dataAssinatura original:', body.dataAssinatura, typeof body.dataAssinatura)
-    console.log('📅 dataVencimento original:', body.dataVencimento, typeof body.dataVencimento)
+
+    // Log do body EXATO recebido
+    console.log('BACKEND - Body JSON EXATO recebido:', JSON.stringify(body, null, 2))
+
+    // Converter datas (ajustar timezone para evitar diferença de um dia)
     // Converter datas (ajustar timezone para evitar diferença de um dia)
     if (body.dataAssinatura) {
       try {
         const dataAssinatura = new Date(body.dataAssinatura)
-        console.log('📅 dataAssinatura convertida:', dataAssinatura)
         dataAssinatura.setHours(12, 0, 0, 0) // Meio-dia para evitar problemas de timezone
         body.dataAssinatura = dataAssinatura
-        console.log('📅 dataAssinatura final:', body.dataAssinatura)
       } catch (error) {
-        console.error('❌ Erro ao converter dataAssinatura:', error)
         throw error
       }
     }
     if (body.dataVencimento) {
       try {
         const dataVencimento = new Date(body.dataVencimento)
-        console.log('📅 dataVencimento convertida:', dataVencimento)
         dataVencimento.setHours(12, 0, 0, 0) // Meio-dia para evitar problemas de timezone
         body.dataVencimento = dataVencimento
-        console.log('📅 dataVencimento final:', body.dataVencimento)
       } catch (error) {
-        console.error('❌ Erro ao converter dataVencimento:', error)
         throw error
       }
     }
-    console.log('✅ Conversão de datas concluída')
-    console.log('🔍 Iniciando validação do schema...')
     const validationResult = acordoSchema.safeParse(body)
     if (!validationResult.success) {
-      console.log('❌ Erro de validação:', validationResult.error.issues)
       return NextResponse.json(
         {
           error: 'Dados inválidos',
@@ -303,7 +389,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    console.log('✅ Validação do schema passou')
     const data = validationResult.data
     // Verificar se o processo existe e está elegível
     const processo = await prisma.processo.findUnique({
@@ -350,7 +435,7 @@ export async function POST(request: NextRequest) {
     // Se existe acordo cancelado, permitir novo acordo
     const acordoCancelado = processo.acordos.find(acordo => acordo.status === 'cancelado')
     if (acordoCancelado) {
-      console.log('ℹ️ Processo tem acordo cancelado, permitindo criação de novo acordo')
+      // Processo tem acordo cancelado, permitindo criação de novo acordo
     }
     // Verificar se data de vencimento é posterior à data de assinatura
     if (data.dataVencimento <= data.dataAssinatura) {
@@ -383,34 +468,35 @@ export async function POST(request: NextRequest) {
     if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && data.dadosEspecificos?.valorInscricoes) {
       // IMPORTANTE: Este valor é "congelado" no momento da criação do acordo
       // para manter a integridade histórica, mesmo se as inscrições forem alteradas depois
-      console.log('=== CÁLCULO TRANSAÇÃO EXCEPCIONAL ===')
-      console.log('Valor das inscrições:', data.dadosEspecificos.valorInscricoes)
-      console.log('Valor final:', data.valorFinal)
       valorOriginal = data.dadosEspecificos.valorInscricoes
       valorDesconto = valorOriginal - data.valorFinal
       percentualDesconto = valorOriginal > 0 ? (valorDesconto / valorOriginal) * 100 : 0
-      console.log('Valor original calculado:', valorOriginal)
-      console.log('Valor desconto calculado:', valorDesconto)
-      console.log('Percentual desconto calculado:', percentualDesconto)
-      console.log('=====================================')
+    }
+
+    // Para compensação, usar valor dos créditos como valor original
+    if (processo.tipo === 'COMPENSACAO' && data.dadosEspecificos?.valorCreditos) {
+      valorOriginal = data.dadosEspecificos.valorCreditos
+    }
+
+    // Para dação em pagamento, usar valor das inscrições oferecidas como valor original
+    if (processo.tipo === 'DACAO_PAGAMENTO' && data.dadosEspecificos?.valorOferecido) {
+      valorOriginal = data.dadosEspecificos.valorOferecido
     }
     // Definir valor de entrada
     let valorEntrada = 0
     if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && data.dadosEspecificos?.propostaFinal?.valorEntrada) {
       valorEntrada = data.dadosEspecificos.propostaFinal.valorEntrada
     }
-    // DEBUG: Verificar observações
-    console.log('=== DEBUG OBSERVAÇÕES ===')
-    console.log('data.observacoes:', data.observacoes)
-    console.log('data.dadosEspecificos?.observacoesAcordo:', data.dadosEspecificos?.observacoesAcordo)
-    console.log('==========================')
+    // Separar observações do usuário das observações técnicas
+    // Observações do usuário vão para a tabela Acordo
+    const observacoesUsuario = data.observacoes || data.dadosEspecificos?.observacoesAcordo || null
+
     // Criar o acordo
-    console.log('🔥 Iniciando criação do acordo no banco...')
     const acordo = await prisma.acordo.create({
       data: {
         processoId: data.processoId,
         numeroTermo,
-        valorTotal: valorOriginal,
+        valorTotal: valorOriginal, // valorTotal representa o valor original/base
         valorDesconto: valorDesconto,
         percentualDesconto: percentualDesconto,
         valorFinal: data.valorFinal,
@@ -419,9 +505,7 @@ export async function POST(request: NextRequest) {
         dataVencimento: data.dataVencimento,
         modalidadePagamento: data.modalidadePagamento,
         numeroParcelas: data.numeroParcelas || 1,
-        observacoes: processo.tipo === 'TRANSACAO_EXCEPCIONAL' && data.dadosEspecificos?.observacoesAcordo
-          ? data.dadosEspecificos.observacoesAcordo
-          : data.observacoes,
+        observacoes: observacoesUsuario,
         clausulasEspeciais: data.clausulasEspeciais,
         status: 'ativo'
       },
@@ -433,75 +517,95 @@ export async function POST(request: NextRequest) {
         }
       }
     })
-    console.log('✅ Acordo criado no banco com ID:', acordo.id)
     // Criar detalhes específicos do acordo baseado no tipo de processo
     if (data.dadosEspecificos && processo.tipo) {
-      console.log('🔧 Criando detalhes específicos...')
       await criarDetalhesEspecificos(acordo.id, processo.tipo, data.dadosEspecificos)
-      console.log('✅ Detalhes específicos criados')
     }
-    // Gerar parcelas se for parcelado
-    if (data.modalidadePagamento === 'parcelado' && data.numeroParcelas && data.numeroParcelas > 1) {
-      // Usar o valor de entrada já definido anteriormente
-      const valorParaParcelas = data.valorFinal - valorEntrada
-      const valorParcela = valorParaParcelas / data.numeroParcelas
-      const parcelas = []
-      // Se há entrada, criar uma "parcela" de entrada com vencimento na data de assinatura
-      if (valorEntrada > 0) {
-        const dataVencimentoEntrada = new Date(data.dataAssinatura)
-        dataVencimentoEntrada.setHours(12, 0, 0, 0) // Ajustar timezone
-        parcelas.push({
-          acordoId: acordo.id,
-          numero: 0, // Entrada como parcela 0
-          valor: valorEntrada,
-          dataVencimento: dataVencimentoEntrada,
-          status: StatusPagamento.PENDENTE
-        })
-      }
-      for (let i = 1; i <= data.numeroParcelas; i++) {
-        // Usar data de vencimento como base para as parcelas
-        const dataVencimentoParcela = new Date(data.dataVencimento)
-        dataVencimentoParcela.setMonth(dataVencimentoParcela.getMonth() + (i - 1)) // Primeira parcela vence na data de vencimento
-        dataVencimentoParcela.setHours(12, 0, 0, 0) // Ajustar timezone
-        parcelas.push({
-          acordoId: acordo.id,
-          numero: i, // Parcelas 1, 2, 3, ..., 20
-          valor: i === data.numeroParcelas
-            ? valorParaParcelas - (valorParcela * (data.numeroParcelas - 1)) // Ajustar última parcela para compensar arredondamentos
-            : valorParcela,
-          dataVencimento: dataVencimentoParcela,
-          status: StatusPagamento.PENDENTE
-        })
-      }
-      await prisma.parcela.createMany({
-        data: parcelas
-      })
-    } else {
-      // Criar parcela única para pagamento à vista
-      const dataVencimentoAvista = new Date(data.dataVencimento)
-      dataVencimentoAvista.setHours(12, 0, 0, 0) // Ajustar timezone
-      await prisma.parcela.create({
-        data: {
-          acordoId: acordo.id,
-          numero: 1,
-          valor: data.valorFinal,
-          dataVencimento: dataVencimentoAvista,
-          status: StatusPagamento.PENDENTE
+    // Gerar parcelas apenas para TRANSACAO_EXCEPCIONAL (compensação e dação não têm parcelas)
+    if (processo.tipo === 'TRANSACAO_EXCEPCIONAL') {
+      if (data.modalidadePagamento === 'parcelado' && data.numeroParcelas && data.numeroParcelas > 1) {
+        // Usar o valor de entrada já definido anteriormente
+        const valorParaParcelas = data.valorFinal - valorEntrada
+        const valorParcela = valorParaParcelas / data.numeroParcelas
+        const parcelas = []
+        // Se há entrada, criar uma "parcela" de entrada com vencimento na data de assinatura
+        if (valorEntrada > 0) {
+          const dataVencimentoEntrada = new Date(data.dataAssinatura)
+          dataVencimentoEntrada.setHours(12, 0, 0, 0) // Ajustar timezone
+          parcelas.push({
+            acordoId: acordo.id,
+            numero: 0, // Entrada como parcela 0
+            valor: valorEntrada,
+            dataVencimento: dataVencimentoEntrada,
+            status: StatusPagamento.PENDENTE
+          })
         }
-      })
+        for (let i = 1; i <= data.numeroParcelas; i++) {
+          // Usar data de vencimento como base para as parcelas
+          const dataVencimentoParcela = new Date(data.dataVencimento)
+          dataVencimentoParcela.setMonth(dataVencimentoParcela.getMonth() + (i - 1)) // Primeira parcela vence na data de vencimento
+          dataVencimentoParcela.setHours(12, 0, 0, 0) // Ajustar timezone
+          parcelas.push({
+            acordoId: acordo.id,
+            numero: i, // Parcelas 1, 2, 3, ..., 20
+            valor: i === data.numeroParcelas
+              ? valorParaParcelas - (valorParcela * (data.numeroParcelas - 1)) // Ajustar última parcela para compensar arredondamentos
+              : valorParcela,
+            dataVencimento: dataVencimentoParcela,
+            status: StatusPagamento.PENDENTE
+          })
+        }
+        await prisma.parcela.createMany({
+          data: parcelas
+        })
+      } else {
+        // Criar parcela única para pagamento à vista
+        const dataVencimentoAvista = new Date(data.dataVencimento)
+        dataVencimentoAvista.setHours(12, 0, 0, 0) // Ajustar timezone
+        await prisma.parcela.create({
+          data: {
+            acordoId: acordo.id,
+            numero: 1,
+            valor: data.valorFinal,
+            dataVencimento: dataVencimentoAvista,
+            status: StatusPagamento.PENDENTE
+          }
+        })
+      }
     }
+    // Para COMPENSACAO e DACAO_PAGAMENTO, não criar parcelas
+    // O cumprimento será validado através dos detalhes específicos do acordo
     // Atualizar status do processo
     await prisma.processo.update({
       where: { id: data.processoId },
       data: { status: 'EM_CUMPRIMENTO' }
     })
     // Registrar no histórico do processo
+    let valorParaHistorico = Number(acordo.valorFinal)
+    let descricaoAdicional = ''
+
+    // Para compensação, usar valor dos créditos ofertados
+    if (processo.tipo === 'COMPENSACAO' && data.dadosEspecificos?.valorCreditos) {
+      valorParaHistorico = Number(data.dadosEspecificos.valorCreditos)
+      descricaoAdicional = ''
+    } else if (processo.tipo === 'TRANSACAO_EXCEPCIONAL') {
+      descricaoAdicional = acordo.modalidadePagamento === 'avista' ? ' - Pagamento à vista' : ` - Parcelamento em ${acordo.numeroParcelas}x`
+    }
+
+    // Definir título baseado no tipo de processo
+    let tituloHistorico = 'Acordo de Pagamento Criado'
+    if (processo.tipo === 'COMPENSACAO') {
+      tituloHistorico = 'Acordo de Compensação Criado'
+    } else if (processo.tipo === 'DACAO_PAGAMENTO') {
+      tituloHistorico = 'Acordo de Dação em Pagamento Criado'
+    }
+
     await prisma.historicoProcesso.create({
       data: {
         processoId: data.processoId,
         usuarioId: user.id,
-        titulo: 'Acordo de Pagamento Criado',
-        descricao: `Termo ${numeroTermo} - ${acordo.modalidadePagamento === 'avista' ? 'Pagamento à vista' : `Parcelamento em ${acordo.numeroParcelas}x`}. Valor: R$ ${Number(acordo.valorFinal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        titulo: tituloHistorico,
+        descricao: `Termo ${numeroTermo}${descricaoAdicional} - Valor: R$ ${valorParaHistorico.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
         tipo: 'ACORDO'
       }
     })
@@ -540,13 +644,11 @@ export async function POST(request: NextRequest) {
     })
     return NextResponse.json(acordoCompleto, { status: 201 })
   } catch (error) {
-    console.error('❌ ERRO COMPLETO ao criar acordo:', error)
-    console.error('❌ Stack trace:', error instanceof Error ? error.stack : 'No stack trace')
-    console.error('❌ Mensagem:', error instanceof Error ? error.message : String(error))
+    console.error('Erro completo ao criar acordo:', error)
     // Se for erro de validação do Prisma, retornar detalhes
     if (error && typeof error === 'object' && 'code' in error) {
-      console.error('❌ Código do erro Prisma:', (error as { code?: string }).code)
-      console.error('❌ Meta do erro Prisma:', (error as { meta?: unknown }).meta)
+      console.error('Código do erro Prisma:', (error as { code?: string }).code)
+      console.error('Meta do erro Prisma:', (error as { meta?: unknown }).meta)
     }
     return NextResponse.json(
       {

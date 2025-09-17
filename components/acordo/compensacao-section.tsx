@@ -1,11 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Calculator, FileText, DollarSign, Check, Plus, Minus } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Calculator, FileText, DollarSign, Edit, Trash2, Loader2, Plus } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Credito {
   id: string
@@ -49,68 +52,300 @@ export default function CompensacaoSection({
   valoresCompensacao,
   onSelectionChange
 }: CompensacaoSectionProps) {
-  const [creditosSelecionados, setCreditosSelecionados] = useState<string[]>([])
-  const [inscricoesSelecionadas, setInscricoesSelecionadas] = useState<string[]>([])
 
-  // Calcular totais baseado na seleção
-  useEffect(() => {
-    const valorCreditosSelecionados = valoresCompensacao.creditos
-      .filter(credito => creditosSelecionados.includes(credito.id))
-      .reduce((total, credito) => total + credito.valor, 0)
+  // Estados para os modais
+  const [showCreditoModal, setShowCreditoModal] = useState(false)
+  const [showInscricaoModal, setShowInscricaoModal] = useState(false)
+  const [editingCredito, setEditingCredito] = useState<{ index: number, credito: Credito } | null>(null)
+  const [editingInscricao, setEditingInscricao] = useState<{ index: number, inscricao: InscricaoCompensacao } | null>(null)
 
-    const valorInscricoesSelecionadas = valoresCompensacao.inscricoes
-      .filter(inscricao => inscricoesSelecionadas.includes(inscricao.id))
-      .reduce((total, inscricao) => {
-        return total + inscricao.debitos.reduce((subtotal, debito) => subtotal + debito.valor, 0)
-      }, 0)
+  // Listas em memória para os novos itens
+  const [creditosAdicionados, setCreditosAdicionados] = useState<Credito[]>([])
+  const [inscricoesAdicionadas, setInscricoesAdicionadas] = useState<InscricaoCompensacao[]>([])
+  const [observacoesAcordo, setObservacoesAcordo] = useState('')
+  const [isLoadingData, setIsLoadingData] = useState(true)
 
-    const valorCompensacao = Math.min(valorCreditosSelecionados, valorInscricoesSelecionadas)
-    const saldoFinal = Math.abs(valorCreditosSelecionados - valorInscricoesSelecionadas)
+  // Estados para formulários dos modais
+  const [creditoForm, setCreditoForm] = useState({
+    tipo: 'precatorio' as 'precatorio' | 'credito_tributario' | 'alvara_judicial' | 'outro',
+    numero: '',
+    valor: '',
+    dataVencimento: '',
+    descricao: ''
+  })
 
-    const dadosSelecionados: DadosSelecionadosCompensacao = {
-      valorTotal: valorCompensacao,
-      valorFinal: saldoFinal,
-      creditosSelecionados: creditosSelecionados,
-      inscricoesSelecionadas: inscricoesSelecionadas,
-      valorCreditos: valorCreditosSelecionados,
-      valorDebitos: valorInscricoesSelecionadas,
+  const [inscricaoForm, setInscricaoForm] = useState({
+    numeroInscricao: '',
+    tipoInscricao: 'imobiliaria' as 'imobiliaria' | 'economica',
+    debitos: [{ descricao: '', valor: '', dataVencimento: '' }]
+  })
+
+  // Calcular totais baseado nos itens adicionados
+  const calcularTotais = useCallback(() => {
+    const valorCreditos = creditosAdicionados.reduce((total, credito) => total + credito.valor, 0)
+    const valorDebitos = inscricoesAdicionadas.reduce((total, inscricao) => {
+      return total + inscricao.debitos.reduce((subtotal, debito) => subtotal + debito.valor, 0)
+    }, 0)
+
+    const valorCompensacao = Math.min(valorCreditos, valorDebitos)
+    const saldoFinal = Math.abs(valorCreditos - valorDebitos)
+
+    return {
+      valorTotal: valorCreditos, // Valor dos créditos ofertados
+      valorFinal: valorCompensacao, // Valor que será efetivamente compensado
+      creditosAdicionados: creditosAdicionados,
+      inscricoesAdicionadas: inscricoesAdicionadas,
+      valorCreditos: valorCreditos,
+      valorDebitos: valorDebitos,
       valorCompensacao: valorCompensacao,
-      saldoFinal: saldoFinal
+      saldoFinal: saldoFinal,
+      observacoesAcordo: observacoesAcordo
+    }
+  }, [creditosAdicionados, inscricoesAdicionadas, observacoesAcordo])
+
+  // Funções utilitárias
+  const formatCurrency = (value: string) => {
+    const numericValue = value.replace(/\D/g, '')
+    if (!numericValue) return ''
+    const cents = parseInt(numericValue, 10)
+    const reais = cents / 100
+    return reais.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })
+  }
+
+  const parseCurrencyToNumber = (value: string): number => {
+    const cleanValue = value.replace(/[^\d,]/g, '')
+    const numericValue = cleanValue.replace(',', '.')
+    return parseFloat(numericValue) || 0
+  }
+
+  const getTipoLabel = (tipo: string) => {
+    switch (tipo) {
+      case 'precatorio': return 'Precatório'
+      case 'credito_tributario': return 'Crédito Tributário'
+      case 'alvara_judicial': return 'Alvará Judicial'
+      case 'outro': return 'Outro'
+      default: return tipo
+    }
+  }
+
+  useEffect(() => {
+    // Só enviar dados se não estivermos carregando
+    if (isLoadingData) return
+
+    const valorCreditos = creditosAdicionados.reduce((total, credito) => total + credito.valor, 0)
+    const valorDebitos = inscricoesAdicionadas.reduce((total, inscricao) => {
+      return total + inscricao.debitos.reduce((subtotal, debito) => subtotal + debito.valor, 0)
+    }, 0)
+
+    const valorCompensacao = Math.min(valorCreditos, valorDebitos)
+    const saldoFinal = Math.abs(valorCreditos - valorDebitos)
+
+    const dadosSelecionados = {
+      valorTotal: valorCreditos,
+      valorFinal: valorCompensacao,
+      creditosAdicionados: creditosAdicionados,
+      inscricoesAdicionadas: inscricoesAdicionadas,
+      valorCreditos: valorCreditos,
+      valorDebitos: valorDebitos,
+      valorCompensacao: valorCompensacao,
+      saldoFinal: saldoFinal,
+      observacoesAcordo: observacoesAcordo
     }
 
     onSelectionChange(dadosSelecionados)
-  }, [creditosSelecionados, inscricoesSelecionadas, valoresCompensacao, onSelectionChange])
+  }, [creditosAdicionados, inscricoesAdicionadas, observacoesAcordo, isLoadingData])
 
-  const handleCreditoChange = (creditoId: string, checked: boolean) => {
-    setCreditosSelecionados(prev =>
-      checked
-        ? [...prev, creditoId]
-        : prev.filter(id => id !== creditoId)
+  // Carregar dados salvos do banco de dados
+  useEffect(() => {
+    const carregarDadosSalvos = async () => {
+      try {
+        // Simular um pequeno delay para mostrar o loading
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        // Os dados já vêm no valoresCompensacao, então vamos usá-los
+        if (valoresCompensacao.creditos && valoresCompensacao.creditos.length > 0) {
+          setCreditosAdicionados(valoresCompensacao.creditos)
+        }
+
+        if (valoresCompensacao.inscricoes && valoresCompensacao.inscricoes.length > 0) {
+          setInscricoesAdicionadas(valoresCompensacao.inscricoes)
+        }
+
+      } catch (error) {
+        console.error('Erro ao carregar dados de compensação:', error)
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+
+    carregarDadosSalvos()
+  }, [valoresCompensacao])
+
+
+
+  // Funções para gerenciar créditos
+  const openCreditoModal = () => {
+    setEditingCredito(null)
+    setCreditoForm({
+      tipo: 'precatorio',
+      numero: '',
+      valor: '',
+      dataVencimento: '',
+      descricao: ''
+    })
+    setShowCreditoModal(true)
+  }
+
+  const openEditCreditoModal = (credito: Credito, index: number) => {
+    setEditingCredito({ index, credito })
+    setCreditoForm({
+      tipo: credito.tipo as 'precatorio' | 'credito_tributario' | 'alvara_judicial' | 'outro',
+      numero: credito.numero,
+      valor: credito.valor ? credito.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
+      dataVencimento: credito.dataVencimento || '',
+      descricao: credito.descricao || ''
+    })
+    setShowCreditoModal(true)
+  }
+
+  const handleSaveCredito = () => {
+    const valor = parseCurrencyToNumber(creditoForm.valor)
+    if (!creditoForm.numero || valor <= 0) {
+      toast.error('Preencha todos os campos obrigatórios')
+      return
+    }
+
+    const creditoData: Credito = {
+      id: Date.now().toString(), // ID temporário
+      tipo: creditoForm.tipo,
+      numero: creditoForm.numero,
+      valor: valor,
+      dataVencimento: creditoForm.dataVencimento,
+      descricao: creditoForm.descricao
+    }
+
+    if (editingCredito) {
+      // Editar crédito existente
+      const novosCreditos = [...creditosAdicionados]
+      const indexAdicionados = novosCreditos.findIndex(c => c.id === editingCredito.credito.id)
+      if (indexAdicionados >= 0) {
+        novosCreditos[indexAdicionados] = { ...creditoData, id: editingCredito.credito.id }
+        setCreditosAdicionados(novosCreditos)
+      }
+    } else {
+      // Adicionar novo crédito
+      setCreditosAdicionados([...creditosAdicionados, creditoData])
+    }
+
+    setShowCreditoModal(false)
+    toast.success(editingCredito ? 'Crédito atualizado' : 'Crédito adicionado')
+  }
+
+  const handleRemoveCredito = (credito: Credito) => {
+    if (confirm(`Tem certeza que deseja remover o crédito "${credito.numero}"?`)) {
+      setCreditosAdicionados(creditosAdicionados.filter(c => c.id !== credito.id))
+      toast.success('Crédito removido')
+    }
+  }
+
+  // Funções para gerenciar inscrições
+  const openInscricaoModal = () => {
+    setEditingInscricao(null)
+    setInscricaoForm({
+      numeroInscricao: '',
+      tipoInscricao: 'imobiliaria',
+      debitos: [{ descricao: '', valor: '', dataVencimento: '' }]
+    })
+    setShowInscricaoModal(true)
+  }
+
+  const openEditInscricaoModal = (inscricao: InscricaoCompensacao, index: number) => {
+    setEditingInscricao({ index, inscricao })
+    setInscricaoForm({
+      numeroInscricao: inscricao.numeroInscricao,
+      tipoInscricao: inscricao.tipoInscricao as 'imobiliaria' | 'economica',
+      debitos: inscricao.debitos.map(d => ({
+        descricao: d.descricao,
+        valor: d.valor ? d.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
+        dataVencimento: d.dataVencimento
+      }))
+    })
+    setShowInscricaoModal(true)
+  }
+
+  const handleSaveInscricao = () => {
+    if (!inscricaoForm.numeroInscricao) {
+      toast.error('Número da inscrição é obrigatório')
+      return
+    }
+
+    const debitosValidos = inscricaoForm.debitos.filter(d =>
+      d.descricao && d.valor && d.dataVencimento
     )
+
+    if (debitosValidos.length === 0) {
+      toast.error('Pelo menos um débito deve ser informado')
+      return
+    }
+
+    const inscricaoData: InscricaoCompensacao = {
+      id: Date.now().toString(), // ID temporário
+      numeroInscricao: inscricaoForm.numeroInscricao,
+      tipoInscricao: inscricaoForm.tipoInscricao,
+      debitos: debitosValidos.map(d => ({
+        descricao: d.descricao,
+        valor: parseCurrencyToNumber(d.valor),
+        dataVencimento: d.dataVencimento
+      }))
+    }
+
+    if (editingInscricao) {
+      // Editar inscrição existente
+      const novasInscricoes = [...inscricoesAdicionadas]
+      const indexAdicionadas = novasInscricoes.findIndex(i => i.id === editingInscricao.inscricao.id)
+      if (indexAdicionadas >= 0) {
+        novasInscricoes[indexAdicionadas] = { ...inscricaoData, id: editingInscricao.inscricao.id }
+        setInscricoesAdicionadas(novasInscricoes)
+      }
+    } else {
+      // Adicionar nova inscrição
+      setInscricoesAdicionadas([...inscricoesAdicionadas, inscricaoData])
+    }
+
+    setShowInscricaoModal(false)
+    toast.success(editingInscricao ? 'Inscrição atualizada' : 'Inscrição adicionada')
   }
 
-  const handleInscricaoChange = (inscricaoId: string, checked: boolean) => {
-    setInscricoesSelecionadas(prev =>
-      checked
-        ? [...prev, inscricaoId]
-        : prev.filter(id => id !== inscricaoId)
-    )
+  const handleRemoveInscricao = (inscricao: InscricaoCompensacao) => {
+    if (confirm(`Tem certeza que deseja remover a inscrição "${inscricao.numeroInscricao}"?`)) {
+      setInscricoesAdicionadas(inscricoesAdicionadas.filter(i => i.id !== inscricao.id))
+      toast.success('Inscrição removida')
+    }
   }
 
-  const selecionarTodosCreditos = () => {
-    setCreditosSelecionados(valoresCompensacao.creditos.map(c => c.id))
+  const addDebito = () => {
+    setInscricaoForm({
+      ...inscricaoForm,
+      debitos: [...inscricaoForm.debitos, { descricao: '', valor: '', dataVencimento: '' }]
+    })
   }
 
-  const selecionarTodasInscricoes = () => {
-    setInscricoesSelecionadas(valoresCompensacao.inscricoes.map(i => i.id))
+  const removeDebito = (index: number) => {
+    if (inscricaoForm.debitos.length > 1) {
+      setInscricaoForm({
+        ...inscricaoForm,
+        debitos: inscricaoForm.debitos.filter((_, i) => i !== index)
+      })
+    }
   }
 
-  const limparSelecaoCreditos = () => {
-    setCreditosSelecionados([])
-  }
-
-  const limparSelecaoInscricoes = () => {
-    setInscricoesSelecionadas([])
+  const updateDebito = (index: number, field: string, value: string) => {
+    const updatedDebitos = [...inscricaoForm.debitos]
+    updatedDebitos[index] = { ...updatedDebitos[index], [field]: value }
+    setInscricaoForm({ ...inscricaoForm, debitos: updatedDebitos })
   }
 
   const getTipoCreditoLabel = (tipo: string) => {
@@ -127,16 +362,24 @@ export default function CompensacaoSection({
     return tipo === 'imobiliaria' ? 'Imobiliária' : 'Econômica'
   }
 
-  const valorCreditosSelecionados = valoresCompensacao.creditos
-    .filter(c => creditosSelecionados.includes(c.id))
-    .reduce((total, c) => total + c.valor, 0)
+  // Calcular totais baseado nos itens adicionados
+  const totalCreditos = creditosAdicionados.reduce((total, c) => total + c.valor, 0)
+  const totalDebitos = inscricoesAdicionadas.reduce((total, i) =>
+    total + i.debitos.reduce((subtotal, d) => subtotal + d.valor, 0), 0)
+  const valorCompensacao = Math.min(totalCreditos, totalDebitos)
+  const saldoFinal = Math.abs(totalCreditos - totalDebitos)
 
-  const valorInscricoesSelecionadas = valoresCompensacao.inscricoes
-    .filter(i => inscricoesSelecionadas.includes(i.id))
-    .reduce((total, i) => total + i.debitos.reduce((subtotal, d) => subtotal + d.valor, 0), 0)
-
-  const valorCompensacao = Math.min(valorCreditosSelecionados, valorInscricoesSelecionadas)
-  const saldoFinal = Math.abs(valorCreditosSelecionados - valorInscricoesSelecionadas)
+  // Se ainda está carregando, mostrar loading
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <p className="text-sm text-gray-600">Carregando dados de compensação...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -145,288 +388,501 @@ export default function CompensacaoSection({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5" />
-            Resumo da Compensação
+            Resumo
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="p-3 bg-green-50 rounded-lg">
-              <span className="text-sm text-green-600">Créditos Selecionados</span>
-              <p className="text-lg font-bold text-green-800">
-                R$ {valorCreditosSelecionados.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex items-center gap-2 mb-1">
+                <DollarSign className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium text-green-800">Créditos Oferecidos</span>
+              </div>
+              <p className="text-lg font-bold text-green-700">
+                R$ {totalCreditos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-xs text-green-600">
+                {creditosAdicionados.length} {creditosAdicionados.length === 1 ? 'crédito' : 'créditos'}
               </p>
             </div>
-            <div className="p-3 bg-red-50 rounded-lg">
-              <span className="text-sm text-red-600">Débitos Selecionados</span>
-              <p className="text-lg font-bold text-red-800">
-                R$ {valorInscricoesSelecionadas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-2 mb-1">
+                <FileText className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-800">A Compensar</span>
+              </div>
+              <p className="text-lg font-bold text-blue-700">
+                R$ {totalDebitos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-xs text-blue-600">
+                {inscricoesAdicionadas.length} {inscricoesAdicionadas.length === 1 ? 'inscrição' : 'inscrições'}
               </p>
             </div>
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <span className="text-sm text-blue-600">Valor Compensado</span>
-              <p className="text-lg font-bold text-blue-800">
-                R$ {valorCompensacao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-2 mb-1">
+                <Calculator className="h-4 w-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-800">Saldo</span>
+              </div>
+              <p className={`text-lg font-bold ${totalCreditos >= totalDebitos ? 'text-green-600' : 'text-red-600'}`}>
+                R$ {(totalCreditos - totalDebitos).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-            </div>
-            <div className="p-3 bg-orange-50 rounded-lg">
-              <span className="text-sm text-orange-600">Saldo Final</span>
-              <p className="text-lg font-bold text-orange-800">
-                R$ {saldoFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              <p className="text-xs text-gray-600">
+                {totalCreditos >= totalDebitos ? 'Superávit' : 'Déficit'}
               </p>
             </div>
           </div>
 
-          {/* Indicador do tipo de saldo */}
-          {saldoFinal > 0 && (
-            <div className="mt-4 p-3 rounded-lg border">
-              {valorCreditosSelecionados > valorInscricoesSelecionadas ? (
-                <div className="flex items-center gap-2 text-green-800">
-                  <Plus className="h-4 w-4" />
-                  <span>Saldo credor: Município deve restituir ao contribuinte</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-red-800">
-                  <Minus className="h-4 w-4" />
-                  <span>Saldo devedor: Contribuinte deve pagar ao município</span>
-                </div>
-              )}
+        </CardContent>
+      </Card>
+
+      {/* Créditos para Compensação */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-green-600" />
+              Créditos para Compensação
+            </CardTitle>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={openCreditoModal}
+              className="cursor-pointer"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Adicionar Crédito
+            </Button>
+          </div>
+          <CardDescription>
+            Créditos que o contribuinte oferece para compensação
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {creditosAdicionados.length === 0 ? (
+            <div className="text-center py-8">
+              <DollarSign className="mx-auto h-12 w-12 text-gray-400" />
+              <p className="mt-2 text-gray-500">
+                Nenhum crédito disponível ainda
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                Clique em "Adicionar Crédito" para começar
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {creditosAdicionados.map((credito) => {
+                return (
+                  <div key={credito.id} className="p-4 border rounded-lg bg-green-50 hover:bg-green-100 transition-colors">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-green-200 rounded-full flex items-center justify-center">
+                          <DollarSign className="h-4 w-4 text-green-700" />
+                        </div>
+                        <div>
+                          <h5 className="font-medium text-green-800">{getTipoLabel(credito.tipo)}</h5>
+                          <p className="text-xs text-green-600">{credito.numero || 'Sem número'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditCreditoModal(credito, 0)}
+                          className="h-6 w-6 p-0 text-green-700 hover:text-green-800 cursor-pointer"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveCredito(credito)}
+                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700 cursor-pointer"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-lg font-bold text-green-700">
+                        R$ {credito.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      {credito.dataVencimento && (
+                        <p className="text-xs text-green-600">
+                          Vence: {new Date(credito.dataVencimento).toLocaleDateString('pt-BR')}
+                        </p>
+                      )}
+                      {credito.descricao && (
+                        <p className="text-xs text-green-600">
+                          {credito.descricao}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Lista de Créditos */}
+      {/* Inscrições a Compensar */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Créditos para Compensação
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-600" />
+              Inscrições a Compensar
+            </CardTitle>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={openInscricaoModal}
+              className="cursor-pointer"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Adicionar Inscrição
+            </Button>
+          </div>
           <CardDescription>
-            Selecione quais créditos serão utilizados na compensação
+            Inscrições municipais que serão compensadas pelos créditos oferecidos
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2 mb-4">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={selecionarTodosCreditos}
-            >
-              Selecionar Todos
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={limparSelecaoCreditos}
-            >
-              Limpar Seleção
-            </Button>
-          </div>
+          {inscricoesAdicionadas.length === 0 ? (
+            <div className="text-center py-8">
+              <FileText className="mx-auto h-12 w-12 text-gray-400" />
+              <p className="mt-2 text-gray-500">
+                Nenhuma inscrição disponível ainda
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                Clique em "Adicionar Inscrição" para começar
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {inscricoesAdicionadas.map((inscricao) => {
+                const totalDebitos = inscricao.debitos.reduce((total, debito) => total + debito.valor, 0)
 
-          <div className="space-y-3">
-            {valoresCompensacao.creditos.map((credito) => {
-              const isSelected = creditosSelecionados.includes(credito.id)
-
-              return (
-                <div
-                  key={credito.id}
-                  className={`border rounded-lg p-4 ${isSelected ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      id={`credito-${credito.id}`}
-                      checked={isSelected}
-                      onCheckedChange={(checked) => handleCreditoChange(credito.id, checked as boolean)}
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h4 className="font-medium">{credito.numero}</h4>
-                        <Badge variant="outline">
-                          {getTipoCreditoLabel(credito.tipo)}
-                        </Badge>
-                        {isSelected && (
-                          <Badge className="bg-green-100 text-green-800">
-                            <Check className="h-3 w-3 mr-1" />
-                            Selecionado
-                          </Badge>
-                        )}
-                      </div>
-
-                      {credito.descricao && (
-                        <p className="text-sm text-gray-600 mb-2">{credito.descricao}</p>
-                      )}
-
-                      <div className="flex justify-between items-center">
-                        <div>
-                          {credito.dataVencimento && (
-                            <span className="text-sm text-gray-500">
-                              Vencimento: {new Date(credito.dataVencimento).toLocaleDateString('pt-BR')}
-                            </span>
-                          )}
+                return (
+                  <div key={inscricao.id} className="p-4 border rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center">
+                          <FileText className="h-4 w-4 text-blue-700" />
                         </div>
-                        <span className="font-bold text-lg text-green-600">
-                          R$ {credito.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </span>
+                        <div>
+                          <h5 className="font-medium text-blue-800">{inscricao.numeroInscricao || 'Sem número'}</h5>
+                          <p className="text-xs text-blue-600 capitalize">{inscricao.tipoInscricao}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditInscricaoModal(inscricao, 0)}
+                          className="h-6 w-6 p-0 text-blue-700 hover:text-blue-800 cursor-pointer"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveInscricao(inscricao)}
+                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700 cursor-pointer"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
                     </div>
+
+                    <div className="space-y-1">
+                      <p className="text-xs text-blue-600">
+                        {inscricao.debitos.length} débito(s)
+                      </p>
+                      <p className="text-lg font-bold text-blue-600">
+                        Total: R$ {totalDebitos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      {inscricao.debitos.length > 0 && (
+                        <div className="text-xs text-blue-600 space-y-0.5">
+                          {inscricao.debitos.slice(0, 2).map((debito, index) => (
+                            <p key={index}>• {debito.descricao || 'Sem descrição'}</p>
+                          ))}
+                          {inscricao.debitos.length > 2 && (
+                            <p>• +{inscricao.debitos.length - 2} mais...</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Lista de Inscrições */}
+      {/* Observações do Acordo */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Inscrições para Compensação
-          </CardTitle>
+          <CardTitle>Observações do Acordo</CardTitle>
           <CardDescription>
-            Selecione quais inscrições serão compensadas
+            Adicione observações específicas sobre este acordo de compensação
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2 mb-4">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={selecionarTodasInscricoes}
-            >
-              Selecionar Todas
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={limparSelecaoInscricoes}
-            >
-              Limpar Seleção
-            </Button>
-          </div>
+          <Textarea
+            placeholder="Descreva detalhes específicos sobre as negociações, condições especiais, ou qualquer informação relevante para este acordo..."
+            value={observacoesAcordo}
+            onChange={(e) => setObservacoesAcordo(e.target.value)}
+            rows={4}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Modal de Crédito */}
+      <Dialog open={showCreditoModal} onOpenChange={setShowCreditoModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-green-600" />
+              {editingCredito ? 'Editar Crédito' : 'Adicionar Crédito'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingCredito ? 'Edite as informações do crédito' : 'Adicione as informações do crédito'}
+            </DialogDescription>
+          </DialogHeader>
 
           <div className="space-y-4">
-            {valoresCompensacao.inscricoes.map((inscricao) => {
-              const totalInscricao = inscricao.debitos.reduce((total, debito) => total + debito.valor, 0)
-              const isSelected = inscricoesSelecionadas.includes(inscricao.id)
+            <div className="space-y-2">
+              <Label htmlFor="modal-tipo">Tipo de Crédito <span className="text-red-500">*</span></Label>
+              <select
+                id="modal-tipo"
+                value={creditoForm.tipo}
+                onChange={(e) => setCreditoForm({ ...creditoForm, tipo: e.target.value as 'precatorio' | 'credito_tributario' | 'alvara_judicial' | 'outro' })}
+                className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="precatorio">Precatório</option>
+                <option value="credito_tributario">Crédito Tributário</option>
+                <option value="alvara_judicial">Alvará Judicial</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
 
-              return (
-                <div
-                  key={inscricao.id}
-                  className={`border rounded-lg p-4 ${isSelected ? 'border-red-500 bg-red-50' : 'border-gray-200'}`}
+            <div className="space-y-2">
+              <Label htmlFor="modal-numero">Número do Crédito <span className="text-red-500">*</span></Label>
+              <Input
+                id="modal-numero"
+                value={creditoForm.numero}
+                onChange={(e) => setCreditoForm({ ...creditoForm, numero: e.target.value })}
+                placeholder="Ex: PRE-2024-001"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="modal-valor">Valor <span className="text-red-500">*</span></Label>
+              <Input
+                id="modal-valor"
+                type="text"
+                value={creditoForm.valor}
+                onChange={(e) => {
+                  const formatted = formatCurrency(e.target.value)
+                  setCreditoForm({ ...creditoForm, valor: formatted })
+                }}
+                placeholder="Ex: 50.000,00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="modal-vencimento">Data de Vencimento</Label>
+              <Input
+                id="modal-vencimento"
+                type="date"
+                value={creditoForm.dataVencimento}
+                onChange={(e) => setCreditoForm({ ...creditoForm, dataVencimento: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="modal-descricao">Descrição</Label>
+              <Textarea
+                id="modal-descricao"
+                rows={2}
+                value={creditoForm.descricao}
+                onChange={(e) => setCreditoForm({ ...creditoForm, descricao: e.target.value })}
+                placeholder="Informações adicionais sobre o crédito..."
+              />
+            </div>
+
+            <div className="flex gap-3 justify-end pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowCreditoModal(false)}
+                className="cursor-pointer"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSaveCredito}
+                disabled={!creditoForm.numero || !creditoForm.valor}
+                className="cursor-pointer"
+              >
+                {editingCredito ? 'Atualizar' : 'Adicionar'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Inscrição */}
+      <Dialog open={showInscricaoModal} onOpenChange={setShowInscricaoModal}>
+        <DialogContent className="w-[95vw] !max-w-[1200px] max-h-[90vh] overflow-hidden" style={{ width: '95vw', maxWidth: '1200px' }}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-600" />
+              {editingInscricao ? 'Editar Inscrição' : 'Adicionar Inscrição'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingInscricao ? 'Edite as informações da inscrição e seus débitos' : 'Adicione uma nova inscrição com múltiplos débitos'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 overflow-y-auto max-h-[calc(90vh-120px)]">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="modal-inscricao-numero">Número da Inscrição <span className="text-red-500">*</span></Label>
+                <Input
+                  id="modal-inscricao-numero"
+                  value={inscricaoForm.numeroInscricao}
+                  onChange={(e) => setInscricaoForm({ ...inscricaoForm, numeroInscricao: e.target.value })}
+                  placeholder="Ex: 123.456.789"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="modal-inscricao-tipo">Tipo de Inscrição <span className="text-red-500">*</span></Label>
+                <select
+                  id="modal-inscricao-tipo"
+                  value={inscricaoForm.tipoInscricao}
+                  onChange={(e) => setInscricaoForm({ ...inscricaoForm, tipoInscricao: e.target.value as 'imobiliaria' | 'economica' })}
+                  className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      id={`inscricao-${inscricao.id}`}
-                      checked={isSelected}
-                      onCheckedChange={(checked) => handleInscricaoChange(inscricao.id, checked as boolean)}
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h4 className="font-medium">Inscrição {inscricao.numeroInscricao}</h4>
-                        <Badge variant="outline">
-                          {getTipoInscricaoLabel(inscricao.tipoInscricao)}
-                        </Badge>
-                        {isSelected && (
-                          <Badge className="bg-red-100 text-red-800">
-                            <Check className="h-3 w-3 mr-1" />
-                            Selecionada
-                          </Badge>
-                        )}
+                  <option value="imobiliaria">Imobiliária</option>
+                  <option value="economica">Econômica</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label>Débitos da Inscrição</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addDebito}
+                  className="cursor-pointer"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar Débito
+                </Button>
+              </div>
+
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {inscricaoForm.debitos.map((debito, index) => (
+                  <div key={index} className="p-3 border rounded-lg bg-gray-50">
+                    <div className="flex items-center justify-between mb-2">
+                      <h6 className="text-sm font-medium">Débito {index + 1}</h6>
+                      {inscricaoForm.debitos.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeDebito(index)}
+                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor={`debito-desc-${index}`}>Descrição <span className="text-red-500">*</span></Label>
+                        <Input
+                          id={`debito-desc-${index}`}
+                          value={debito.descricao}
+                          onChange={(e) => updateDebito(index, 'descricao', e.target.value)}
+                          placeholder="Ex: IPTU 2024"
+                        />
                       </div>
 
                       <div className="space-y-2">
-                        {inscricao.debitos.map((debito, index) => (
-                          <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded border">
-                            <span>{debito.descricao}</span>
-                            <div className="text-right">
-                              <span className="font-medium">
-                                R$ {debito.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </span>
-                              <br />
-                              <span className="text-gray-500 text-xs">
-                                Venc: {new Date(debito.dataVencimento).toLocaleDateString('pt-BR')}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+                        <Label htmlFor={`debito-valor-${index}`}>Valor Lançado <span className="text-red-500">*</span></Label>
+                        <Input
+                          id={`debito-valor-${index}`}
+                          type="text"
+                          value={debito.valor}
+                          onChange={(e) => {
+                            const formatted = formatCurrency(e.target.value)
+                            updateDebito(index, 'valor', formatted)
+                          }}
+                          placeholder="Ex: 1.500,00"
+                        />
                       </div>
 
-                      <div className="mt-2 pt-2 border-t border-gray-200">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">Total da Inscrição:</span>
-                          <span className="font-bold text-lg text-red-600">
-                            R$ {totalInscricao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`debito-vencimento-${index}`}>Data de Vencimento <span className="text-red-500">*</span></Label>
+                        <Input
+                          id={`debito-vencimento-${index}`}
+                          type="date"
+                          value={debito.dataVencimento}
+                          onChange={(e) => updateDebito(index, 'dataVencimento', e.target.value)}
+                        />
                       </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Resultado da Compensação */}
-      {(creditosSelecionados.length > 0 || inscricoesSelecionadas.length > 0) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5" />
-              Resultado da Compensação
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-green-50 rounded-lg border">
-                  <span className="text-sm text-green-600">Total de Créditos</span>
-                  <p className="text-xl font-bold text-green-800">
-                    R$ {valorCreditosSelecionados.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div className="text-center p-4 bg-red-50 rounded-lg border">
-                  <span className="text-sm text-red-600">Total de Débitos</span>
-                  <p className="text-xl font-bold text-red-800">
-                    R$ {valorInscricoesSelecionadas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div className="text-center p-4 bg-blue-50 rounded-lg border">
-                  <span className="text-sm text-blue-600">Valor Compensado</span>
-                  <p className="text-xl font-bold text-blue-800">
-                    R$ {valorCompensacao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
+                ))}
               </div>
 
-              {saldoFinal > 0 && (
-                <div className="p-4 rounded-lg border-2 border-dashed">
-                  <div className="text-center">
-                    <span className="text-lg font-medium">Saldo Remanescente:</span>
-                    <p className="text-2xl font-bold mt-1">
-                      R$ {saldoFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-2">
-                      {valorCreditosSelecionados > valorInscricoesSelecionadas
-                        ? 'A ser restituído ao contribuinte'
-                        : 'A ser pago pelo contribuinte'
-                      }
-                    </p>
-                  </div>
+              <div className="p-3 bg-blue-50 rounded border border-blue-200">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-blue-800">Total dos Débitos:</span>
+                  <span className="text-lg font-bold text-blue-700">
+                    R$ {inscricaoForm.debitos.reduce((total, d) => total + parseCurrencyToNumber(d.valor), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
                 </div>
-              )}
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+
+            <div className="flex gap-3 justify-end pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowInscricaoModal(false)}
+                className="cursor-pointer"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSaveInscricao}
+                disabled={!inscricaoForm.numeroInscricao || inscricaoForm.debitos.some(d => !d.descricao || !d.valor || !d.dataVencimento)}
+                className="cursor-pointer"
+              >
+                {editingInscricao ? 'Atualizar' : 'Adicionar'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

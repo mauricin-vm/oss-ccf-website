@@ -2,10 +2,10 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { 
-  FileText, 
-  Clock, 
-  CheckCircle, 
+import {
+  FileText,
+  Clock,
+  CheckCircle,
   AlertCircle,
   TrendingUp,
   Users,
@@ -13,6 +13,8 @@ import {
   Gavel
 } from 'lucide-react'
 import { SessionUser } from '@/types'
+import { getStatusInfo, STATUS_GROUPS } from '@/lib/constants/status'
+import { getTipoProcessoInfo } from '@/lib/constants/tipos-processo'
 
 async function getStatistics() {
   const [
@@ -28,7 +30,7 @@ async function getStatistics() {
     prisma.processo.count({
       where: {
         status: {
-          in: ['EM_ANALISE', 'EM_PAUTA']
+          in: [...STATUS_GROUPS.EM_ANALISE_GERAL]
         }
       }
     }),
@@ -151,24 +153,7 @@ export default async function DashboardPage() {
     }
   ]
 
-  const tipoProcessoMap = {
-    COMPENSACAO: 'Compensação',
-    DACAO_PAGAMENTO: 'Dação em Pagamento',
-    TRANSACAO_EXCEPCIONAL: 'Transação Excepcional'
-  }
 
-  const statusMap = {
-    RECEPCIONADO: { label: 'Recepcionado', color: 'bg-gray-100 text-gray-800' },
-    EM_ANALISE: { label: 'Em Análise', color: 'bg-blue-100 text-blue-800' },
-    EM_PAUTA: { label: 'Em Pauta', color: 'bg-purple-100 text-purple-800' },
-    SUSPENSO: { label: 'Suspenso', color: 'bg-yellow-100 text-yellow-800' },
-    PEDIDO_VISTA: { label: 'Pedido de Vista', color: 'bg-orange-100 text-orange-800' },
-    PEDIDO_DILIGENCIA: { label: 'Pedido de Diligência', color: 'bg-red-100 text-red-800' },
-    JULGADO: { label: 'Julgado', color: 'bg-indigo-100 text-indigo-800' },
-    ACORDO_FIRMADO: { label: 'Acordo Firmado', color: 'bg-green-100 text-green-800' },
-    EM_CUMPRIMENTO: { label: 'Em Cumprimento', color: 'bg-orange-100 text-orange-800' },
-    ARQUIVADO: { label: 'Arquivado', color: 'bg-gray-100 text-gray-800' }
-  }
 
   return (
     <div className="space-y-6">
@@ -221,12 +206,12 @@ export default async function DashboardPage() {
                     {processo.contribuinte.nome}
                   </p>
                   <p className="text-sm text-gray-500">
-                    {tipoProcessoMap[processo.tipo]} • {new Date(processo.dataAbertura).toLocaleDateString('pt-BR')}
+                    {getTipoProcessoInfo(processo.tipo).label} • {new Date(processo.dataAbertura).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusMap[processo.status].color}`}>
-                    {statusMap[processo.status].label}
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusInfo(processo.status).color}`}>
+                    {getStatusInfo(processo.status).label}
                   </span>
                 </div>
               </div>

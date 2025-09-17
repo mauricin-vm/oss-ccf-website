@@ -227,7 +227,7 @@ export default function ConselheirosTab() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateConselheiro} className="space-y-4">
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="nome">Nome do Conselheiro *</Label>
                 <Input
                   id="nome"
@@ -236,7 +236,7 @@ export default function ConselheirosTab() {
                   required
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
@@ -245,7 +245,7 @@ export default function ConselheirosTab() {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="telefone">Telefone</Label>
                 <Input
                   id="telefone"
@@ -254,7 +254,7 @@ export default function ConselheirosTab() {
                   placeholder="(00) 00000-0000"
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="cargo">Cargo</Label>
                 <Input
                   id="cargo"
@@ -263,7 +263,7 @@ export default function ConselheirosTab() {
                   placeholder="Ex: Conselheiro Titular, Conselheiro Suplente"
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="origem">Origem (Setor/Órgão/Entidade)</Label>
                 <Input
                   id="origem"
@@ -446,7 +446,7 @@ export default function ConselheirosTab() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditConselheiro} className="space-y-4">
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-nome">Nome do Conselheiro *</Label>
               <Input
                 id="edit-nome"
@@ -455,7 +455,7 @@ export default function ConselheirosTab() {
                 required
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-email">Email</Label>
               <Input
                 id="edit-email"
@@ -464,7 +464,7 @@ export default function ConselheirosTab() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-telefone">Telefone</Label>
               <Input
                 id="edit-telefone"
@@ -473,7 +473,7 @@ export default function ConselheirosTab() {
                 placeholder="(00) 00000-0000"
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-cargo">Cargo</Label>
               <Input
                 id="edit-cargo"
@@ -482,7 +482,7 @@ export default function ConselheirosTab() {
                 placeholder="Ex: Conselheiro Titular, Conselheiro Suplente"
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-origem">Origem (Setor/Órgão/Entidade)</Label>
               <Input
                 id="edit-origem"

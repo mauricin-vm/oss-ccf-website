@@ -192,44 +192,31 @@ export async function POST(request: NextRequest) {
         cep: contribuinteData.cep && contribuinteData.cep.trim() !== '' ? contribuinteData.cep : null,
         cpfCnpj: cpfCnpjLimpo && cpfCnpjLimpo.length > 0 ? cpfCnpjLimpo : null,
       }
-      console.log('Criando contribuinte com dados:', dadosContribuinte)
       try {
         contribuinte = await prisma.contribuinte.create({
           data: dadosContribuinte
         })
-        console.log('Contribuinte criado com sucesso:', contribuinte.id)
       } catch (error) {
-        console.error('Erro ao criar contribuinte:', error)
         throw error
       }
     }
     // Verificar se o contribuinte foi criado
     if (!contribuinte || !contribuinte.id) {
-      console.error('Contribuinte não foi criado corretamente:', contribuinte)
       return NextResponse.json(
         { error: 'Erro ao criar contribuinte' },
         { status: 500 }
       )
     }
-    console.log('Criando processo com contribuinteId:', contribuinte.id)
-    console.log('User ID:', user.id)
-    console.log('Dados do processo:', {
-      ...processoData,
-      contribuinteId: contribuinte.id,
-      createdById: user.id
-    })
     // Verificar se o usuário existe
     const usuarioExiste = await prisma.user.findUnique({
       where: { id: user.id }
     })
     if (!usuarioExiste) {
-      console.error('Usuário não encontrado:', user.id)
       return NextResponse.json(
         { error: 'Usuário não encontrado' },
         { status: 500 }
       )
     }
-    console.log('Usuário encontrado:', usuarioExiste.email)
     // Criar o processo
     let processo
     try {
@@ -252,9 +239,7 @@ export async function POST(request: NextRequest) {
           }
         }
       })
-      console.log('Processo criado com sucesso:', processo.id)
     } catch (error) {
-      console.error('Erro detalhado ao criar processo:', error)
       throw error
     }
     // Criar histórico inicial do processo
@@ -268,9 +253,7 @@ export async function POST(request: NextRequest) {
           tipo: 'SISTEMA'
         }
       })
-      console.log('Histórico inicial criado para o processo:', processo.id)
     } catch (error) {
-      console.error('Erro ao criar histórico inicial:', error)
       // Não interrompe o fluxo se falhar o histórico
     }
     // Log de auditoria

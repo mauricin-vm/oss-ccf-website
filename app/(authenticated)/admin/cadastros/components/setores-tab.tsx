@@ -219,7 +219,7 @@ export default function SetoresTab() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateSetor} className="space-y-4">
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="nome">Nome do Setor</Label>
                 <Input
                   id="nome"
@@ -228,7 +228,7 @@ export default function SetoresTab() {
                   required
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="sigla">Sigla</Label>
                 <Input
                   id="sigla"
@@ -238,7 +238,7 @@ export default function SetoresTab() {
                   required
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
@@ -247,7 +247,7 @@ export default function SetoresTab() {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="responsavel">Responsável</Label>
                 <Input
                   id="responsavel"
@@ -422,7 +422,7 @@ export default function SetoresTab() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditSetor} className="space-y-4">
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-nome">Nome do Setor</Label>
               <Input
                 id="edit-nome"
@@ -431,7 +431,7 @@ export default function SetoresTab() {
                 required
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-sigla">Sigla</Label>
               <Input
                 id="edit-sigla"
@@ -441,7 +441,7 @@ export default function SetoresTab() {
                 required
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-email">Email</Label>
               <Input
                 id="edit-email"
@@ -450,7 +450,7 @@ export default function SetoresTab() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-responsavel">Responsável</Label>
               <Input
                 id="edit-responsavel"

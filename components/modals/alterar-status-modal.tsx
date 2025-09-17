@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { getStatusOptions } from '@/lib/constants/status'
 
 interface AlterarStatusModalProps {
   processoId: string
@@ -17,18 +18,6 @@ interface AlterarStatusModalProps {
   onSuccess: () => void
 }
 
-const statusOptions = [
-  { value: 'RECEPCIONADO', label: 'Recepcionado', color: 'bg-gray-100 text-gray-800' },
-  { value: 'EM_ANALISE', label: 'Em Análise', color: 'bg-blue-100 text-blue-800' },
-  { value: 'EM_PAUTA', label: 'Em Pauta', color: 'bg-purple-100 text-purple-800' },
-  { value: 'SUSPENSO', label: 'Suspenso', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'PEDIDO_VISTA', label: 'Pedido de vista', color: 'bg-blue-100 text-blue-800' },
-  { value: 'PEDIDO_DILIGENCIA', label: 'Pedido de diligência', color: 'bg-orange-100 text-orange-800' },
-  { value: 'JULGADO', label: 'Julgado', color: 'bg-indigo-100 text-indigo-800' },
-  { value: 'ACORDO_FIRMADO', label: 'Acordo Firmado', color: 'bg-green-100 text-green-800' },
-  { value: 'EM_CUMPRIMENTO', label: 'Em Cumprimento', color: 'bg-orange-100 text-orange-800' },
-  { value: 'ARQUIVADO', label: 'Arquivado', color: 'bg-gray-100 text-gray-800' }
-]
 
 export default function AlterarStatusModal({
   processoId,
@@ -40,6 +29,8 @@ export default function AlterarStatusModal({
   const [novoStatus, setNovoStatus] = useState(statusAtual)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const statusOptions = getStatusOptions()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

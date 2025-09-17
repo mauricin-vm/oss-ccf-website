@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { 
   Activity, 
   Search, 
@@ -20,6 +21,7 @@ import {
   Eye
 } from 'lucide-react'
 import { SessionUser } from '@/types'
+import { toast } from 'sonner'
 
 interface LogEntry {
   id: string
@@ -32,8 +34,27 @@ interface LogEntry {
   userAgent?: string
   createdAt: string
   usuario: {
+    id: string
     name: string
     email: string
+  }
+}
+
+interface LogsResponse {
+  logs: LogEntry[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    pages: number
+  }
+  statistics: {
+    totalLogs: number
+    logsLast24h: number
+    uniqueUsers: number
+    criticalActions: number
+    uniqueActions: string[]
+    uniqueEntities: string[]
   }
 }
 
@@ -47,6 +68,20 @@ export default function LogsAdminPage() {
   const [usuarioFilter, setUsuarioFilter] = useState('')
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null)
   const [showDetails, setShowDetails] = useState(false)
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 50,
+    total: 0,
+    pages: 0
+  })
+  const [statistics, setStatistics] = useState({
+    totalLogs: 0,
+    logsLast24h: 0,
+    uniqueUsers: 0,
+    criticalActions: 0,
+    uniqueActions: [] as string[],
+    uniqueEntities: [] as string[]
+  })
 
   // Verificar se é admin
   useEffect(() => {
@@ -60,56 +95,39 @@ export default function LogsAdminPage() {
     }
   }, [session, status])
 
-  // Carregar logs (simulado - você implementaria uma API real)
-  const loadLogs = async () => {
+  // Carregar logs do banco de dados
+  const loadLogs = useCallback(async () => {
     try {
       setLoading(true)
-      // Simular dados de logs por enquanto
-      const mockLogs: LogEntry[] = [
-        {
-          id: '1',
-          acao: 'CREATE',
-          entidade: 'User',
-          entidadeId: 'user123',
-          dadosNovos: { name: 'João Silva', email: 'joao@ccf.gov.br' },
-          ip: '192.168.1.100',
-          userAgent: 'Mozilla/5.0...',
-          createdAt: new Date().toISOString(),
-          usuario: { name: 'Admin', email: 'admin@ccf.gov.br' }
-        },
-        {
-          id: '2',
-          acao: 'UPDATE',
-          entidade: 'Processo',
-          entidadeId: 'proc456',
-          dadosAnteriores: { status: 'EM_ANALISE' },
-          dadosNovos: { status: 'EM_PAUTA' },
-          ip: '192.168.1.101',
-          createdAt: new Date(Date.now() - 3600000).toISOString(),
-          usuario: { name: 'Maria Santos', email: 'maria@ccf.gov.br' }
-        },
-        {
-          id: '3',
-          acao: 'DELETE',
-          entidade: 'Documento',
-          entidadeId: 'doc789',
-          dadosAnteriores: { nome: 'documento.pdf' },
-          ip: '192.168.1.102',
-          createdAt: new Date(Date.now() - 7200000).toISOString(),
-          usuario: { name: 'Carlos Lima', email: 'carlos@ccf.gov.br' }
-        }
-      ]
-      setLogs(mockLogs)
+      const params = new URLSearchParams({
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString()
+      })
+
+      if (search) params.append('search', search)
+      if (acaoFilter && acaoFilter !== 'all') params.append('acao', acaoFilter)
+      if (entidadeFilter && entidadeFilter !== 'all') params.append('entidade', entidadeFilter)
+
+      const response = await fetch(`/api/logs?${params}`)
+      if (!response.ok) {
+        throw new Error('Erro ao carregar logs')
+      }
+
+      const data: LogsResponse = await response.json()
+      setLogs(data.logs)
+      setPagination(data.pagination)
+      setStatistics(data.statistics)
     } catch (error) {
+      toast.error('Erro ao carregar logs')
       console.error('Erro ao carregar logs:', error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [pagination.page, pagination.limit, search, acaoFilter, entidadeFilter])
 
   useEffect(() => {
     loadLogs()
-  }, [])
+  }, [loadLogs])
 
   const getActionLabel = (acao: string) => {
     const labels: Record<string, string> = {
@@ -145,23 +163,15 @@ export default function LogsAdminPage() {
       Sessao: 'Sessão',
       Documento: 'Documento',
       Tramitacao: 'Tramitação',
-      Pauta: 'Pauta'
+      Pauta: 'Pauta',
+      Parcela: 'Parcela',
+      Pagamento: 'Pagamento',
+      PagamentoParcela: 'Pagamento de Parcela',
+      AcordoDetalhes: 'Detalhes do Acordo',
+      HistoricoProcesso: 'Histórico do Processo'
     }
     return labels[entidade] || entidade
   }
-
-  const filteredLogs = logs.filter(log => {
-    const matchSearch = !search || 
-      log.usuario.name.toLowerCase().includes(search.toLowerCase()) ||
-      log.entidade.toLowerCase().includes(search.toLowerCase()) ||
-      log.acao.toLowerCase().includes(search.toLowerCase())
-    
-    const matchAcao = acaoFilter === 'all' || log.acao === acaoFilter
-    const matchEntidade = entidadeFilter === 'all' || log.entidade === entidadeFilter
-    const matchUsuario = !usuarioFilter || log.usuario.name.toLowerCase().includes(usuarioFilter.toLowerCase())
-
-    return matchSearch && matchAcao && matchEntidade && matchUsuario
-  })
 
   const showLogDetails = (log: LogEntry) => {
     setSelectedLog(log)
@@ -171,9 +181,6 @@ export default function LogsAdminPage() {
   if (status === 'loading' || loading) {
     return <div>Carregando...</div>
   }
-
-  const uniqueActions = Array.from(new Set(logs.map(log => log.acao)))
-  const uniqueEntities = Array.from(new Set(logs.map(log => log.entidade)))
 
   return (
     <div className="space-y-6">
@@ -188,11 +195,11 @@ export default function LogsAdminPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={loadLogs} variant="outline">
+          <Button onClick={loadLogs} variant="outline" className="cursor-pointer">
             <RefreshCw className="h-4 w-4 mr-2" />
             Atualizar
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" className="cursor-pointer">
             <Download className="h-4 w-4 mr-2" />
             Exportar
           </Button>
@@ -206,7 +213,7 @@ export default function LogsAdminPage() {
             <CardTitle className="text-sm font-medium">Total de Logs</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{logs.length}</div>
+            <div className="text-2xl font-bold">{statistics.totalLogs}</div>
           </CardContent>
         </Card>
         <Card>
@@ -215,7 +222,7 @@ export default function LogsAdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {logs.filter(log => new Date(log.createdAt) > new Date(Date.now() - 86400000)).length}
+              {statistics.logsLast24h}
             </div>
           </CardContent>
         </Card>
@@ -225,7 +232,7 @@ export default function LogsAdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {new Set(logs.map(log => log.usuario.email)).size}
+              {statistics.uniqueUsers}
             </div>
           </CardContent>
         </Card>
@@ -235,7 +242,7 @@ export default function LogsAdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {logs.filter(log => log.acao === 'DELETE').length}
+              {statistics.criticalActions}
             </div>
           </CardContent>
         </Card>
@@ -268,7 +275,7 @@ export default function LogsAdminPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as ações</SelectItem>
-                {uniqueActions.map(action => (
+                {statistics.uniqueActions.map(action => (
                   <SelectItem key={action} value={action}>
                     {getActionLabel(action)}
                   </SelectItem>
@@ -281,7 +288,7 @@ export default function LogsAdminPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as entidades</SelectItem>
-                {uniqueEntities.map(entity => (
+                {statistics.uniqueEntities.map(entity => (
                   <SelectItem key={entity} value={entity}>
                     {getEntityLabel(entity)}
                   </SelectItem>
@@ -302,13 +309,13 @@ export default function LogsAdminPage() {
         <CardHeader>
           <CardTitle>Registros de Atividade</CardTitle>
           <CardDescription>
-            {filteredLogs.length} de {logs.length} registros
+            Mostrando {logs.length} de {pagination.total} registros (Página {pagination.page} de {pagination.pages})
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredLogs.map((log) => (
-              <div key={log.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer" onClick={() => showLogDetails(log)}>
+            {logs.map((log) => (
+              <div key={log.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                 <div className="flex items-center space-x-4">
                   <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
                     <Activity className="h-5 w-5 text-gray-600" />
@@ -343,90 +350,141 @@ export default function LogsAdminPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => showLogDetails(log)}
+                  className="cursor-pointer"
                 >
                   <Eye className="h-4 w-4" />
                 </Button>
               </div>
             ))}
           </div>
+
+          {/* Paginação */}
+          {pagination.pages > 1 && (
+            <div className="flex items-center justify-between pt-4 border-t">
+              <p className="text-sm text-gray-600">
+                Mostrando {((pagination.page - 1) * pagination.limit) + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} logs
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                  disabled={pagination.page <= 1}
+                  className="cursor-pointer"
+                >
+                  Anterior
+                </Button>
+                <span className="flex items-center px-3 text-sm">
+                  Página {pagination.page} de {pagination.pages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                  disabled={pagination.page >= pagination.pages}
+                  className="cursor-pointer"
+                >
+                  Próximo
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Modal de Detalhes */}
-      {showDetails && selectedLog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">Detalhes do Log</h2>
-                <Button variant="outline" onClick={() => setShowDetails(false)}>
-                  Fechar
-                </Button>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Detalhes do Log de Auditoria
+            </DialogTitle>
+            <DialogDescription>
+              Informações detalhadas sobre a atividade registrada no sistema.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedLog && (
+            <div className="space-y-6">
+              {/* Informações básicas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-600">Ação</label>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Ação</label>
-                    <div className="mt-1">
-                      <Badge className={getActionColor(selectedLog.acao)}>
-                        {getActionLabel(selectedLog.acao)}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Entidade</label>
-                    <p className="mt-1">{getEntityLabel(selectedLog.entidade)}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Usuário</label>
-                    <p className="mt-1">{selectedLog.usuario.name}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Data/Hora</label>
-                    <p className="mt-1">{new Date(selectedLog.createdAt).toLocaleString()}</p>
-                  </div>
-                  {selectedLog.ip && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">IP</label>
-                      <p className="mt-1">{selectedLog.ip}</p>
-                    </div>
-                  )}
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">ID da Entidade</label>
-                    <p className="mt-1 font-mono text-sm">{selectedLog.entidadeId}</p>
+                    <Badge className={getActionColor(selectedLog.acao)}>
+                      {getActionLabel(selectedLog.acao)}
+                    </Badge>
                   </div>
                 </div>
-
-                {selectedLog.dadosAnteriores && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Dados Anteriores</label>
-                    <pre className="mt-1 p-3 bg-gray-100 rounded text-sm overflow-auto">
-                      {JSON.stringify(selectedLog.dadosAnteriores, null, 2)}
-                    </pre>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-600">Entidade</label>
+                  <p className="text-sm">{getEntityLabel(selectedLog.entidade)}</p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-600">Usuário</label>
+                  <p className="text-sm">{selectedLog.usuario.name}</p>
+                  <p className="text-xs text-gray-500">{selectedLog.usuario.email}</p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-600">Data/Hora</label>
+                  <p className="text-sm">{new Date(selectedLog.createdAt).toLocaleString()}</p>
+                </div>
+                {selectedLog.ip && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-600">Endereço IP</label>
+                    <p className="text-sm font-mono">{selectedLog.ip}</p>
                   </div>
                 )}
-
-                {selectedLog.dadosNovos && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Dados Novos</label>
-                    <pre className="mt-1 p-3 bg-gray-100 rounded text-sm overflow-auto">
-                      {JSON.stringify(selectedLog.dadosNovos, null, 2)}
-                    </pre>
-                  </div>
-                )}
-
-                {selectedLog.userAgent && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">User Agent</label>
-                    <p className="mt-1 text-sm break-all">{selectedLog.userAgent}</p>
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-600">ID da Entidade</label>
+                  <p className="text-sm font-mono">{selectedLog.entidadeId}</p>
+                </div>
               </div>
+
+              {/* Dados anteriores */}
+              {selectedLog.dadosAnteriores && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-600">Dados Anteriores</label>
+                  <pre className="p-3 bg-gray-50 rounded-md text-xs overflow-auto max-h-40 border">
+                    {JSON.stringify(selectedLog.dadosAnteriores, null, 2)}
+                  </pre>
+                </div>
+              )}
+
+              {/* Dados novos */}
+              {selectedLog.dadosNovos && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-600">Dados Novos</label>
+                  <pre className="p-3 bg-gray-50 rounded-md text-xs overflow-auto max-h-40 border">
+                    {JSON.stringify(selectedLog.dadosNovos, null, 2)}
+                  </pre>
+                </div>
+              )}
+
+              {/* User Agent */}
+              {selectedLog.userAgent && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-600">User Agent</label>
+                  <p className="text-xs text-gray-700 break-all p-2 bg-gray-50 rounded border">
+                    {selectedLog.userAgent}
+                  </p>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
-      )}
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDetails(false)}
+              className="cursor-pointer"
+            >
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

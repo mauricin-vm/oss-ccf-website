@@ -24,7 +24,6 @@ import {
   ArrowRight,
   History,
   User,
-  Search,
   Pause,
   Eye,
   FilePlus,
@@ -40,6 +39,8 @@ import AdicionarHistoricoModal from '@/components/modals/adicionar-historico-mod
 import AlterarStatusModal from '@/components/modals/alterar-status-modal'
 import ProcessoActions from '@/components/processo/processo-actions'
 import ValoresProcessoModal from '@/components/modals/valores-processo-modal'
+import { getStatusInfo, getResultadoBadge as getResultadoBadgeFromConstants, getPosicaoVotoInfo, getCardBackground as getCardBackgroundFromConstants } from '@/lib/constants/status'
+import { getTipoProcessoInfo } from '@/lib/constants/tipos-processo'
 
 
 
@@ -161,78 +162,23 @@ export default function ProcessoDetalhesPage({ params }: Props) {
 
   const user = session.user as SessionUser
 
-  const tipoProcessoMap = {
-    COMPENSACAO: { label: 'Compensação', color: 'bg-blue-100 text-blue-800' },
-    DACAO_PAGAMENTO: { label: 'Dação em Pagamento', color: 'bg-purple-100 text-purple-800' },
-    TRANSACAO_EXCEPCIONAL: { label: 'Transação Excepcional', color: 'bg-orange-100 text-orange-800' }
-  }
 
-  const statusMap = {
-    RECEPCIONADO: { label: 'Recepcionado', color: 'bg-gray-100 text-gray-800', icon: Clock },
-    EM_ANALISE: { label: 'Em Análise', color: 'bg-blue-100 text-blue-800', icon: Clock },
-    AGUARDANDO_DOCUMENTOS: { label: 'Aguardando Docs', color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle },
-    EM_PAUTA: { label: 'Em Pauta', color: 'bg-purple-100 text-purple-800', icon: Calendar },
-    EM_SESSAO: { label: 'Em Sessão', color: 'bg-purple-100 text-purple-800', icon: Calendar },
-    SUSPENSO: { label: 'Suspenso', color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle },
-    PEDIDO_VISTA: { label: 'Pedido de Vista', color: 'bg-blue-100 text-blue-800', icon: Search },
-    PEDIDO_DILIGENCIA: { label: 'Pedido de Diligência', color: 'bg-orange-100 text-orange-800', icon: Clock },
-    JULGADO: { label: 'Julgado', color: 'bg-indigo-100 text-indigo-800', icon: CheckCircle },
-    ACORDO_FIRMADO: { label: 'Acordo Firmado', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-    EM_CUMPRIMENTO: { label: 'Em Cumprimento', color: 'bg-orange-100 text-orange-800', icon: Clock },
-    FINALIZADO: { label: 'Finalizado', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-    ARQUIVADO: { label: 'Arquivado', color: 'bg-gray-100 text-gray-800', icon: XCircle }
-  }
 
 
   const canEdit = user.role === 'ADMIN' || user.role === 'FUNCIONARIO'
-  const statusInfo = statusMap[processo.status] || { label: processo.status, color: 'bg-gray-100 text-gray-800', icon: AlertCircle }
+  const statusInfo = getStatusInfo(processo.status)
   const StatusIcon = statusInfo.icon
 
   const getResultadoBadge = (decisao: ProcessoDecisao) => {
-    if (!decisao) return null
+    if (!decisao) return <Badge variant="outline">Aguardando</Badge>
 
-    switch (decisao.tipoResultado) {
-      case 'SUSPENSO':
-        return <Badge className="bg-yellow-100 text-yellow-800">Suspenso</Badge>
-      case 'PEDIDO_VISTA':
-        return <Badge className="bg-blue-100 text-blue-800">Pedido de vista</Badge>
-      case 'PEDIDO_DILIGENCIA':
-        return <Badge className="bg-orange-100 text-orange-800">Pedido de diligência</Badge>
-      case 'JULGADO':
-        const tipoDecisao = decisao.tipoDecisao
-        return (
-          <Badge
-            className={
-              tipoDecisao === 'DEFERIDO' ? 'bg-green-100 text-green-800' :
-                tipoDecisao === 'INDEFERIDO' ? 'bg-red-100 text-red-800' :
-                  'bg-yellow-100 text-yellow-800'
-            }
-          >
-            {tipoDecisao === 'DEFERIDO' ? 'Deferido' :
-              tipoDecisao === 'INDEFERIDO' ? 'Indeferido' :
-                'Parcial'}
-          </Badge>
-        )
-      default:
-        return <Badge variant="outline">Aguardando</Badge>
-    }
+    const badge = getResultadoBadgeFromConstants(decisao.tipoResultado, decisao.tipoDecisao)
+    return <Badge className={badge.color}>{badge.label}</Badge>
   }
 
   const getCardBackground = (decisao: ProcessoDecisao) => {
     if (!decisao) return 'bg-gray-50'
-
-    switch (decisao.tipoResultado) {
-      case 'SUSPENSO':
-        return 'bg-yellow-50 border-yellow-200'
-      case 'PEDIDO_VISTA':
-        return 'bg-blue-50 border-blue-200'
-      case 'PEDIDO_DILIGENCIA':
-        return 'bg-orange-50 border-orange-200'
-      case 'JULGADO':
-        return 'bg-green-50 border-green-200'
-      default:
-        return 'bg-gray-50'
-    }
+    return getCardBackgroundFromConstants(decisao.tipoResultado)
   }
 
   const formatarListaNomes = (nomes: string[]): string => {
@@ -308,8 +254,8 @@ export default function ProcessoDetalhesPage({ params }: Props) {
               <FileText className="h-5 w-5 text-blue-600" />
               <div>
                 <p className="text-sm font-medium text-gray-600">Tipo</p>
-                <Badge className={tipoProcessoMap[processo.tipo].color}>
-                  {tipoProcessoMap[processo.tipo].label}
+                <Badge className={getTipoProcessoInfo(processo.tipo).color}>
+                  {getTipoProcessoInfo(processo.tipo).label}
                 </Badge>
               </div>
             </div>
@@ -359,7 +305,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                   </div>
                   <div>
                     <Label>Tipo de Processo</Label>
-                    <p className="font-medium">{tipoProcessoMap[processo.tipo].label}</p>
+                    <p className="font-medium">{getTipoProcessoInfo(processo.tipo).label}</p>
                   </div>
                   <div>
                     <Label>Data de Abertura</Label>
@@ -542,7 +488,6 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                             R$ {(() => {
                               const total = processo.valoresEspecificos.imoveis.reduce((total: number, imovel: Record<string, unknown>) => {
                                 const valor = Number((imovel.imovel as Record<string, unknown>)?.valorAvaliado || imovel.valorAvaliacao || 0);
-                                console.log('Imovel debug:', { imovel, valor, valorAvaliado: (imovel.imovel as Record<string, unknown>)?.valorAvaliado, valorAvaliacao: imovel.valorAvaliacao });
                                 return total + valor;
                               }, 0);
                               return total.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
@@ -801,7 +746,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                 )}
                                 {processoPauta?.revisores && Array.isArray(processoPauta.revisores) && processoPauta.revisores.length > 0 && (
                                   <p className="text-sm text-blue-600">
-                                    Revisor{processoPauta.revisores.length > 1 ? 'es' : ''}: {processoPauta.revisores.join(', ')}
+                                    Revisor{processoPauta.revisores.length > 1 ? 'es' : ''}: {formatarListaNomes(processoPauta.revisores)}
                                   </p>
                                 )}
                               </div>
@@ -839,10 +784,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                                   <span className="truncate font-medium">{voto.nomeVotante}</span>
                                                 </div>
                                                 <span className={`font-medium text-xs ${voto.acompanhaVoto ? 'text-blue-600' :
-                                                  voto.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
-                                                    voto.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
-                                                      voto.posicaoVoto === 'PARCIAL' ? 'text-yellow-600' :
-                                                        'text-blue-600'
+                                                  getPosicaoVotoInfo(voto.posicaoVoto || '').color
                                                   }`}>
                                                   {voto.acompanhaVoto
                                                     ? `Acomp. ${voto.acompanhaVoto.split(' ')[0]}`
@@ -868,10 +810,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
 
                                           return (
                                             <div key={posicao} className="text-xs">
-                                              <span className={`font-medium ${posicao === 'DEFERIDO' ? 'text-green-600' :
-                                                posicao === 'INDEFERIDO' ? 'text-red-600' :
-                                                  'text-yellow-600'
-                                                }`}>
+                                              <span className={`font-medium ${getPosicaoVotoInfo(posicao).color}`}>
                                                 {posicao}:
                                               </span>
                                               <span className="ml-1 text-gray-700">
@@ -927,16 +866,12 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                         </Badge>
                                         <span className="truncate font-medium">{decisao.sessao.presidente.nome}</span>
                                       </div>
-                                      <span className={`font-medium text-xs ${(decisao.votos || []).find((voto: ProcessoVoto) =>
-                                        voto.conselheiroId === decisao.sessao?.presidente?.id ||
-                                        voto.nomeVotante === decisao.sessao?.presidente?.nome
-                                      )?.posicaoVoto === 'DEFERIDO' ? 'text-green-600' :
-                                        (decisao.votos || []).find((voto: ProcessoVoto) =>
+                                      <span className={`font-medium text-xs ${
+                                        getPosicaoVotoInfo(String((decisao.votos || []).find((voto: ProcessoVoto) =>
                                           voto.conselheiroId === decisao.sessao?.presidente?.id ||
                                           voto.nomeVotante === decisao.sessao?.presidente?.nome
-                                        )?.posicaoVoto === 'INDEFERIDO' ? 'text-red-600' :
-                                          'text-yellow-600'
-                                        }`}>
+                                        )?.posicaoVoto || '')).color
+                                      }`}>
                                         {(decisao.votos || []).find((voto: ProcessoVoto) =>
                                           voto.conselheiroId === decisao.sessao?.presidente?.id ||
                                           voto.nomeVotante === decisao.sessao?.presidente?.nome
@@ -1114,31 +1049,138 @@ export default function ProcessoDetalhesPage({ params }: Props) {
               ) : (
                 <div className="space-y-4">
                   {processo.acordos?.map((acordo) => {
+                    // Função para calcular o valor correto do acordo baseado no tipo
+                    const getValorAcordo = () => {
+                      const tipoProcesso = processo.tipo
+
+                      // Para transação excepcional, usar valorFinal padrão
+                      if (tipoProcesso === 'TRANSACAO_EXCEPCIONAL') {
+                        return Number(acordo.valorFinal) || 0
+                      }
+
+                      // Para compensação e dação, calcular baseado nos detalhes se disponível
+                      if (!acordo.detalhes || acordo.detalhes.length === 0) {
+                        return Number(acordo.valorFinal) || 0
+                      }
+
+                      let valorTotal = 0
+
+                      acordo.detalhes.forEach((detalhe: any) => {
+                        if (detalhe.tipo === 'compensacao') {
+                          // Para compensação: extrair valor total dos créditos das observações
+                          try {
+                            const observacoes = detalhe.observacoes
+                            if (observacoes) {
+                              const dadosCreditos = JSON.parse(observacoes)
+                              if (dadosCreditos.valorTotalCreditos) {
+                                valorTotal += Number(dadosCreditos.valorTotalCreditos || 0)
+                              }
+                            }
+                          } catch (e) {
+                            // Se não conseguir fazer parse, usar valor original como fallback
+                            valorTotal += Number(detalhe.valorOriginal || 0)
+                          }
+                        } else if (detalhe.tipo === 'dacao') {
+                          // Para dação: usar valor avaliado do imóvel
+                          if (detalhe.imovel && detalhe.imovel.valorAvaliado) {
+                            valorTotal += Number(detalhe.imovel.valorAvaliado || 0)
+                          } else {
+                            // Fallback para valor original
+                            valorTotal += Number(detalhe.valorOriginal || 0)
+                          }
+                        }
+                      })
+
+                      return valorTotal > 0 ? valorTotal : Number(acordo.valorFinal) || 0
+                    }
+
                     // Calcular progresso do pagamento
-                    const valorTotal = Number(acordo.valorFinal) || 0
+                    const valorTotal = getValorAcordo()
                     const valorPago = (acordo.parcelas as ProcessoParcela[]).reduce((total: number, parcela: ProcessoParcela) => {
                       return total + (parcela.pagamentos || []).reduce((subtotal: number, pagamento: ProcessoPagamento) => {
                         return subtotal + (Number(pagamento.valorPago) || 0)
                       }, 0)
                     }, 0)
-                    const percentual = valorTotal > 0 ? Math.round((valorPago / valorTotal) * 100) : 0
-                    const progresso = {
-                      valorTotal,
-                      valorPago,
-                      valorPendente: valorTotal - valorPago,
-                      percentual
+
+                    const getProgressoPagamento = () => {
+                      const tipoProcesso = processo.tipo
+
+                      // Para transação excepcional, calcular progresso baseado em pagamentos
+                      if (tipoProcesso === 'TRANSACAO_EXCEPCIONAL') {
+                        const percentual = valorTotal > 0 ? Math.round((valorPago / valorTotal) * 100) : 0
+
+                        return {
+                          valorTotal,
+                          valorPago,
+                          valorPendente: valorTotal - valorPago,
+                          percentual
+                        }
+                      }
+
+                      // Para compensação e dação, progresso baseado no status
+                      if (acordo.status === 'cumprido') {
+                        return {
+                          valorTotal,
+                          valorPago: valorTotal,
+                          valorPendente: 0,
+                          percentual: 100
+                        }
+                      }
+
+                      return {
+                        valorTotal,
+                        valorPago: 0,
+                        valorPendente: valorTotal,
+                        percentual: 0
+                      }
                     }
 
+                    const progresso = getProgressoPagamento()
                     const vencido = new Date(String(acordo.dataVencimento)) < new Date() && acordo.status === 'ativo'
 
                     // Função para mostrar informações das parcelas
                     const getDisplayParcelasInfo = () => {
                       const totalParcelas = acordo.parcelas.length
+
+                      // Para transação excepcional parcelada, mostrar "Entrada + x parcelas"
                       if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && acordo.modalidadePagamento === 'parcelado' && totalParcelas > 1) {
-                        const parcelasRestantes = totalParcelas - 1
+                        const parcelasRestantes = totalParcelas - 1 // Excluir a entrada
                         return `Entrada + ${parcelasRestantes} parcela${parcelasRestantes !== 1 ? 's' : ''}`
                       }
+
+                      // Para outros tipos, mostrar formato padrão
                       return `${totalParcelas} parcela${totalParcelas !== 1 ? 's' : ''}`
+                    }
+
+                    // Função para formatar valores em moeda
+                    const formatarMoeda = (valor: number) => {
+                      return valor.toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                        minimumFractionDigits: 2
+                      })
+                    }
+
+                    const getStatusColor = (status: string) => {
+                      switch (status) {
+                        case 'ativo': return 'bg-green-100 text-green-800'
+                        case 'cumprido': return 'bg-blue-100 text-blue-800'
+                        case 'vencido': return 'bg-red-100 text-red-800'
+                        case 'cancelado': return 'bg-orange-100 text-orange-800'
+                        case 'renegociado': return 'bg-yellow-100 text-yellow-800'
+                        default: return 'bg-gray-100 text-gray-800'
+                      }
+                    }
+
+                    const getStatusLabel = (status: string) => {
+                      switch (status) {
+                        case 'ativo': return 'Ativo'
+                        case 'cumprido': return 'Cumprido'
+                        case 'vencido': return 'Vencido'
+                        case 'cancelado': return 'Cancelado'
+                        case 'renegociado': return 'Renegociado'
+                        default: return status
+                      }
                     }
 
                     return (
@@ -1151,8 +1193,8 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                 <span className="font-semibold text-lg">
                                   {acordo.numeroTermo}
                                 </span>
-                                <Badge className={acordo.status === 'ativo' ? 'bg-green-100 text-green-800' : acordo.status === 'cancelado' ? 'bg-orange-100 text-orange-800' : acordo.status === 'cumprido' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}>
-                                  {acordo.status === 'ativo' ? 'Ativo' : acordo.status === 'cancelado' ? 'Cancelado' : acordo.status === 'cumprido' ? 'Cumprido' : acordo.status}
+                                <Badge className={getStatusColor(acordo.status)}>
+                                  {getStatusLabel(acordo.status)}
                                 </Badge>
                                 {vencido && (
                                   <Badge className="bg-red-100 text-red-800">
@@ -1160,31 +1202,24 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                     Vencido
                                   </Badge>
                                 )}
-                                <Badge variant="outline">
-                                  {acordo.modalidadePagamento === 'avista' ? 'À Vista' : `${acordo.numeroParcelas}x`}
-                                </Badge>
                                 {/* Badge para tipo de processo */}
-                                {processo.tipo === 'TRANSACAO_EXCEPCIONAL' && (
-                                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                                    Transação Excepcional
-                                  </Badge>
-                                )}
-                                {processo.tipo === 'DACAO_PAGAMENTO' && (
-                                  <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                                    Dação em Pagamento
-                                  </Badge>
-                                )}
-                                {processo.tipo === 'COMPENSACAO' && (
-                                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                    Compensação
-                                  </Badge>
-                                )}
+                                <Badge variant="outline" className={getTipoProcessoInfo(processo.tipo || '').color}>
+                                  {getTipoProcessoInfo(processo.tipo || '').label}
+                                </Badge>
+                              </div>
+
+                              {/* Informações do Contribuinte */}
+                              <div>
+                                <p className="font-medium">{processo.contribuinte?.nome || 'Contribuinte não encontrado'}</p>
+                                <p className="text-sm text-gray-600">{processo.contribuinte?.cpfCnpj ? formatCpfCnpj(processo.contribuinte.cpfCnpj) : ''}</p>
                               </div>
 
                               {/* Valores e Progresso */}
                               <div className="space-y-2">
                                 <div className="flex items-center justify-between text-sm">
-                                  <span className="text-gray-600">Progresso do Pagamento</span>
+                                  <span className="text-gray-600">
+                                    {processo.tipo === 'TRANSACAO_EXCEPCIONAL' ? 'Progresso do Pagamento' : 'Progresso do Acordo'}
+                                  </span>
                                   <span className="font-medium">{progresso.percentual}%</span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2">
@@ -1193,26 +1228,46 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                     style={{ width: `${progresso.percentual}%` }}
                                   />
                                 </div>
-                                <div className="grid grid-cols-3 gap-2 text-xs">
-                                  <div>
-                                    <span className="text-gray-500">Total:</span>
-                                    <p className="font-medium">
-                                      R$ {progresso.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </p>
+                                {processo.tipo === 'TRANSACAO_EXCEPCIONAL' ? (
+                                  <div className="grid grid-cols-3 gap-2 text-xs">
+                                    <div>
+                                      <span className="text-gray-500">Total:</span>
+                                      <p className="font-medium">
+                                        {formatarMoeda(progresso.valorTotal)}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <span className="text-gray-500">Pago:</span>
+                                      <p className="font-medium text-green-600">
+                                        {formatarMoeda(progresso.valorPago)}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <span className="text-gray-500">Pendente:</span>
+                                      <p className="font-medium text-yellow-600">
+                                        {formatarMoeda(progresso.valorPendente)}
+                                      </p>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <span className="text-gray-500">Pago:</span>
-                                    <p className="font-medium text-green-600">
-                                      R$ {progresso.valorPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </p>
+                                ) : (
+                                  <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                      <span className="text-gray-500">
+                                        {processo.tipo === 'COMPENSACAO' ? 'Valor dos Créditos:' :
+                                          processo.tipo === 'DACAO_PAGAMENTO' ? 'Valor do Imóvel:' : 'Valor Total:'}
+                                      </span>
+                                      <p className="font-medium">
+                                        {formatarMoeda(progresso.valorTotal)}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <span className="text-gray-500">Status:</span>
+                                      <p className={`font-medium ${acordo.status === 'cumprido' ? 'text-green-600' : acordo.status === 'ativo' ? 'text-yellow-600' : 'text-red-600'}`}>
+                                        {getStatusLabel(acordo.status)}
+                                      </p>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <span className="text-gray-500">Pendente:</span>
-                                    <p className="font-medium text-yellow-600">
-                                      R$ {progresso.valorPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </p>
-                                  </div>
-                                </div>
+                                )}
                               </div>
 
                               {/* Informações do Acordo */}
@@ -1221,22 +1276,26 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                   <Calendar className="h-4 w-4" />
                                   <span>Assinado: {new Date(String(acordo.dataAssinatura)).toLocaleDateString('pt-BR')}</span>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Calendar className="h-4 w-4" />
-                                  <span>Vence: {new Date(String(acordo.dataVencimento)).toLocaleDateString('pt-BR')}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <FileText className="h-4 w-4" />
-                                  <span>{getDisplayParcelasInfo()}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <DollarSign className="h-4 w-4" />
-                                  <span>{acordo.parcelas.reduce((total, p) => total + (p.pagamentos?.length || 0), 0)} pagamento{acordo.parcelas.reduce((total, p) => total + (p.pagamentos?.length || 0), 0) !== 1 ? 's' : ''}</span>
-                                </div>
+                                {processo.tipo === 'TRANSACAO_EXCEPCIONAL' && (
+                                  <>
+                                    <div className="flex items-center gap-2">
+                                      <Calendar className="h-4 w-4" />
+                                      <span>Vence: {new Date(String(acordo.dataVencimento)).toLocaleDateString('pt-BR')}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <FileText className="h-4 w-4" />
+                                      <span>{getDisplayParcelasInfo()}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <DollarSign className="h-4 w-4" />
+                                      <span>{acordo.parcelas.reduce((total, p) => total + (p.pagamentos?.length || 0), 0)} pagamento{acordo.parcelas.reduce((total, p) => total + (p.pagamentos?.length || 0), 0) !== 1 ? 's' : ''}</span>
+                                    </div>
+                                  </>
+                                )}
                               </div>
 
-                              {/* Próximas Parcelas */}
-                              {acordo.parcelas.filter(p => p.status === 'PENDENTE').length > 0 && (
+                              {/* Próximas Parcelas - apenas para transação excepcional */}
+                              {processo.tipo === 'TRANSACAO_EXCEPCIONAL' && acordo.parcelas.filter(p => p.status === 'PENDENTE').length > 0 && (
                                 <div className="border-t pt-3">
                                   <h4 className="text-sm font-medium text-gray-900 mb-2">
                                     Próximas Parcelas:
@@ -1251,7 +1310,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                             {parcela.numero === 0 ? 'Entrada' : `Parcela ${parcela.numero}`} - {new Date(String(parcela.dataVencimento)).toLocaleDateString('pt-BR')}
                                           </span>
                                           <span className="font-medium">
-                                            R$ {Number(parcela.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            {formatarMoeda(Number(parcela.valor))}
                                           </span>
                                         </div>
                                       ))}
@@ -1314,6 +1373,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     if (titulo.includes('Suspenso')) return Pause
                     if (titulo.includes('Vista')) return Eye
                     if (titulo.includes('Diligência')) return FilePlus
+                    if (titulo.includes('Negociação') || titulo.includes('Em Negociação')) return DollarSign
                     if (titulo.includes('Julgado')) return Gavel
                     return XCircle // ícone padrão para decisões
                   }
@@ -1352,7 +1412,8 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                   const getDecisaoCor = (titulo: string) => {
                     if (titulo.includes('Suspenso')) return { bg: 'bg-yellow-100', text: 'text-yellow-600' }
                     if (titulo.includes('Vista')) return { bg: 'bg-blue-100', text: 'text-blue-600' }
-                    if (titulo.includes('Diligência')) return { bg: 'bg-orange-100', text: 'text-orange-600' }
+                    if (titulo.includes('Diligência')) return { bg: 'bg-purple-100', text: 'text-purple-600' }
+                    if (titulo.includes('Negociação') || titulo.includes('Em Negociação')) return { bg: 'bg-orange-100', text: 'text-orange-600' }
                     if (titulo.includes('Julgado')) return { bg: 'bg-green-100', text: 'text-green-600' }
                     return { bg: 'bg-gray-100', text: 'text-gray-600' }
                   }

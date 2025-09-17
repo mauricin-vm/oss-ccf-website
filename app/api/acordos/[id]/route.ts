@@ -80,7 +80,6 @@ export async function PUT(
       )
     }
     const body = await request.json()
-    console.log('🔄 Tentativa de atualização do acordo:', { id, body, totalPagamentos: 'calculando...' })
     // Buscar acordo atual
     const acordoAtual = await prisma.acordo.findUnique({
       where: { id },
@@ -110,19 +109,13 @@ export async function PUT(
     const totalPagamentos = acordoAtual.parcelas.reduce((total, parcela) => {
       return total + parcela.pagamentos.length
     }, 0)
-    console.log('📊 Total de pagamentos:', totalPagamentos)
-    console.log('📝 Campos enviados:', Object.keys(body))
     // Permitir cancelamento e campos específicos mesmo com pagamentos
     if (totalPagamentos > 0) {
       // Com pagamentos, só permite: cancelamento, observações e motivo de cancelamento
       const camposPermitidos = ['status', 'observacoes', 'motivoCancelamento']
       const camposEnviados = Object.keys(body)
       const camposNaoPermitidos = camposEnviados.filter(campo => !camposPermitidos.includes(campo))
-      console.log('✅ Campos permitidos:', camposPermitidos)
-      console.log('❌ Campos não permitidos:', camposNaoPermitidos)
-      console.log('🎯 Status sendo enviado:', body.status)
       if (camposNaoPermitidos.length > 0 && body.status !== 'cancelado') {
-        console.log('🚫 Bloqueando edição - acordo com pagamentos')
         return NextResponse.json(
           { error: 'Acordos com pagamentos registrados só podem ser cancelados ou ter observações atualizadas.' },
           { status: 400 }
@@ -276,12 +269,29 @@ export async function DELETE(
       data: { status: 'JULGADO' }
     })
     // Registrar no histórico do processo
+    const tipoProcesso = acordo.processo.tipo
+    const incluirValor = tipoProcesso !== 'COMPENSACAO'
+
+    let descricao = `Termo ${acordo.numeroTermo} foi excluído.`
+    if (incluirValor) {
+      descricao += ` Valor: R$ ${Number(acordo.valorFinal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`
+    }
+    descricao += ` Processo retornado ao status "Julgado".`
+
+    // Definir título baseado no tipo de processo
+    let tituloHistorico = 'Acordo de Pagamento Excluído'
+    if (tipoProcesso === 'COMPENSACAO') {
+      tituloHistorico = 'Acordo de Compensação Excluído'
+    } else if (tipoProcesso === 'DACAO_PAGAMENTO') {
+      tituloHistorico = 'Acordo de Dação em Pagamento Excluído'
+    }
+
     await prisma.historicoProcesso.create({
       data: {
         processoId: acordo.processoId,
         usuarioId: user.id,
-        titulo: 'Acordo de Pagamento Excluído',
-        descricao: `Termo ${acordo.numeroTermo} foi excluído. Valor: R$ ${Number(acordo.valorFinal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. Processo retornado ao status "Julgado".`,
+        titulo: tituloHistorico,
+        descricao,
         tipo: 'ACORDO'
       }
     })

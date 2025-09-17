@@ -155,10 +155,8 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
           setSelectedProcesso(processo)
           setValue('processoId', processo.id)
 
-          // Definir setor de origem baseado na última tramitação
-          if (processo.tramitacoes.length > 0) {
-            setValue('setorOrigem', processo.tramitacoes[0].setorDestino, { shouldValidate: true })
-          }
+          // Manter CCF como padrão para setor de origem
+          setValue('setorOrigem', 'CCF', { shouldValidate: true })
         }
       } catch (error) {
         console.error('Erro ao buscar processo:', error)
@@ -212,10 +210,8 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
     setSearchProcess('')
     setProcessos([])
 
-    // Definir setor de origem baseado na última tramitação
-    if (processo.tramitacoes.length > 0) {
-      setValue('setorOrigem', processo.tramitacoes[0].setorDestino, { shouldValidate: true })
-    }
+    // Manter CCF como padrão para setor de origem
+    setValue('setorOrigem', 'CCF', { shouldValidate: true })
   }
 
   const tipoProcessoMap = {

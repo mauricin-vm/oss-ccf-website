@@ -268,6 +268,15 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
     }
   })
 
+  // Memoized callback for compensacao section - must be after useForm
+  const handleCompensacaoChange = useCallback((dadosSelecionados: DadosSelecionadosCompensacao) => {
+    // Atualizar valores do formulário baseado na seleção
+    setValue('valorTotal', dadosSelecionados.valorTotal as number)
+    setValue('valorFinal', dadosSelecionados.valorFinal as number)
+    // Capturar dados específicos
+    setDadosEspecificos(dadosSelecionados as DadosEspecificos)
+  }, [setValue])
+
   // Função para verificar se processo julgado teve decisão deferida e retornar o tipo
   const fetchDecisoesDeferidas = useCallback(async (processoId: string) => {
     try {
@@ -367,7 +376,8 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
     }
 
     fetchProcessos()
-  }, [fetchDecisoesDeferidas, fetchValoresEspecificos])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Se processoId for fornecido via prop ou URL, buscar o processo específico
   useEffect(() => {
@@ -440,7 +450,8 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
     }
 
     fetchProcesso()
-  }, [processoId, searchParams, setValue, fetchDecisoesDeferidas, fetchValoresEspecificos])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [processoId, searchParams])
 
   // Watch valores para exibição
   const modalidadePagamento = watch('modalidadePagamento')
@@ -466,9 +477,71 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
     setIsLoading(true)
     setError(null)
 
+    // Log para debug dos dados sendo enviados
+    console.log('ACORDO-FORM - Dados sendo enviados:', {
+      tipoProcesso: selectedProcesso?.tipo,
+      dadosEspecificos,
+      formData: data
+    })
+
+    // Log específico para arrays de dação
+    if (selectedProcesso?.tipo === 'DACAO_PAGAMENTO') {
+      console.log('ACORDO-FORM - Arrays de dação:', {
+        inscricoesOferecidasAdicionadas: dadosEspecificos?.inscricoesOferecidasAdicionadas,
+        inscricoesCompensarAdicionadas: dadosEspecificos?.inscricoesCompensarAdicionadas,
+        temInscricoesOferecidas: !!dadosEspecificos?.inscricoesOferecidasAdicionadas,
+        temInscricoesCompensar: !!dadosEspecificos?.inscricoesCompensarAdicionadas,
+        lengthOferecidas: dadosEspecificos?.inscricoesOferecidasAdicionadas?.length || 'N/A',
+        lengthCompensar: dadosEspecificos?.inscricoesCompensarAdicionadas?.length || 'N/A'
+      })
+    }
+
     try {
-      // Para transação excepcional, usar dados específicos, senão calcular valores normalmente
+      // Validação específica para compensação
+      if (selectedProcesso?.tipo === 'COMPENSACAO') {
+        if (!dadosEspecificos || !dadosEspecificos.valorTotal || !dadosEspecificos.valorFinal) {
+          setError('Para acordos de compensação, é necessário configurar créditos e inscrições antes de criar o acordo.')
+          setIsLoading(false)
+          return
+        }
+
+        if (!dadosEspecificos.creditosAdicionados || dadosEspecificos.creditosAdicionados.length === 0) {
+          setError('É necessário adicionar pelo menos um crédito para compensação.')
+          setIsLoading(false)
+          return
+        }
+
+        if (!dadosEspecificos.inscricoesAdicionadas || dadosEspecificos.inscricoesAdicionadas.length === 0) {
+          setError('É necessário adicionar pelo menos uma inscrição para compensação.')
+          setIsLoading(false)
+          return
+        }
+      }
+
+      // Validação específica para dação em pagamento
+      if (selectedProcesso?.tipo === 'DACAO_PAGAMENTO') {
+        if (!dadosEspecificos || !dadosEspecificos.valorTotal || !dadosEspecificos.valorFinal) {
+          setError('Para acordos de dação em pagamento, é necessário configurar inscrições oferecidas e a compensar antes de criar o acordo.')
+          setIsLoading(false)
+          return
+        }
+
+        if (!dadosEspecificos.inscricoesOferecidasAdicionadas || dadosEspecificos.inscricoesOferecidasAdicionadas.length === 0) {
+          setError('É necessário adicionar pelo menos uma inscrição oferecida para dação em pagamento.')
+          setIsLoading(false)
+          return
+        }
+
+        if (!dadosEspecificos.inscricoesCompensarAdicionadas || dadosEspecificos.inscricoesCompensarAdicionadas.length === 0) {
+          setError('É necessário adicionar pelo menos uma inscrição a compensar para dação em pagamento.')
+          setIsLoading(false)
+          return
+        }
+      }
+      // Para cada tipo de processo, usar dados específicos ou calcular valores normalmente
       let finalData
+
+
       if (selectedProcesso?.tipo === 'TRANSACAO_EXCEPCIONAL' && dadosEspecificos?.valorInscricoes) {
         // Para transação excepcional: usar valores dos dados específicos
         finalData = {
@@ -478,8 +551,26 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
           valorDesconto: Number(dadosEspecificos.valorInscricoes) - (dadosEspecificos.propostaFinal?.valorTotalProposto || data.valorTotal),
           dadosEspecificos
         }
+      } else if (selectedProcesso?.tipo === 'COMPENSACAO' && dadosEspecificos) {
+        // Para compensação: usar valores dos dados específicos
+        finalData = {
+          ...data,
+          valorTotal: dadosEspecificos.valorTotal || data.valorTotal,
+          valorFinal: dadosEspecificos.valorFinal || data.valorFinal,
+          valorDesconto: (dadosEspecificos.valorTotal || data.valorTotal) - (dadosEspecificos.valorFinal || data.valorFinal),
+          dadosEspecificos
+        }
+      } else if (selectedProcesso?.tipo === 'DACAO_PAGAMENTO' && dadosEspecificos) {
+        // Para dação em pagamento: usar valores dos dados específicos
+        finalData = {
+          ...data,
+          valorTotal: dadosEspecificos.valorTotal || data.valorTotal,
+          valorFinal: dadosEspecificos.valorFinal || data.valorFinal,
+          valorDesconto: (dadosEspecificos.valorTotal || data.valorTotal) - (dadosEspecificos.valorFinal || data.valorFinal),
+          dadosEspecificos
+        }
       } else {
-        // Para outros tipos: calcular valores normalmente
+        // Para outros tipos ou quando não há dados específicos: calcular valores normalmente
         const valores = calcularValores()
         finalData = {
           ...data,
@@ -490,12 +581,31 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
       }
 
 
+
+      console.log('ACORDO-FORM - finalData sendo enviado para API:', finalData)
+
+      // Log específico para verificar a estrutura dos arrays
+      if (selectedProcesso?.tipo === 'DACAO_PAGAMENTO') {
+        console.log('ACORDO-FORM - Detalhes dos arrays em finalData:', {
+          dadosEspecificos: finalData.dadosEspecificos,
+          inscricoesOferecidasAdicionadas: finalData.dadosEspecificos?.inscricoesOferecidasAdicionadas,
+          inscricoesCompensarAdicionadas: finalData.dadosEspecificos?.inscricoesCompensarAdicionadas,
+          jsonStringified: JSON.stringify({
+            inscricoesOferecidasAdicionadas: finalData.dadosEspecificos?.inscricoesOferecidasAdicionadas,
+            inscricoesCompensarAdicionadas: finalData.dadosEspecificos?.inscricoesCompensarAdicionadas
+          })
+        })
+      }
+
+      const bodyToSend = JSON.stringify(finalData)
+      console.log('ACORDO-FORM - Body JSON exato sendo enviado:', bodyToSend)
+
       const response = await fetch('/api/acordos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(finalData)
+        body: bodyToSend
       })
 
       if (!response.ok) {
@@ -775,13 +885,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
             {selectedProcesso.valoresEspecificos?.detalhes ? (
               <CompensacaoSection
                 valoresCompensacao={selectedProcesso.valoresEspecificos.detalhes as ValoresCompensacao}
-                onSelectionChange={(dadosSelecionados: DadosSelecionadosCompensacao) => {
-                  // Atualizar valores do formulário baseado na seleção
-                  setValue('valorTotal', dadosSelecionados.valorTotal as number)
-                  setValue('valorFinal', dadosSelecionados.valorFinal as number)
-                  // Capturar dados específicos
-                  setDadosEspecificos(dadosSelecionados as DadosEspecificos)
-                }}
+                onSelectionChange={handleCompensacaoChange}
               />
             ) : (
               <div className="text-center py-8">
@@ -815,11 +919,24 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
               <DacaoSection
                 valoresDacao={selectedProcesso.valoresEspecificos.detalhes as ValoresDacao}
                 onSelectionChange={(dadosSelecionados: DadosSelecionadosDacao) => {
+                  console.log('ACORDO-FORM - Recebendo do DacaoSection:', dadosSelecionados)
+
                   // Atualizar valores do formulário baseado na seleção
                   setValue('valorTotal', dadosSelecionados.valorTotal as number)
                   setValue('valorFinal', dadosSelecionados.valorFinal as number)
+
                   // Capturar dados específicos
+                  console.log('ACORDO-FORM - Antes do setDadosEspecificos:', {
+                    inscricoesOferecidasAdicionadas: dadosSelecionados.inscricoesOferecidasAdicionadas,
+                    inscricoesCompensarAdicionadas: dadosSelecionados.inscricoesCompensarAdicionadas
+                  })
+
                   setDadosEspecificos(dadosSelecionados as DadosEspecificos)
+
+                  // Verificar se os dados foram salvos corretamente
+                  setTimeout(() => {
+                    console.log('ACORDO-FORM - Após setDadosEspecificos, dadosEspecificos atual:', dadosEspecificos)
+                  }, 100)
                 }}
               />
             ) : (
@@ -853,7 +970,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="dataAssinatura">Data de Assinatura *</Label>
+                  <Label htmlFor="dataAssinatura">Data de Assinatura <span className={selectedProcesso.tipo === 'COMPENSACAO' || selectedProcesso.tipo === 'DACAO_PAGAMENTO' ? 'text-red-500' : ''}>*</span></Label>
                   <Input
                     id="dataAssinatura"
                     type="date"
@@ -869,7 +986,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="dataVencimento">Data de Vencimento *</Label>
+                  <Label htmlFor="dataVencimento">Data de Vencimento <span className={selectedProcesso.tipo === 'COMPENSACAO' || selectedProcesso.tipo === 'DACAO_PAGAMENTO' ? 'text-red-500' : ''}>*</span></Label>
                   <Input
                     id="dataVencimento"
                     type="date"
@@ -886,73 +1003,6 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
             </CardContent>
           </Card>
 
-          {/* Modalidade de Pagamento - apenas para tipos que não têm proposta específica */}
-          {selectedProcesso.tipo !== 'TRANSACAO_EXCEPCIONAL' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Modalidade de Pagamento</CardTitle>
-                <CardDescription>
-                  Escolha se o pagamento será à vista ou parcelado
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <Label>Forma de Pagamento *</Label>
-                  <RadioGroup
-                    value={modalidadePagamento}
-                    onValueChange={(value) => {
-                      setValue('modalidadePagamento', value as 'avista' | 'parcelado')
-                      // Se mudar para à vista, definir parcelas como 1
-                      if (value === 'avista') {
-                        setValue('numeroParcelas', 1)
-                      } else if (value === 'parcelado' && numeroParcelas < 2) {
-                        // Se mudar para parcelado e tem menos de 2 parcelas, definir como 2
-                        setValue('numeroParcelas', 2)
-                      }
-                    }}
-                    disabled={isLoading}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="avista" id="avista" />
-                      <Label htmlFor="avista">À Vista</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="parcelado" id="parcelado" />
-                      <Label htmlFor="parcelado">Parcelado</Label>
-                    </div>
-                  </RadioGroup>
-                  {errors.modalidadePagamento && (
-                    <p className="text-sm text-red-500">{errors.modalidadePagamento.message}</p>
-                  )}
-                </div>
-
-                {modalidadePagamento === 'parcelado' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="numeroParcelas">Número de Parcelas *</Label>
-                    <Input
-                      id="numeroParcelas"
-                      type="number"
-                      min={2}
-                      max={60}
-                      {...register('numeroParcelas', {
-                        setValueAs: (value) => parseInt(value) || 1
-                      })}
-                      disabled={isLoading}
-                      placeholder="Ex: 12"
-                    />
-                    {errors.numeroParcelas && (
-                      <p className="text-sm text-red-500">{errors.numeroParcelas.message}</p>
-                    )}
-                    {valorParcela > 0 && (
-                      <p className="text-sm text-gray-600">
-                        Valor da parcela: R$ {valorParcela.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
 
           {/* Botões de Ação */}
           <div className="flex gap-4 justify-end">

@@ -278,7 +278,7 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
     setInscricaoOferecidaForm({
       numeroInscricao: inscricao.numeroInscricao,
       tipoInscricao: inscricao.tipoInscricao,
-      valor: inscricao.valor?.toString() || '',
+      valor: inscricao.valor ? inscricao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
       dataVencimento: inscricao.dataVencimento || '',
       descricao: inscricao.descricao || ''
     })
@@ -337,7 +337,7 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
       tipoInscricao: inscricao.tipoInscricao,
       debitos: (inscricao.debitos as DebitoFormData[])?.map((d: DebitoFormData) => ({
         descricao: d.descricao,
-        valor: d.valor || '',
+        valor: d.valor ? parseFloat(d.valor.toString()).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
         dataVencimento: d.dataVencimento || ''
       })) || [{ descricao: '', valor: '', dataVencimento: '' }]
     })

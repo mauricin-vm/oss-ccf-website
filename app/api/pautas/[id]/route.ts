@@ -175,11 +175,16 @@ export async function DELETE(
       })
       // Criar histórico de exclusão da pauta para cada processo
       await Promise.all(
-        processosIds.map(processoId => 
-          tx.$queryRaw`
-            INSERT INTO "HistoricoProcesso" ("id", "processoId", "usuarioId", "titulo", "descricao", "tipo", "createdAt")
-            VALUES (gen_random_uuid(), ${processoId}, ${user.id}, ${'Processo removido de pauta'}, ${`Processo removido da ${pauta.numero} que foi excluída`}, ${'PAUTA'}, ${new Date()})
-          `
+        processosIds.map(processoId =>
+          tx.historicoProcesso.create({
+            data: {
+              processoId,
+              usuarioId: user.id,
+              titulo: 'Processo removido de pauta',
+              descricao: `Processo removido da ${pauta.numero} que foi excluída`,
+              tipo: 'PAUTA'
+            }
+          })
         )
       )
       // Criar histórico de exclusão antes de deletar

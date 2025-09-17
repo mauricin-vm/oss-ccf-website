@@ -116,7 +116,7 @@ export async function PUT(
         })
         await tx.processo.update({
           where: { id: parcelaAtual.acordo.processoId },
-          data: { status: 'ACORDO_FIRMADO' }
+          data: { status: 'CONCLUIDO' }
         })
         // Registrar no histórico do processo
         await tx.historicoProcesso.create({

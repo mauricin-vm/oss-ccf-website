@@ -37,21 +37,36 @@ const inscricaoSchema = z.object({
   debitos: z.array(debitoSchema).min(1, 'Pelo menos um débito deve ser informado')
 })
 
-const propostaSchema = z.object({
-  valorTotalProposto: z.number().min(0.01, 'Valor total proposto é obrigatório e deve ser maior que zero'),
-  metodoPagamento: z.enum(['a_vista', 'parcelado']).refine((val) => ['a_vista', 'parcelado'].includes(val), {
-    message: 'Método de pagamento é obrigatório'
-  }),
-  valorEntrada: z.number().min(0, 'Valor de entrada deve ser positivo'),
-  quantidadeParcelas: z.number().min(1, 'Quantidade de parcelas deve ser pelo menos 1').max(120, 'Quantidade de parcelas deve ser no máximo 120')
+const propostaFormSchema = z.object({
+  valorTotalProposto: z.union([z.string(), z.number()]),
+  metodoPagamento: z.enum(['parcelado', 'a_vista']),
+  valorEntrada: z.union([z.string(), z.number()]),
+  quantidadeParcelas: z.number()
 })
 
-const valoresTransacaoSchema = z.object({
+const valoresTransacaoFormSchema = z.object({
   inscricoes: z.array(inscricaoSchema),
-  proposta: propostaSchema
+  proposta: propostaFormSchema
 })
 
-type ValoresTransacaoInput = z.infer<typeof valoresTransacaoSchema>
+// Tipo para o formulário (com formatação)
+type ValoresTransacaoFormInput = {
+  inscricoes: Array<{
+    numeroInscricao: string
+    tipoInscricao: 'imobiliaria' | 'economica'
+    debitos: Array<{
+      descricao: string
+      valor: number
+      dataVencimento: string
+    }>
+  }>
+  proposta: {
+    valorTotalProposto: string | number
+    metodoPagamento: 'parcelado' | 'a_vista'
+    valorEntrada: string | number
+    quantidadeParcelas: number
+  }
+}
 
 interface ValoresTransacaoFormProps {
   processoId: string
@@ -79,14 +94,14 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
     watch,
     setValue,
     formState: { errors }
-  } = useForm<ValoresTransacaoInput>({
-    resolver: zodResolver(valoresTransacaoSchema),
+  } = useForm<ValoresTransacaoFormInput>({
+    resolver: zodResolver(valoresTransacaoFormSchema),
     defaultValues: {
       inscricoes: [],
       proposta: {
-        valorTotalProposto: 0,
+        valorTotalProposto: '',
         metodoPagamento: 'parcelado',
-        valorEntrada: 0,
+        valorEntrada: '',
         quantidadeParcelas: 1
       }
     }
@@ -102,6 +117,9 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
     const loadValoresExistentes = async () => {
       try {
         setIsLoadingData(true)
+
+        // Garantir que o método de pagamento seja 'parcelado' por padrão
+        setValue('proposta.metodoPagamento', 'parcelado')
         const response = await fetch(`/api/processos/${processoId}/valores-transacao`)
         if (response.ok) {
           const data = await response.json()
@@ -122,12 +140,12 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
 
           // Carregar proposta
           if (data.proposta) {
-            // Formatar valores monetários ao carregar
+            // Formatar valores monetários ao carregar usando a função formatCurrency
             const valorTotalFormatado = data.proposta.valorTotalProposto
-              ? (data.proposta.valorTotalProposto).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              ? formatCurrency(Math.round(data.proposta.valorTotalProposto * 100).toString())
               : ''
             const valorEntradaFormatado = data.proposta.valorEntrada
-              ? (data.proposta.valorEntrada).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              ? formatCurrency(Math.round(data.proposta.valorEntrada * 100).toString())
               : ''
 
             setValue('proposta.valorTotalProposto', valorTotalFormatado)
@@ -151,17 +169,31 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
     loadValoresExistentes()
   }, [processoId, appendInscricao, setValue])
 
-  const onSubmit = async (data: ValoresTransacaoInput) => {
+  const onSubmit = async (data: ValoresTransacaoFormInput) => {
     setIsLoading(true)
     setError(null)
 
     try {
+      // Converter valores formatados para números antes de enviar
+      const processedData = {
+        ...data,
+        proposta: {
+          ...data.proposta,
+          valorTotalProposto: typeof data.proposta.valorTotalProposto === 'string'
+            ? parseCurrencyToNumber(data.proposta.valorTotalProposto)
+            : data.proposta.valorTotalProposto,
+          valorEntrada: typeof data.proposta.valorEntrada === 'string'
+            ? parseCurrencyToNumber(data.proposta.valorEntrada)
+            : data.proposta.valorEntrada
+        }
+      }
+
       const response = await fetch(`/api/processos/${processoId}/valores-transacao`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(processedData)
       })
 
       if (!response.ok) {
@@ -206,7 +238,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
     setInscricaoForm({
       numeroInscricao: inscricao.numeroInscricao,
       tipoInscricao: inscricao.tipoInscricao,
-      debitos: (inscricao.debitos as Array<{descricao: string, valor: number, dataVencimento: string}>)?.map((d: {descricao: string, valor: number, dataVencimento: string}) => ({
+      debitos: (inscricao.debitos as Array<{ descricao: string, valor: number, dataVencimento: string }>)?.map((d: { descricao: string, valor: number, dataVencimento: string }) => ({
         descricao: d.descricao as string,
         valor: formatValue(d.valor as number),
         dataVencimento: (d.dataVencimento as string) || ''
@@ -312,8 +344,8 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
 
   // Função para formatar campos de valor da proposta
   const handlePropostaValueChange = (field: string, value: string) => {
-    const numericValue = parseCurrencyToNumber(value)
-    setValue(`proposta.${field}` as `proposta.${keyof ValoresTransacaoInput['proposta']}`, numericValue)
+    const formattedValue = formatCurrency(value)
+    setValue(`proposta.${field}` as `proposta.${keyof ValoresTransacaoFormInput['proposta']}`, formattedValue)
   }
 
   const calcularTotalDebitos = () => {
@@ -628,9 +660,8 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
                     <Label htmlFor="valorParcela">Valor da Parcela</Label>
                     <Input
                       id="valorParcela"
-                      type="number"
-                      step="0.01"
-                      value={calcularValorParcela().toFixed(2)}
+                      type="text"
+                      value={calcularValorParcela().toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       disabled={true}
                       className="bg-gray-100"
                     />

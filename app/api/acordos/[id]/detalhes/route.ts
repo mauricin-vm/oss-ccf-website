@@ -23,7 +23,19 @@ export async function GET(
       },
       orderBy: { createdAt: 'asc' }
     })
-    return NextResponse.json({ detalhes })
+
+    // Parse JSON fields for inscricoes
+    const detalhesProcessados = detalhes.map(detalhe => ({
+      ...detalhe,
+      inscricoes: detalhe.inscricoes.map(inscricao => ({
+        ...inscricao,
+        descricaoDebitos: inscricao.descricaoDebitos
+          ? JSON.parse(inscricao.descricaoDebitos as string)
+          : null
+      }))
+    }))
+
+    return NextResponse.json({ detalhes: detalhesProcessados })
   } catch (error) {
     console.error('Erro ao buscar detalhes do acordo:', error)
     return NextResponse.json(

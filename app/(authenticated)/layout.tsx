@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth/config'
 import Sidebar from '@/components/layout/sidebar'
 import { SessionUser } from '@/types'
+import { SessionValidator } from '@/components/auth/SessionValidator'
 
 export default async function AuthenticatedLayout({
   children
@@ -11,7 +12,7 @@ export default async function AuthenticatedLayout({
 }) {
   const session = await getServerSession(authOptions)
 
-  if (!session) {
+  if (!session || !session.user) {
     redirect('/login')
   }
 
@@ -19,6 +20,7 @@ export default async function AuthenticatedLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
+      <SessionValidator />
       <Sidebar userRole={user.role} userName={user.name} />
       <main className="flex-1 overflow-y-auto bg-gray-50">
         <div className="p-8">

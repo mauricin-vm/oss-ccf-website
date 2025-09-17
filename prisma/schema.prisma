@@ -27,9 +27,11 @@ enum StatusProcesso {
   SUSPENSO
   PEDIDO_VISTA
   PEDIDO_DILIGENCIA
+  EM_NEGOCIACAO
   JULGADO
   ACORDO_FIRMADO
   EM_CUMPRIMENTO
+  CONCLUIDO
   ARQUIVADO
 }
 
@@ -37,6 +39,7 @@ enum TipoResultadoJulgamento {
   SUSPENSO
   PEDIDO_VISTA
   PEDIDO_DILIGENCIA
+  EM_NEGOCIACAO
   JULGADO
 }
 
@@ -341,6 +344,7 @@ model Decisao {
   
   // Campos específicos para cada tipo
   motivoSuspensao   String?         @db.Text
+  detalhesNegociacao String?        @db.Text
   conselheiroPedidoVista String?    // Nome do conselheiro que pediu vista
   prazoVista        DateTime?       // Prazo para retorno da vista
   especificacaoDiligencia String?   @db.Text
