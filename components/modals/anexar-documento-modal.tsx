@@ -48,7 +48,7 @@ export default function AnexarDocumentoModal({
     '.txt'
   ]
 
-  const maxFileSize = 50 * 1024 * 1024 // 50MB
+  const maxFileSize = 100 * 1024 * 1024 // 100MB
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
@@ -67,7 +67,7 @@ export default function AnexarDocumentoModal({
 
       // Validar tamanho
       if (file.size > maxFileSize) {
-        errors.push(`${file.name}: arquivo muito grande (máximo 50MB)`)
+        errors.push(`${file.name}: arquivo muito grande (máximo 100MB)`)
         return
       }
 
@@ -217,7 +217,7 @@ export default function AnexarDocumentoModal({
           <DialogTitle>Anexar Documentos</DialogTitle>
           <DialogDescription>
             Selecione os arquivos que deseja anexar ao processo. 
-            Tipos permitidos: PDF, DOC, XLS, imagens e TXT (máximo 50MB cada).
+            Tipos permitidos: PDF, DOC, XLS, imagens e TXT (máximo 100MB cada).
           </DialogDescription>
         </DialogHeader>
 
@@ -241,7 +241,7 @@ export default function AnexarDocumentoModal({
               <span className="font-medium">Clique para selecionar</span> ou arraste arquivos aqui
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              {allowedTypes.join(', ')} - Máximo 50MB por arquivo
+              {allowedTypes.join(', ')} - Máximo 100MB por arquivo
             </p>
           </div>
 
