@@ -256,6 +256,16 @@ export interface ProcessoAcordo {
   numeroParcelas: number
   valorFinal: number
   parcelas: ProcessoParcela[]
+  detalhes?: {
+    id: string
+    tipo: string
+    descricao: string
+    valorOriginal: number
+    valorNegociado: number
+    observacoes?: string
+    valorAvaliado?: number
+    [key: string]: unknown
+  }[]
 }
 
 export interface ProcessoParcela {
@@ -298,7 +308,7 @@ export interface ProcessoPautaWithDetails {
 
 export interface ProcessoHistorico {
   id: string
-  tipo: 'EVENTO' | 'OBSERVACAO' | 'ALTERACAO' | 'COMUNICACAO' | 'DECISAO' | 'SISTEMA' | 'PAUTA' | 'REPAUTAMENTO' | 'TRAMITACAO' | 'TRAMITACAO_ENTREGUE' | 'ACORDO'
+  tipo: 'EVENTO' | 'OBSERVACAO' | 'ALTERACAO' | 'COMUNICACAO' | 'DECISAO' | 'SISTEMA' | 'PAUTA' | 'REPAUTAMENTO' | 'TRAMITACAO' | 'TRAMITACAO_ENTREGUE' | 'ACORDO' | 'ACORDO_CONCLUIDO'
   titulo: string
   descricao: string
   createdAt: string
@@ -316,6 +326,12 @@ export interface AcordoDetalhe {
   status: string
   dataExecucao?: string
   observacoes?: string
+  imovel?: {
+    id: string
+    endereco?: string
+    valorAvaliado?: number
+    [key: string]: unknown
+  }
   inscricoes?: Array<{
     id: string
     numeroInscricao: string

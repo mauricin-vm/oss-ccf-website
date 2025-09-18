@@ -196,7 +196,7 @@ export default function AcordosPage() {
               valorTotal += Number(dadosCreditos.valorTotalCreditos || 0)
             }
           }
-        } catch (e) {
+        } catch {
           // Se não conseguir fazer parse, usar valor original como fallback
           valorTotal += Number(detalhe.valorOriginal || 0)
         }

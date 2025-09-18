@@ -1065,7 +1065,15 @@ export default function ProcessoDetalhesPage({ params }: Props) {
 
                       let valorTotal = 0
 
-                      acordo.detalhes.forEach((detalhe: any) => {
+                      acordo.detalhes.forEach((detalhe: {
+                        id: string
+                        tipo: string
+                        descricao: string
+                        valorOriginal: number
+                        valorNegociado: number
+                        observacoes?: string
+                        [key: string]: unknown
+                      }) => {
                         if (detalhe.tipo === 'compensacao') {
                           // Para compensação: extrair valor total dos créditos das observações
                           try {
@@ -1076,14 +1084,14 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                 valorTotal += Number(dadosCreditos.valorTotalCreditos || 0)
                               }
                             }
-                          } catch (e) {
+                          } catch {
                             // Se não conseguir fazer parse, usar valor original como fallback
                             valorTotal += Number(detalhe.valorOriginal || 0)
                           }
                         } else if (detalhe.tipo === 'dacao') {
                           // Para dação: usar valor avaliado do imóvel
-                          if (detalhe.imovel && detalhe.imovel.valorAvaliado) {
-                            valorTotal += Number(detalhe.imovel.valorAvaliado || 0)
+                          if (detalhe.imovel && (detalhe.imovel as { valorAvaliado?: number }).valorAvaliado) {
+                            valorTotal += Number((detalhe.imovel as { valorAvaliado?: number }).valorAvaliado || 0)
                           } else {
                             // Fallback para valor original
                             valorTotal += Number(detalhe.valorOriginal || 0)
@@ -1389,8 +1397,9 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     'REPAUTAMENTO': Calendar,
                     'TRAMITACAO': ArrowRight,
                     'TRAMITACAO_ENTREGUE': ArrowRight,
-                    'ACORDO': CreditCard
-                  }[historico.tipo] || History
+                    'ACORDO': CreditCard,
+                    'ACORDO_CONCLUIDO': CreditCard
+                  }[historico.tipo as 'EVENTO' | 'OBSERVACAO' | 'ALTERACAO' | 'COMUNICACAO' | 'DECISAO' | 'SISTEMA' | 'PAUTA' | 'REPAUTAMENTO' | 'TRAMITACAO' | 'TRAMITACAO_ENTREGUE' | 'ACORDO' | 'ACORDO_CONCLUIDO'] || History
 
                   const tipoLabel = {
                     'EVENTO': 'Evento',
@@ -1403,8 +1412,9 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     'REPAUTAMENTO': 'Repautamento',
                     'TRAMITACAO': 'Tramitação',
                     'TRAMITACAO_ENTREGUE': 'Tramitação',
-                    'ACORDO': 'Acordo'
-                  }[historico.tipo] || historico.tipo
+                    'ACORDO': 'Acordo',
+                    'ACORDO_CONCLUIDO': 'Acordo'
+                  }[historico.tipo as 'EVENTO' | 'OBSERVACAO' | 'ALTERACAO' | 'COMUNICACAO' | 'DECISAO' | 'SISTEMA' | 'PAUTA' | 'REPAUTAMENTO' | 'TRAMITACAO' | 'TRAMITACAO_ENTREGUE' | 'ACORDO' | 'ACORDO_CONCLUIDO'] || historico.tipo
 
                   const Icon = tipoIcon
 
@@ -1424,14 +1434,14 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                         historico.tipo === 'PAUTA' || historico.tipo === 'REPAUTAMENTO' ? 'bg-purple-100' :
                           historico.tipo === 'DECISAO' ? getDecisaoCor(historico.titulo).bg :
                             historico.tipo === 'TRAMITACAO' || historico.tipo === 'TRAMITACAO_ENTREGUE' ? 'bg-orange-100' :
-                              historico.tipo === 'ACORDO' ? 'bg-green-100' :
+                              historico.tipo === 'ACORDO' || historico.tipo === 'ACORDO_CONCLUIDO' ? 'bg-green-100' :
                                 'bg-blue-100'
                         }`}>
                         <Icon className={`h-4 w-4 ${historico.tipo === 'SISTEMA' ? 'text-green-600' :
                           historico.tipo === 'PAUTA' || historico.tipo === 'REPAUTAMENTO' ? 'text-purple-600' :
                             historico.tipo === 'DECISAO' ? getDecisaoCor(historico.titulo).text :
                               historico.tipo === 'TRAMITACAO' || historico.tipo === 'TRAMITACAO_ENTREGUE' ? 'text-orange-600' :
-                                historico.tipo === 'ACORDO' ? 'text-green-600' :
+                                historico.tipo === 'ACORDO' || historico.tipo === 'ACORDO_CONCLUIDO' ? 'text-green-600' :
                                   'text-blue-600'
                           }`} />
                       </div>

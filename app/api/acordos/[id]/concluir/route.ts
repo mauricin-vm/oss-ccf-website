@@ -76,17 +76,6 @@ export async function PATCH(
           status: 'CONCLUIDO'
         }
       })
-
-      // Criar histórico adicional para o processo
-      await prisma.historicoProcesso.create({
-        data: {
-          processoId: acordo.processoId,
-          titulo: 'Processo Concluído',
-          descricao: 'Processo concluído através da conclusão do acordo',
-          tipo: 'PROCESSO_CONCLUIDO',
-          usuarioId: user.id
-        }
-      })
     }
 
     // Registrar log da atividade

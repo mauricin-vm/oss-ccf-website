@@ -191,11 +191,10 @@ export default function ProcessosPage() {
                       <SelectItem value="SUSPENSO">Suspenso</SelectItem>
                       <SelectItem value="PEDIDO_VISTA">Pedido de Vista</SelectItem>
                       <SelectItem value="PEDIDO_DILIGENCIA">Pedido de Diligência</SelectItem>
-                      <SelectItem value="ACORDO_FIRMADO">Acordo Firmado</SelectItem>
                       <SelectItem value="EM_PAUTA">Em Pauta</SelectItem>
                       <SelectItem value="JULGADO">Julgado</SelectItem>
                       <SelectItem value="EM_CUMPRIMENTO">Em Cumprimento</SelectItem>
-                      <SelectItem value="ARQUIVADO">Arquivado</SelectItem>
+                      <SelectItem value="CONCLUIDO">Concluído</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

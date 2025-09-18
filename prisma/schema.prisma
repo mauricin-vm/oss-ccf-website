@@ -29,10 +29,8 @@ enum StatusProcesso {
   PEDIDO_DILIGENCIA
   EM_NEGOCIACAO
   JULGADO
-  ACORDO_FIRMADO
   EM_CUMPRIMENTO
   CONCLUIDO
-  ARQUIVADO
 }
 
 enum TipoResultadoJulgamento {

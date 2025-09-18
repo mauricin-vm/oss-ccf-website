@@ -18,7 +18,7 @@ export async function GET(
         pautaId,
         processo: {
           status: {
-            in: ['JULGADO', 'ACORDO_FIRMADO', 'EM_CUMPRIMENTO', 'ARQUIVADO']
+            in: ['JULGADO', 'EM_CUMPRIMENTO', 'CONCLUIDO']
           }
         }
       },

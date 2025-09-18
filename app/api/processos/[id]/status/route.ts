@@ -14,9 +14,8 @@ const statusSchema = z.object({
     'PEDIDO_VISTA',
     'PEDIDO_DILIGENCIA',
     'JULGADO',
-    'ACORDO_FIRMADO',
     'EM_CUMPRIMENTO',
-    'ARQUIVADO'
+    'CONCLUIDO'
   ])
 })
 export async function PUT(

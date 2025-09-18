@@ -226,10 +226,8 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
     AGUARDANDO_DOCUMENTOS: { label: 'Aguardando Docs', color: 'bg-yellow-100 text-yellow-800' },
     EM_PAUTA: { label: 'Em Pauta', color: 'bg-purple-100 text-purple-800' },
     JULGADO: { label: 'Julgado', color: 'bg-indigo-100 text-indigo-800' },
-    ACORDO_FIRMADO: { label: 'Acordo Firmado', color: 'bg-green-100 text-green-800' },
     EM_CUMPRIMENTO: { label: 'Em Cumprimento', color: 'bg-orange-100 text-orange-800' },
-    FINALIZADO: { label: 'Finalizado', color: 'bg-green-100 text-green-800' },
-    ARQUIVADO: { label: 'Arquivado', color: 'bg-gray-100 text-gray-800' }
+    CONCLUIDO: { label: 'Concluído', color: 'bg-green-100 text-green-800' }
   }
 
   return (

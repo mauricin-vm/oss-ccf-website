@@ -63,7 +63,7 @@ export async function POST(
     }
     // Verificar se o processo pode ser incluído
     const statusPermitidos = ['EM_ANALISE', 'SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA']
-    const statusJulgados = ['JULGADO', 'ACORDO_FIRMADO', 'EM_CUMPRIMENTO', 'ARQUIVADO']
+    const statusJulgados = ['JULGADO', 'EM_CUMPRIMENTO', 'CONCLUIDO']
     if (!statusPermitidos.includes(processo.status) && !statusJulgados.includes(processo.status)) {
       return NextResponse.json(
         { error: 'Processo não pode ser incluído em pauta com este status' },

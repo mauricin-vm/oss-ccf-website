@@ -80,6 +80,25 @@ export const acordoSchema = z.object({
     inscricoesCompensar: z.array(z.string()).optional(),
     inscricoesOferecidasSelecionadas: z.array(z.string()).optional(),
     inscricoesCompensarSelecionadas: z.array(z.string()).optional(),
+    // Dação em Pagamento - Arrays completos
+    inscricoesOferecidasAdicionadas: z.array(z.object({
+      id: z.string(),
+      numeroInscricao: z.string(),
+      tipoInscricao: z.string(),
+      valor: z.number(),
+      dataVencimento: z.string().optional(),
+      descricao: z.string().optional()
+    })).optional(),
+    inscricoesCompensarAdicionadas: z.array(z.object({
+      id: z.string(),
+      numeroInscricao: z.string(),
+      tipoInscricao: z.string(),
+      debitos: z.array(z.object({
+        descricao: z.string(),
+        valor: z.number(),
+        dataVencimento: z.string()
+      }))
+    })).optional(),
     valorOferecido: z.number().optional(),
     valorCompensar: z.number().optional(),
     valorDacao: z.number().optional()

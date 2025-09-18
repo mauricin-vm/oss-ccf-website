@@ -527,8 +527,8 @@ export default function AcordoPage({ params }: AcordoPageProps) {
             acordo_data.status === 'cumprido' &&
             (tipoProcesso === 'COMPENSACAO' || tipoProcesso === 'DACAO_PAGAMENTO')
           ) && (
-            <AcordoActions acordo={acordo as { id: string; status: string; parcelas: { id: string; pagamentos: { id: string; valorPago: number; }[]; }[]; valorFinal: number; }} />
-          )}
+              <AcordoActions acordo={acordo as { id: string; status: string; parcelas: { id: string; pagamentos: { id: string; valorPago: number; }[]; }[]; valorFinal: number; }} />
+            )}
         </div>
       </div>
 
@@ -579,7 +579,12 @@ export default function AcordoPage({ params }: AcordoPageProps) {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">Número do Processo:</span>
-                <p className="font-medium">{(acordo_data.processo as Record<string, unknown>).numero as string}</p>
+                <Link
+                  href={`/processos/${(acordo_data.processo as Record<string, unknown>).id as string}`}
+                  className="font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors block"
+                >
+                  {(acordo_data.processo as Record<string, unknown>).numero as string}
+                </Link>
               </div>
               <div>
                 <span className="text-gray-600">Contribuinte:</span>
@@ -722,8 +727,8 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                       R$ {getValorAcordo().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                     <p className="text-xs text-gray-600">
-                      {tipoProcesso === 'COMPENSACAO' ? 'Valor dos Créditos Ofertados' :
-                        tipoProcesso === 'DACAO_PAGAMENTO' ? 'Valor do Imóvel Ofertado' :
+                      {tipoProcesso === 'COMPENSACAO' ? 'Valor do Acordo' :
+                        tipoProcesso === 'DACAO_PAGAMENTO' ? 'Valor do Acordo' :
                           'Valor do Acordo'}
                     </p>
                   </div>
@@ -955,13 +960,86 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                                   )
                                 }
                               }
-                            } catch (e) {
+                            } catch {
                               // Se não conseguir fazer parse ou não tiver dados
                             }
                             return (
                               <div className="bg-green-50 p-3 rounded-lg border border-green-200">
                                 <p className="text-sm text-green-700">
                                   Os créditos configurados no momento da criação do acordo foram utilizados para esta compensação.
+                                </p>
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      </>
+                    )}
+
+
+                    {/* Para Dação em Pagamento: Mostrar inscrições oferecidas separadamente */}
+                    {(detalhe.tipo as string) === 'dacao' && (
+                      <>
+                        {/* Inscrições Oferecidas */}
+                        <div className="mb-6">
+                          <h5 className="text-sm font-medium text-green-700 mb-3 flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            Inscrições Oferecidas
+                          </h5>
+                          {(() => {
+                            try {
+                              const observacoes = detalhe.observacoes as string
+                              if (observacoes) {
+                                const dadosDacao = JSON.parse(observacoes)
+                                if (dadosDacao.inscricoesOferecidas && Array.isArray(dadosDacao.inscricoesOferecidas)) {
+                                  return (
+                                    <div className="space-y-3">
+                                      {dadosDacao.inscricoesOferecidas.map((inscricao: Record<string, unknown>, idx: number) => (
+                                        <div key={inscricao.id as string || `inscricao-oferecida-${idx}`} className="p-3 bg-green-50 rounded-lg border border-green-200">
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                              <div>
+                                                <p className="font-medium text-sm text-green-900">{inscricao.numeroInscricao as string}</p>
+                                                <p className="text-xs text-green-700 capitalize">
+                                                  {(inscricao.tipoInscricao as string) === 'imobiliaria' ? 'Imobiliária' : 'Econômica'}
+                                                </p>
+                                              </div>
+                                            </div>
+                                            <div className="text-right">
+                                              <p className="text-sm font-medium text-green-900">
+                                                R$ {Number(inscricao.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                              </p>
+                                              {inscricao.dataVencimento && String(inscricao.dataVencimento) !== '' ? (
+                                                <p className="text-xs text-green-600">
+                                                  Venc: {new Date(inscricao.dataVencimento as string).toLocaleDateString('pt-BR')}
+                                                </p>
+                                              ) : null}
+                                            </div>
+                                          </div>
+                                          {(inscricao.descricao as string) && (
+                                            <p className="text-xs text-green-600 mt-1">{inscricao.descricao as string}</p>
+                                          )}
+                                        </div>
+                                      ))}
+                                      <div className="p-3 bg-green-100 rounded-lg border border-green-300">
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-sm font-medium text-green-800">Total das Inscrições Oferecidas:</span>
+                                          <span className="text-sm font-bold text-green-900">
+                                            R$ {Number(dadosDacao.valorTotalOferecido || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )
+                                }
+                              }
+                            } catch {
+                              // Se não conseguir fazer parse ou não tiver dados
+                            }
+                            return (
+                              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                                <p className="text-sm text-green-700">
+                                  As inscrições configuradas no momento da criação do acordo foram utilizadas para esta dação.
                                 </p>
                               </div>
                             )
@@ -1035,78 +1113,6 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                           </div>
                         </div>
                       </div>
-                    )}
-
-                    {/* Para Dação em Pagamento: Layout igual à compensação */}
-                    {(detalhe.tipo as string) === 'dacao' && (
-                      <>
-                        {/* Inscrições Oferecidas em Dação (equivalente aos Créditos na compensação) */}
-                        <div className="mb-6">
-                          <h5 className="text-sm font-medium text-green-700 mb-3 flex items-center gap-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            Inscrições Oferecidas em Dação
-                          </h5>
-                          {(() => {
-                            try {
-                              const observacoes = detalhe.observacoes as string
-                              if (observacoes) {
-                                const dadosDacao = JSON.parse(observacoes)
-                                if (dadosDacao.inscricoesOferecidas && Array.isArray(dadosDacao.inscricoesOferecidas) && dadosDacao.inscricoesOferecidas.length > 0) {
-                                  return (
-                                    <div className="space-y-3">
-                                      {dadosDacao.inscricoesOferecidas.map((inscricao: Record<string, unknown>, idx: number) => (
-                                        <div key={inscricao.id as string || `inscricao-oferecida-${idx}`} className="p-3 bg-green-50 rounded-lg border border-green-200">
-                                          <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                              <div>
-                                                <p className="font-medium text-sm text-green-900">{inscricao.numeroInscricao as string}</p>
-                                                <p className="text-xs text-green-700 capitalize">
-                                                  {(inscricao.tipoInscricao as string) === 'imobiliaria' ? 'Imobiliária' : 'Econômica'}
-                                                </p>
-                                              </div>
-                                            </div>
-                                            <div className="text-right">
-                                              <p className="text-sm font-medium text-green-900">
-                                                R$ {Number(inscricao.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                              </p>
-                                              {inscricao.dataVencimento && (
-                                                <p className="text-xs text-green-600">
-                                                  Venc: {new Date(inscricao.dataVencimento as string).toLocaleDateString('pt-BR')}
-                                                </p>
-                                              )}
-                                            </div>
-                                          </div>
-                                          {(inscricao.descricao as string) && (
-                                            <p className="text-xs text-green-600 mt-1">{inscricao.descricao as string}</p>
-                                          )}
-                                        </div>
-                                      ))}
-                                      <div className="p-3 bg-green-100 rounded-lg border border-green-300">
-                                        <div className="flex justify-between items-center">
-                                          <span className="text-sm font-medium text-green-800">Total Oferecido:</span>
-                                          <span className="text-sm font-bold text-green-900">
-                                            R$ {Number(dadosDacao.valorTotalOferecido || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )
-                                }
-                              }
-                            } catch (e) {
-                              // Se não conseguir fazer parse ou não tiver dados
-                            }
-                            return (
-                              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                                <p className="text-sm text-green-700">
-                                  Nenhuma inscrição oferecida foi configurada para este acordo de dação.
-                                </p>
-                              </div>
-                            )
-                          })()}
-                        </div>
-                      </>
                     )}
 
                     {/* Imóvel relacionado (para dação) */}

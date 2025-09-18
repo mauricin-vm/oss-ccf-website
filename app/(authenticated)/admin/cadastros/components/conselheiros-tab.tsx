@@ -228,7 +228,7 @@ export default function ConselheirosTab() {
             </DialogHeader>
             <form onSubmit={handleCreateConselheiro} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome do Conselheiro *</Label>
+                <Label htmlFor="nome">Nome do Conselheiro <span className="text-red-500">*</span></Label>
                 <Input
                   id="nome"
                   value={formData.nome}
@@ -447,7 +447,7 @@ export default function ConselheirosTab() {
           </DialogHeader>
           <form onSubmit={handleEditConselheiro} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-nome">Nome do Conselheiro *</Label>
+              <Label htmlFor="edit-nome">Nome do Conselheiro <span className="text-red-500">*</span></Label>
               <Input
                 id="edit-nome"
                 value={formData.nome}

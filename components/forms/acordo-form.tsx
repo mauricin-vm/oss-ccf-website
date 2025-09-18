@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Loader2, AlertCircle, HandCoins, Search, Building, Settings, CreditCard } from 'lucide-react'
 import TransacaoExcepcionalAcordoSection from '@/components/acordo/transacao-excepcional-acordo-section'
 import CompensacaoSection from '@/components/acordo/compensacao-section'
@@ -212,6 +211,48 @@ interface DadosEspecificos {
   valorCompensar?: number
   valorDacao?: number
   observacoesAcordo?: string
+  // Propriedades adicionais para Compensação
+  creditosAdicionados?: Array<{
+    id: string
+    tipo: string
+    numero: string
+    valor: number
+    dataVencimento?: string
+    descricao?: string
+  }>
+  inscricoesAdicionadas?: Array<{
+    id: string
+    numeroInscricao: string
+    tipoInscricao: string
+    debitos: Array<{
+      descricao: string
+      valor: number
+      dataVencimento: string
+    }>
+  }>
+  // Propriedades adicionais para Dação em Pagamento
+  inscricoesOferecidasAdicionadas?: Array<{
+    id: string
+    numeroInscricao: string
+    tipoInscricao: string
+    valor: number
+    dataVencimento?: string
+    descricao?: string
+  }>
+  inscricoesCompensarAdicionadas?: Array<{
+    id: string
+    numeroInscricao: string
+    tipoInscricao: string
+    debitos: Array<{
+      descricao: string
+      valor: number
+      dataVencimento: string
+    }>
+  }>
+  // Propriedades de valores
+  valorTotal?: number
+  valorFinal?: number
+  valorOferecido?: number
 }
 
 
@@ -399,7 +440,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
 
             // Buscar valores específicos baseado no tipo do processo
             await fetchValoresEspecificos(processo)
-            
+
             // Usar valores específicos se já estão no processo (vindos da API principal)
             let valorOriginal = processo.valor || 0
             let valorFinal = processo.valor || 0
@@ -437,7 +478,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
 
             setSelectedProcesso(processoComValores)
             setValue('processoId', processo.id)
-            
+
             // Usar valor dos valores específicos se disponível
             const valorParaUsar = processoComValores.valoresEspecificos.valorFinal
             setValue('valorTotal', valorParaUsar)
@@ -454,8 +495,6 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
   }, [processoId, searchParams])
 
   // Watch valores para exibição
-  const modalidadePagamento = watch('modalidadePagamento')
-  const numeroParcelas = watch('numeroParcelas') || 1
   const valorTotal = watch('valorTotal') || 0
   const percentualDesconto = watch('percentualDesconto') || 0
   const valorDesconto = watch('valorDesconto') || 0
@@ -471,30 +510,12 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
     }
   }
 
-  const valoresCalculados = calcularValores()
+  calcularValores()
 
   const onSubmit = async (data: AcordoInput) => {
     setIsLoading(true)
     setError(null)
 
-    // Log para debug dos dados sendo enviados
-    console.log('ACORDO-FORM - Dados sendo enviados:', {
-      tipoProcesso: selectedProcesso?.tipo,
-      dadosEspecificos,
-      formData: data
-    })
-
-    // Log específico para arrays de dação
-    if (selectedProcesso?.tipo === 'DACAO_PAGAMENTO') {
-      console.log('ACORDO-FORM - Arrays de dação:', {
-        inscricoesOferecidasAdicionadas: dadosEspecificos?.inscricoesOferecidasAdicionadas,
-        inscricoesCompensarAdicionadas: dadosEspecificos?.inscricoesCompensarAdicionadas,
-        temInscricoesOferecidas: !!dadosEspecificos?.inscricoesOferecidasAdicionadas,
-        temInscricoesCompensar: !!dadosEspecificos?.inscricoesCompensarAdicionadas,
-        lengthOferecidas: dadosEspecificos?.inscricoesOferecidasAdicionadas?.length || 'N/A',
-        lengthCompensar: dadosEspecificos?.inscricoesCompensarAdicionadas?.length || 'N/A'
-      })
-    }
 
     try {
       // Validação específica para compensação
@@ -598,7 +619,6 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
       }
 
       const bodyToSend = JSON.stringify(finalData)
-      console.log('ACORDO-FORM - Body JSON exato sendo enviado:', bodyToSend)
 
       const response = await fetch('/api/acordos', {
         method: 'POST',
@@ -674,10 +694,6 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
     processo.contribuinte.nome.toLowerCase().includes(searchProcesso.toLowerCase())
   )
 
-  // Calcular valor das parcelas se for parcelado
-  const valorParcela = modalidadePagamento === 'parcelado' && numeroParcelas > 0
-    ? valoresCalculados.final / numeroParcelas
-    : 0
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -750,24 +766,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                     </div>
                   ))}
                 </div>
-              ) : searchProcesso.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                    <HandCoins className="h-12 w-12 text-blue-600 mx-auto mb-3" />
-                    <p className="text-sm font-medium text-blue-800 mb-2">
-                      <strong>{processos.length}</strong> processo{processos.length !== 1 ? 's' : ''} elegível{processos.length !== 1 ? 'is' : ''} para acordo
-                    </p>
-                    <p className="text-xs text-blue-600">
-                      Digite no campo acima para buscar um processo específico
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Nenhum processo encontrado com os critérios de busca</p>
-                  <p className="text-xs text-gray-400 mt-1">Tente uma busca diferente</p>
-                </div>
-              )}
+              ) : null}
 
               {!isLoadingProcessos && processos.length === 0 && (
                 <div className="text-center py-8">
@@ -919,24 +918,12 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
               <DacaoSection
                 valoresDacao={selectedProcesso.valoresEspecificos.detalhes as ValoresDacao}
                 onSelectionChange={(dadosSelecionados: DadosSelecionadosDacao) => {
-                  console.log('ACORDO-FORM - Recebendo do DacaoSection:', dadosSelecionados)
-
                   // Atualizar valores do formulário baseado na seleção
                   setValue('valorTotal', dadosSelecionados.valorTotal as number)
                   setValue('valorFinal', dadosSelecionados.valorFinal as number)
 
                   // Capturar dados específicos
-                  console.log('ACORDO-FORM - Antes do setDadosEspecificos:', {
-                    inscricoesOferecidasAdicionadas: dadosSelecionados.inscricoesOferecidasAdicionadas,
-                    inscricoesCompensarAdicionadas: dadosSelecionados.inscricoesCompensarAdicionadas
-                  })
-
                   setDadosEspecificos(dadosSelecionados as DadosEspecificos)
-
-                  // Verificar se os dados foram salvos corretamente
-                  setTimeout(() => {
-                    console.log('ACORDO-FORM - Após setDadosEspecificos, dadosEspecificos atual:', dadosEspecificos)
-                  }, 100)
                 }}
               />
             ) : (

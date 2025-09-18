@@ -1,6 +1,6 @@
 {
   "name": "ccf-sistema",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -8,9 +8,6 @@
     "start": "next start",
     "lint": "eslint",
     "db:clear": "tsx prisma/clear-database.ts"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",

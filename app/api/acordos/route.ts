@@ -59,6 +59,17 @@ interface DadosEspecificos {
   valorCompensacao?: number
   valorCompensar?: number
   valorDacao?: number
+  // Propriedades específicas para dação em pagamento
+  inscricoesOferecidasAdicionadas?: InscricaoOferecida[]
+  inscricoesCompensarAdicionadas?: InscricaoCompensar[]
+  valorOferecido?: number
+  saldoFinal?: number
+  // Propriedades específicas para compensação
+  creditosAdicionados?: CreditoCompensacao[]
+  inscricoesAdicionadas?: InscricaoCompensar[]
+  // Propriedades para cálculos gerais
+  valorTotal?: number
+  valorFinal?: number
 }
 async function criarDetalhesEspecificos(acordoId: string, tipoProcesso: string, dadosEspecificos: DadosEspecificos) {
   switch (tipoProcesso) {
@@ -135,7 +146,12 @@ async function criarDetalhesEspecificos(acordoId: string, tipoProcesso: string, 
 
         // Criar registros para cada inscrição a compensar
         if (inscricoes.length > 0) {
-          for (const inscricao of inscricoes) {
+          for (const inscricaoItem of inscricoes) {
+            // Verificar se é um objeto inscrição válido
+            if (typeof inscricaoItem === 'string') continue
+
+            const inscricao = inscricaoItem as InscricaoCompensar
+
             // Calcular valor total dos débitos para esta inscrição
             const valorDebitos = inscricao.debitos?.reduce(
               (total: number, debito: DebitoAcordo) => total + (Number(debito?.valor) || 0), 0
@@ -166,47 +182,16 @@ async function criarDetalhesEspecificos(acordoId: string, tipoProcesso: string, 
       break
     case 'DACAO_PAGAMENTO':
       // Usar os nomes corretos enviados pelo DacaoSection
-      let inscricoesOferecidasAdicionadas = dadosEspecificos.inscricoesOferecidasAdicionadas || []
-      let inscricoesCompensarAdicionadas = dadosEspecificos.inscricoesCompensarAdicionadas || []
+      const inscricoesOferecidasAdicionadas = dadosEspecificos.inscricoesOferecidasAdicionadas || []
+      const inscricoesCompensarAdicionadas = dadosEspecificos.inscricoesCompensarAdicionadas || []
 
-      console.log('DACAO_PAGAMENTO - dadosEspecificos completo:', JSON.stringify(dadosEspecificos, null, 2))
-
-      console.log('DACAO_PAGAMENTO - Dados completos recebidos:', {
-        inscricoesOferecidasAdicionadas: {
-          quantidade: inscricoesOferecidasAdicionadas.length,
-          primeira: inscricoesOferecidasAdicionadas[0] || 'nenhuma',
-          todas: inscricoesOferecidasAdicionadas
-        },
-        inscricoesCompensarAdicionadas: {
-          quantidade: inscricoesCompensarAdicionadas.length,
-          primeira: inscricoesCompensarAdicionadas[0] || 'nenhuma',
-          todas: inscricoesCompensarAdicionadas
-        },
-        valores: {
-          valorOferecido: dadosEspecificos.valorOferecido,
-          valorCompensar: dadosEspecificos.valorCompensar,
-          valorDacao: dadosEspecificos.valorDacao
-        }
-      })
-
-      // Sempre usar apenas os dados reais enviados pelo frontend
-      // Se não há dados específicos, criar estrutura mínima para manter funcionamento
-      if (inscricoesOferecidasAdicionadas.length === 0 && (!dadosEspecificos.valorOferecido || dadosEspecificos.valorOferecido === 0)) {
-        console.log('Aviso: Nenhuma inscrição oferecida foi adicionada e sem valor oferecido')
-      }
-
-      if (inscricoesCompensarAdicionadas.length === 0 && (!dadosEspecificos.valorCompensar || dadosEspecificos.valorCompensar === 0)) {
-        console.log('Aviso: Nenhuma inscrição a compensar foi adicionada e sem valor a compensar')
-      }
-
-
-      // Sempre criar AcordoDetalhes para dação em pagamento para manter a estrutura
-      if (true) { // Sempre criar, mesmo se arrays estiverem vazios
+      // Criar AcordoDetalhes sempre (seguindo padrão da compensação)
+      if (inscricoesOferecidasAdicionadas.length > 0 || inscricoesCompensarAdicionadas.length > 0) {
         // Para dação, salvar dados seguindo o padrão da compensação:
         // - "Inscrições oferecidas" nas observações (similar aos créditos)
         // - "Inscrições a compensar" na tabela acordoInscricao (similar às inscrições incluídas)
         const dadosTecnicos = {
-          inscricoesOferecidas: inscricoesOferecidasAdicionadas, // Seguir o padrão da compensação
+          inscricoesOferecidas: inscricoesOferecidasAdicionadas,
           valorTotalOferecido: dadosEspecificos.valorOferecido || 0,
           valorCompensar: dadosEspecificos.valorCompensar || 0,
           valorDacao: dadosEspecificos.valorDacao || 0,
@@ -218,15 +203,14 @@ async function criarDetalhesEspecificos(acordoId: string, tipoProcesso: string, 
             acordoId,
             tipo: 'dacao',
             descricao: 'Dação em Pagamento',
-            valorOriginal: dadosEspecificos.valorOferecido || 0, // Valor das inscrições oferecidas
-            valorNegociado: dadosEspecificos.valorOferecido || 0, // Para dação, usar valor oferecido
+            valorOriginal: dadosEspecificos.valorOferecido || 0,
+            valorNegociado: dadosEspecificos.valorOferecido || 0,
             observacoes: JSON.stringify(dadosTecnicos),
             status: StatusPagamento.PENDENTE
           }
         })
 
-
-        // Criar registros para inscrições a compensar (agora sempre tem dados)
+        // Criar registros para inscrições a compensar
         if (inscricoesCompensarAdicionadas.length > 0) {
           for (const inscricao of inscricoesCompensarAdicionadas) {
             // Calcular valor total dos débitos para esta inscrição
@@ -256,10 +240,6 @@ async function criarDetalhesEspecificos(acordoId: string, tipoProcesso: string, 
           }
         }
 
-        console.log('Inscrições salvas:', {
-          oferecidas: inscricoesOferecidasAdicionadas.length,
-          compensar: inscricoesCompensarAdicionadas.length
-        })
       }
       break
   }
@@ -357,7 +337,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     // Log do body EXATO recebido
-    console.log('BACKEND - Body JSON EXATO recebido:', JSON.stringify(body, null, 2))
 
     // Converter datas (ajustar timezone para evitar diferença de um dia)
     // Converter datas (ajustar timezone para evitar diferença de um dia)
@@ -587,6 +566,10 @@ export async function POST(request: NextRequest) {
     // Para compensação, usar valor dos créditos ofertados
     if (processo.tipo === 'COMPENSACAO' && data.dadosEspecificos?.valorCreditos) {
       valorParaHistorico = Number(data.dadosEspecificos.valorCreditos)
+      descricaoAdicional = ''
+    } else if (processo.tipo === 'DACAO_PAGAMENTO' && data.dadosEspecificos?.valorOferecido) {
+      // Para dação em pagamento, usar valor das inscrições oferecidas
+      valorParaHistorico = Number(data.dadosEspecificos.valorOferecido)
       descricaoAdicional = ''
     } else if (processo.tipo === 'TRANSACAO_EXCEPCIONAL') {
       descricaoAdicional = acordo.modalidadePagamento === 'avista' ? ' - Pagamento à vista' : ` - Parcelamento em ${acordo.numeroParcelas}x`

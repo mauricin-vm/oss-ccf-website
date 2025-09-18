@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { SessionUser } from '@/types'
 
-type StatusProcesso = 'RECEPCIONADO' | 'EM_ANALISE' | 'AGUARDANDO_DOCUMENTOS' | 'EM_PAUTA' | 'JULGADO' | 'ACORDO_FIRMADO' | 'EM_CUMPRIMENTO' | 'FINALIZADO' | 'ARQUIVADO' | 'SUSPENSO' | 'PEDIDO_VISTA' | 'PEDIDO_DILIGENCIA'
+type StatusProcesso = 'RECEPCIONADO' | 'EM_ANALISE' | 'AGUARDANDO_DOCUMENTOS' | 'EM_PAUTA' | 'JULGADO' | 'EM_CUMPRIMENTO' | 'FINALIZADO' | 'CONCLUIDO' | 'SUSPENSO' | 'PEDIDO_VISTA' | 'PEDIDO_DILIGENCIA'
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; processoId: string }> }
@@ -96,7 +96,7 @@ export async function DELETE(
             break
           case 'JULGADO':
             if (ultimaDecisao.definirAcordo) {
-              novoStatus = 'ACORDO_FIRMADO'
+              novoStatus = 'EM_CUMPRIMENTO'
             } else {
               novoStatus = 'JULGADO'
             }

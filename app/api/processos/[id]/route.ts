@@ -174,7 +174,7 @@ export async function GET(
           role: h.userRole
         }
       }))
-    } catch (error) {
+    } catch {
       historicos = []
     }
     // Os valores específicos já estão nas relações creditos e imoveis do processo

@@ -394,7 +394,7 @@ export default function LogsAdminPage() {
 
       {/* Modal de Detalhes */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-7xl max-h-[80vh] overflow-y-auto" style={{ width: '90vw', maxWidth: '1200px' }}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />

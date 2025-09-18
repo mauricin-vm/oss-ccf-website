@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db'
 import { z } from 'zod'
 import { SessionUser } from '@/types'
 
-type StatusProcesso = 'RECEPCIONADO' | 'EM_ANALISE' | 'AGUARDANDO_DOCUMENTOS' | 'EM_PAUTA' | 'JULGADO' | 'ACORDO_FIRMADO' | 'EM_CUMPRIMENTO' | 'FINALIZADO' | 'ARQUIVADO' | 'SUSPENSO' | 'PEDIDO_VISTA' | 'PEDIDO_DILIGENCIA'
+type StatusProcesso = 'RECEPCIONADO' | 'EM_ANALISE' | 'AGUARDANDO_DOCUMENTOS' | 'EM_PAUTA' | 'JULGADO' | 'EM_CUMPRIMENTO' | 'FINALIZADO' | 'CONCLUIDO' | 'SUSPENSO' | 'PEDIDO_VISTA' | 'PEDIDO_DILIGENCIA'
 // Funções auxiliares para histórico
 function getTituloHistoricoDecisao(tipoResultado: string): string {
   switch (tipoResultado) {
@@ -272,7 +272,7 @@ export async function PUT(
           break
         case 'JULGADO':
           if (data.definirAcordo) {
-            novoStatusProcesso = 'ACORDO_FIRMADO'
+            novoStatusProcesso = 'EM_CUMPRIMENTO'
           } else {
             novoStatusProcesso = 'JULGADO'
           }

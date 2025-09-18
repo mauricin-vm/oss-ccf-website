@@ -220,7 +220,7 @@ export default function SetoresTab() {
             </DialogHeader>
             <form onSubmit={handleCreateSetor} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome do Setor</Label>
+                <Label htmlFor="nome">Nome do Setor <span className="text-red-500">*</span></Label>
                 <Input
                   id="nome"
                   value={formData.nome}
@@ -229,7 +229,7 @@ export default function SetoresTab() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="sigla">Sigla</Label>
+                <Label htmlFor="sigla">Sigla <span className="text-red-500">*</span></Label>
                 <Input
                   id="sigla"
                   value={formData.sigla}
@@ -423,7 +423,7 @@ export default function SetoresTab() {
           </DialogHeader>
           <form onSubmit={handleEditSetor} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-nome">Nome do Setor</Label>
+              <Label htmlFor="edit-nome">Nome do Setor <span className="text-red-500">*</span></Label>
               <Input
                 id="edit-nome"
                 value={formData.nome}
@@ -432,7 +432,7 @@ export default function SetoresTab() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-sigla">Sigla</Label>
+              <Label htmlFor="edit-sigla">Sigla <span className="text-red-500">*</span></Label>
               <Input
                 id="edit-sigla"
                 value={formData.sigla}

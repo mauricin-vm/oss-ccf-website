@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -80,44 +80,12 @@ export default function DacaoSection({
     debitos: [{ descricao: '', valor: '', dataVencimento: '' }]
   })
 
-  // Calcular totais baseado nos itens adicionados
-  const calcularTotais = useCallback(() => {
-    const valorOferecido = inscricoesOferecidasAdicionadas.reduce((total, inscricao) => total + inscricao.valor, 0)
-    const valorCompensar = inscricoesCompensarAdicionadas.reduce((total, inscricao) => {
-      return total + inscricao.debitos.reduce((subtotal, debito) => subtotal + debito.valor, 0)
-    }, 0)
-
-    const valorDacao = Math.min(valorOferecido, valorCompensar)
-    const saldoFinal = Math.abs(valorOferecido - valorCompensar)
-
-    return {
-      valorTotal: valorOferecido, // Valor dos bens/imóveis oferecidos
-      valorFinal: valorDacao, // Valor que será efetivamente dado em pagamento
-      inscricoesOferecidasAdicionadas: inscricoesOferecidasAdicionadas,
-      inscricoesCompensarAdicionadas: inscricoesCompensarAdicionadas,
-      valorOferecido: valorOferecido,
-      valorCompensar: valorCompensar,
-      valorDacao: valorDacao,
-      saldoFinal: saldoFinal,
-      observacoesAcordo: observacoesAcordo
-    }
-  }, [inscricoesOferecidasAdicionadas, inscricoesCompensarAdicionadas, observacoesAcordo])
 
   // Enviar dados para o formulário principal sempre que houver mudanças
   useEffect(() => {
     // Só enviar dados se não estivermos carregando
     if (isLoadingData) return
 
-    console.log('DACAO-SECTION - Dados atuais:', {
-      inscricoesOferecidasAdicionadas: {
-        length: inscricoesOferecidasAdicionadas.length,
-        data: inscricoesOferecidasAdicionadas
-      },
-      inscricoesCompensarAdicionadas: {
-        length: inscricoesCompensarAdicionadas.length,
-        data: inscricoesCompensarAdicionadas
-      }
-    })
 
     const valorOferecido = inscricoesOferecidasAdicionadas.reduce((total, inscricao) => total + inscricao.valor, 0)
     const valorCompensar = inscricoesCompensarAdicionadas.reduce((total, inscricao) => {
@@ -139,8 +107,8 @@ export default function DacaoSection({
       observacoesAcordo: observacoesAcordo
     }
 
-    console.log('DACAO-SECTION - Enviando para acordo-form:', dadosSelecionados)
     onSelectionChange(dadosSelecionados)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inscricoesOferecidasAdicionadas, inscricoesCompensarAdicionadas, observacoesAcordo, isLoadingData])
 
   // Carregar dados existentes quando os valores forem recebidos
@@ -348,7 +316,6 @@ export default function DacaoSection({
   const valorCompensar = inscricoesCompensarAdicionadas.reduce((total, inscricao) => {
     return total + inscricao.debitos.reduce((subtotal, debito) => subtotal + debito.valor, 0)
   }, 0)
-  const valorDacao = Math.min(valorOferecido, valorCompensar)
   const saldoFinal = Math.abs(valorOferecido - valorCompensar)
 
   // Se ainda está carregando, mostrar loading
@@ -449,7 +416,7 @@ export default function DacaoSection({
                   Nenhuma inscrição adicionada ainda
                 </p>
                 <p className="text-sm text-gray-400 mt-1">
-                  Clique em "Adicionar Inscrição" para começar
+                  Clique em &quot;Adicionar Inscrição&quot; para começar
                 </p>
               </div>
             ) : (
@@ -541,7 +508,7 @@ export default function DacaoSection({
                   Nenhuma inscrição adicionada ainda
                 </p>
                 <p className="text-sm text-gray-400 mt-1">
-                  Clique em "Adicionar Inscrição" para começar
+                  Clique em &quot;Adicionar Inscrição&quot; para começar
                 </p>
               </div>
             ) : (

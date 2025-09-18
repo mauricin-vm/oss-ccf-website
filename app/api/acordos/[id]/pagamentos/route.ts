@@ -180,7 +180,7 @@ export async function POST(
       // Atualizar status do processo
       await prisma.processo.update({
         where: { id: acordo.processoId },
-        data: { status: 'ARQUIVADO' }
+        data: { status: 'CONCLUIDO' }
       })
     }
     // Log de auditoria

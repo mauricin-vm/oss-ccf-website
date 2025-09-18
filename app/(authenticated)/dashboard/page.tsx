@@ -36,7 +36,7 @@ async function getStatistics() {
     }),
     prisma.processo.count({
       where: {
-        status: 'ARQUIVADO'
+        status: 'CONCLUIDO'
       }
     }),
     prisma.tramitacao.count({

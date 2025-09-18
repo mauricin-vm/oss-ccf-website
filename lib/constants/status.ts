@@ -24,10 +24,8 @@ export type StatusProcesso =
   | 'PEDIDO_DILIGENCIA'
   | 'EM_NEGOCIACAO'
   | 'JULGADO'
-  | 'ACORDO_FIRMADO'
   | 'EM_CUMPRIMENTO'
   | 'CONCLUIDO'
-  | 'ARQUIVADO'
 
 export interface StatusInfo {
   label: string
@@ -85,12 +83,6 @@ export const STATUS_MAP: Record<StatusProcesso, StatusInfo> = {
     icon: CheckCircle,
     description: 'Processo julgado pela Câmara'
   },
-  ACORDO_FIRMADO: {
-    label: 'Acordo Firmado',
-    color: 'bg-lime-200 text-lime-800',
-    icon: CheckCircle,
-    description: 'Acordo homologado e firmado'
-  },
   EM_CUMPRIMENTO: {
     label: 'Em Cumprimento',
     color: 'bg-sky-200 text-sky-800',
@@ -102,12 +94,6 @@ export const STATUS_MAP: Record<StatusProcesso, StatusInfo> = {
     color: 'bg-green-100 text-green-800',
     icon: CheckCircle,
     description: 'Processo totalmente concluído'
-  },
-  ARQUIVADO: {
-    label: 'Arquivado',
-    color: 'bg-slate-200 text-slate-800',
-    icon: XCircle,
-    description: 'Processo arquivado'
   }
 }
 
@@ -132,10 +118,8 @@ export function getStatusOptions(): Array<{ value: StatusProcesso; label: string
     'PEDIDO_DILIGENCIA',
     'EM_NEGOCIACAO',
     'JULGADO',
-    'ACORDO_FIRMADO',
     'EM_CUMPRIMENTO',
-    'CONCLUIDO',
-    'ARQUIVADO'
+    'CONCLUIDO'
   ]
 
   return availableStatus.map(status => ({
@@ -149,8 +133,8 @@ export function getStatusOptions(): Array<{ value: StatusProcesso; label: string
 export const STATUS_GROUPS = {
   EM_ANALISE_GERAL: ['RECEPCIONADO', 'EM_ANALISE', 'EM_PAUTA'],
   PENDENTES: ['RECEPCIONADO', 'EM_ANALISE', 'EM_PAUTA', 'SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'EM_NEGOCIACAO'],
-  FINALIZADOS: ['CONCLUIDO', 'ARQUIVADO'],
-  COM_ACORDO: ['ACORDO_FIRMADO', 'EM_CUMPRIMENTO', 'CONCLUIDO']
+  FINALIZADOS: ['CONCLUIDO'],
+  COM_ACORDO: ['EM_CUMPRIMENTO', 'CONCLUIDO']
 } as const
 
 // === RESULTADOS DA SESSÃO ===

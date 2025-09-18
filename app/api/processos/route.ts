@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       // Converter string separada por vírgula em array para usar com 'in'
       const statusArray = status.split(',').map(s => s.trim())
       // Validar se os status existem no enum StatusProcesso
-      const validStatuses = ['RECEPCIONADO', 'EM_ANALISE', 'EM_PAUTA', 'SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO', 'ACORDO_FIRMADO', 'EM_CUMPRIMENTO', 'ARQUIVADO']
+      const validStatuses = ['RECEPCIONADO', 'EM_ANALISE', 'EM_PAUTA', 'SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO', 'EM_CUMPRIMENTO', 'CONCLUIDO']
       const filteredStatuses = statusArray.filter(s => validStatuses.includes(s))
       if (filteredStatuses.length > 0) {
         where.status = { in: filteredStatuses as StatusProcesso[] }
@@ -253,7 +253,7 @@ export async function POST(request: NextRequest) {
           tipo: 'SISTEMA'
         }
       })
-    } catch (error) {
+    } catch {
       // Não interrompe o fluxo se falhar o histórico
     }
     // Log de auditoria

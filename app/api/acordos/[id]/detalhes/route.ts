@@ -145,7 +145,7 @@ export async function PATCH(
       // Atualizar status do processo
       await prisma.processo.update({
         where: { id: detalhe.acordo.processoId },
-        data: { status: 'ACORDO_FIRMADO' }
+        data: { status: 'EM_CUMPRIMENTO' }
       })
     }
     return NextResponse.json({ detalhe: detalheAtualizado })

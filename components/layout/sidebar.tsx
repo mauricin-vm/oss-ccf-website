@@ -11,7 +11,6 @@ import {
   Gavel,
   HandCoins,
   BarChart3,
-  Settings,
   Users,
   LogOut,
   ChevronRight,
@@ -103,12 +102,12 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
       icon: Activity,
       roles: ['ADMIN']
     },
-    {
-      title: 'Configurações',
-      href: '/admin/configuracoes',
-      icon: Settings,
-      roles: ['ADMIN']
-    }
+    // {
+    //   title: 'Configurações',
+    //   href: '/admin/configuracoes',
+    //   icon: Settings,
+    //   roles: ['ADMIN']
+    // }
   ]
 
   const filteredMenuItems = menuItems.filter(item => 

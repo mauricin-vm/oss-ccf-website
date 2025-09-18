@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -80,28 +80,6 @@ export default function CompensacaoSection({
     debitos: [{ descricao: '', valor: '', dataVencimento: '' }]
   })
 
-  // Calcular totais baseado nos itens adicionados
-  const calcularTotais = useCallback(() => {
-    const valorCreditos = creditosAdicionados.reduce((total, credito) => total + credito.valor, 0)
-    const valorDebitos = inscricoesAdicionadas.reduce((total, inscricao) => {
-      return total + inscricao.debitos.reduce((subtotal, debito) => subtotal + debito.valor, 0)
-    }, 0)
-
-    const valorCompensacao = Math.min(valorCreditos, valorDebitos)
-    const saldoFinal = Math.abs(valorCreditos - valorDebitos)
-
-    return {
-      valorTotal: valorCreditos, // Valor dos créditos ofertados
-      valorFinal: valorCompensacao, // Valor que será efetivamente compensado
-      creditosAdicionados: creditosAdicionados,
-      inscricoesAdicionadas: inscricoesAdicionadas,
-      valorCreditos: valorCreditos,
-      valorDebitos: valorDebitos,
-      valorCompensacao: valorCompensacao,
-      saldoFinal: saldoFinal,
-      observacoesAcordo: observacoesAcordo
-    }
-  }, [creditosAdicionados, inscricoesAdicionadas, observacoesAcordo])
 
   // Funções utilitárias
   const formatCurrency = (value: string) => {
@@ -156,6 +134,7 @@ export default function CompensacaoSection({
     }
 
     onSelectionChange(dadosSelecionados)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [creditosAdicionados, inscricoesAdicionadas, observacoesAcordo, isLoadingData])
 
   // Carregar dados salvos do banco de dados
@@ -348,26 +327,11 @@ export default function CompensacaoSection({
     setInscricaoForm({ ...inscricaoForm, debitos: updatedDebitos })
   }
 
-  const getTipoCreditoLabel = (tipo: string) => {
-    switch (tipo) {
-      case 'precatorio': return 'Precatório'
-      case 'credito_tributario': return 'Crédito Tributário'
-      case 'alvara_judicial': return 'Alvará Judicial'
-      case 'outro': return 'Outro'
-      default: return tipo
-    }
-  }
-
-  const getTipoInscricaoLabel = (tipo: string) => {
-    return tipo === 'imobiliaria' ? 'Imobiliária' : 'Econômica'
-  }
 
   // Calcular totais baseado nos itens adicionados
   const totalCreditos = creditosAdicionados.reduce((total, c) => total + c.valor, 0)
   const totalDebitos = inscricoesAdicionadas.reduce((total, i) =>
     total + i.debitos.reduce((subtotal, d) => subtotal + d.valor, 0), 0)
-  const valorCompensacao = Math.min(totalCreditos, totalDebitos)
-  const saldoFinal = Math.abs(totalCreditos - totalDebitos)
 
   // Se ainda está carregando, mostrar loading
   if (isLoadingData) {
@@ -465,7 +429,7 @@ export default function CompensacaoSection({
                 Nenhum crédito disponível ainda
               </p>
               <p className="text-sm text-gray-400 mt-1">
-                Clique em "Adicionar Crédito" para começar
+                Clique em &quot;Adicionar Crédito&quot; para começar
               </p>
             </div>
           ) : (
@@ -559,7 +523,7 @@ export default function CompensacaoSection({
                 Nenhuma inscrição disponível ainda
               </p>
               <p className="text-sm text-gray-400 mt-1">
-                Clique em "Adicionar Inscrição" para começar
+                Clique em &quot;Adicionar Inscrição&quot; para começar
               </p>
             </div>
           ) : (

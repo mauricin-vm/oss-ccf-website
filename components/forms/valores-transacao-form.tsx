@@ -25,7 +25,7 @@ interface InscricaoData {
 
 const debitoSchema = z.object({
   descricao: z.string().min(1, 'Descrição do débito é obrigatória'),
-  valor: z.number().min(0.01, 'Valor deve ser maior que zero'),
+  valor: z.string().min(1, 'Valor é obrigatório'),
   dataVencimento: z.string().min(1, 'Data de vencimento é obrigatória')
 })
 
@@ -38,10 +38,10 @@ const inscricaoSchema = z.object({
 })
 
 const propostaFormSchema = z.object({
-  valorTotalProposto: z.union([z.string(), z.number()]),
+  valorTotalProposto: z.string(),
   metodoPagamento: z.enum(['parcelado', 'a_vista']),
-  valorEntrada: z.union([z.string(), z.number()]),
-  quantidadeParcelas: z.number()
+  valorEntrada: z.string(),
+  quantidadeParcelas: z.string()
 })
 
 const valoresTransacaoFormSchema = z.object({
@@ -56,15 +56,15 @@ type ValoresTransacaoFormInput = {
     tipoInscricao: 'imobiliaria' | 'economica'
     debitos: Array<{
       descricao: string
-      valor: number
+      valor: string
       dataVencimento: string
     }>
   }>
   proposta: {
-    valorTotalProposto: string | number
+    valorTotalProposto: string
     metodoPagamento: 'parcelado' | 'a_vista'
-    valorEntrada: string | number
-    quantidadeParcelas: number
+    valorEntrada: string
+    quantidadeParcelas: string
   }
 }
 
@@ -102,7 +102,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
         valorTotalProposto: '',
         metodoPagamento: 'parcelado',
         valorEntrada: '',
-        quantidadeParcelas: 1
+        quantidadeParcelas: '1'
       }
     }
   })
@@ -133,7 +133,10 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
               appendInscricao({
                 numeroInscricao: inscricao.numeroInscricao,
                 tipoInscricao: inscricao.tipoInscricao,
-                debitos: inscricao.debitos || []
+                debitos: (inscricao.debitos || []).map(debito => ({
+                  ...debito,
+                  valor: String(debito.valor)
+                }))
               })
             })
           }
@@ -151,7 +154,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
             setValue('proposta.valorTotalProposto', valorTotalFormatado)
             setValue('proposta.metodoPagamento', data.proposta.metodoPagamento || 'parcelado')
             setValue('proposta.valorEntrada', valorEntradaFormatado)
-            setValue('proposta.quantidadeParcelas', Number(data.proposta.quantidadeParcelas) || 1)
+            setValue('proposta.quantidadeParcelas', String(data.proposta.quantidadeParcelas || 1))
           }
 
           // Carregar resumo (se disponível da nova estrutura do banco)
@@ -177,6 +180,15 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
       // Converter valores formatados para números antes de enviar
       const processedData = {
         ...data,
+        inscricoes: data.inscricoes.map(inscricao => ({
+          ...inscricao,
+          debitos: inscricao.debitos.map(debito => ({
+            ...debito,
+            valor: typeof debito.valor === 'string'
+              ? parseCurrencyToNumber(debito.valor)
+              : debito.valor
+          }))
+        })),
         proposta: {
           ...data.proposta,
           valorTotalProposto: typeof data.proposta.valorTotalProposto === 'string'
@@ -184,7 +196,10 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
             : data.proposta.valorTotalProposto,
           valorEntrada: typeof data.proposta.valorEntrada === 'string'
             ? parseCurrencyToNumber(data.proposta.valorEntrada)
-            : data.proposta.valorEntrada
+            : data.proposta.valorEntrada,
+          quantidadeParcelas: typeof data.proposta.quantidadeParcelas === 'string'
+            ? parseInt(data.proposta.quantidadeParcelas)
+            : data.proposta.quantidadeParcelas
         }
       }
 
@@ -227,21 +242,40 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
     const inscricao = watch(`inscricoes.${index}`)
     setEditingInscricao({ index, inscricao })
 
-    // Aplicar formatação usando a própria função formatCurrency
-    const formatValue = (valor: number) => {
+    // Função para garantir formatação correta dos valores
+    const ensureFormattedValue = (valor: string | number) => {
       if (!valor || valor === 0) return ''
-      // Converter para string de centavos e aplicar formatação
-      const centavos = Math.round(valor * 100).toString()
-      return formatCurrency(centavos)
+
+      // Se já é string formatada (contém vírgula), retorna como está
+      if (typeof valor === 'string' && valor.includes(',')) {
+        return valor
+      }
+
+      // Se é número, converte para centavos e formata
+      if (typeof valor === 'number') {
+        const centavos = Math.round(valor * 100).toString()
+        return formatCurrency(centavos)
+      }
+
+      // Se é string sem formatação, tenta formatar
+      if (typeof valor === 'string') {
+        const numericValue = parseFloat(valor)
+        if (!isNaN(numericValue)) {
+          const centavos = Math.round(numericValue * 100).toString()
+          return formatCurrency(centavos)
+        }
+      }
+
+      return ''
     }
 
     setInscricaoForm({
       numeroInscricao: inscricao.numeroInscricao,
       tipoInscricao: inscricao.tipoInscricao,
-      debitos: (inscricao.debitos as Array<{ descricao: string, valor: number, dataVencimento: string }>)?.map((d: { descricao: string, valor: number, dataVencimento: string }) => ({
-        descricao: d.descricao as string,
-        valor: formatValue(d.valor as number),
-        dataVencimento: (d.dataVencimento as string) || ''
+      debitos: inscricao.debitos?.map((d: { descricao?: string; valor?: string | number; dataVencimento?: string }) => ({
+        descricao: d.descricao || '',
+        valor: ensureFormattedValue(d.valor || ''),
+        dataVencimento: d.dataVencimento || ''
       })) || [{ descricao: '', valor: '', dataVencimento: '' }]
     })
     setShowInscricaoModal(true)
@@ -253,7 +287,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
       tipoInscricao: inscricaoForm.tipoInscricao,
       debitos: inscricaoForm.debitos.map(d => ({
         descricao: d.descricao,
-        valor: parseCurrencyToNumber(d.valor),
+        valor: formatCurrency(d.valor), // Manter formatação no formulário
         dataVencimento: d.dataVencimento
       }))
     }
@@ -353,7 +387,8 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
     const inscricoes = watch('inscricoes') || []
     return inscricoes.reduce((total, inscricao) => {
       const totalInscricao = (inscricao.debitos || []).reduce((subtotal, debito) => {
-        return subtotal + (debito.valor || 0)
+        const valor = typeof debito.valor === 'string' ? parseCurrencyToNumber(debito.valor) : (debito.valor || 0)
+        return subtotal + valor
       }, 0)
       return total + totalInscricao
     }, 0)
@@ -519,7 +554,10 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {inscricoesFields.map((inscricaoField, inscricaoIndex) => {
                   const inscricao = watch(`inscricoes.${inscricaoIndex}`)
-                  const totalDebitos = (inscricao.debitos || []).reduce((total, debito) => total + (debito.valor || 0), 0)
+                  const totalDebitos = (inscricao.debitos || []).reduce((total, debito) => {
+                    const valor = typeof debito.valor === 'string' ? parseCurrencyToNumber(debito.valor) : (debito.valor || 0)
+                    return total + valor
+                  }, 0)
 
                   return (
                     <div key={inscricaoField.id} className="p-4 border rounded-lg bg-green-50 hover:bg-green-100 transition-colors">
@@ -689,7 +727,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
                       {metodoPagamento === 'parcelado' ? 'Valor das Parcelas:' : 'Valor Total:'}
                     </span>
                     <p className="font-medium text-blue-700">
-                      {metodoPagamento === 'parcelado' && watch('proposta.quantidadeParcelas') > 0
+                      {metodoPagamento === 'parcelado' && parseInt(watch('proposta.quantidadeParcelas')) > 0
                         ? `${watch('proposta.quantidadeParcelas')}x de R$ ${calcularValorParcela().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                         : `R$ ${valorProposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                       }
