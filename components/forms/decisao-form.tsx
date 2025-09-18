@@ -198,11 +198,11 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
         if (response.ok) {
           const sessao = await response.json()
 
-          const processosNaoJulgados = sessao.pauta.processos.filter(
+          const processosNaoJulgados = sessao.pauta?.processos?.filter(
             (p: ProcessoPauta) => !sessao.decisoes.some(
               (d: { processoId: string }) => d.processoId === p.processo.id
             )
-          )
+          ) || []
 
           setProcessos(processosNaoJulgados)
           setConselheiros(sessao.conselheiros || [])

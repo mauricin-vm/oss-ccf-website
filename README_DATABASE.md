@@ -201,17 +201,23 @@ ProcessoPauta {
 ```sql
 SessaoJulgamento {
   id: String (PK)
-  pautaId: String (FK, UNIQUE)
+  pautaId: String (FK, UNIQUE) // Opcional para sessões administrativas
   dataInicio: DateTime
   dataFim: DateTime
   ata: Text
   numeroAta: String
+  agenda: Text // Agenda para sessões administrativas
+  tipoSessao: String // "julgamento" | "administrativa"
   assuntosAdministrativos: Text
   presidenteId: String (FK)
   createdAt: DateTime
   updatedAt: DateTime
 }
 ```
+
+**Tipos de Sessão:**
+- **Sessão de Julgamento**: Vinculada a uma pauta (`pautaId` obrigatório), foca no julgamento de processos
+- **Sessão Administrativa**: Independente de pauta (`pautaId` null), utiliza campo `agenda` para assuntos administrativos
 
 #### `Conselheiro` - Conselheiros
 ```sql
@@ -632,6 +638,21 @@ Processo → Imovel → ProcessoImovel
 Processo → TransacaoExcepcional → PropostaTransacao
          → Acordo → Parcela → PagamentoParcela
 ```
+
+### 5. Fluxo de Sessões
+```
+// Sessão de Julgamento
+Pauta → SessaoJulgamento → Decisao → Voto
+
+// Sessão Administrativa
+SessaoJulgamento (sem pauta) → Agenda → Ata
+```
+
+**Sessões Administrativas:**
+- Não requerem pauta de processos
+- Utilizam campo `agenda` para definir assuntos
+- Focam em questões administrativas da CCF
+- Podem ser realizadas independentemente dos processos
 
 ---
 

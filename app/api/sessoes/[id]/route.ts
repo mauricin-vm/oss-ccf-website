@@ -79,7 +79,7 @@ export async function GET(
     // Converter valores Decimal para number antes de retornar
     const sessaoSerializada = {
       ...sessao,
-      pauta: {
+      pauta: sessao.pauta ? {
         ...sessao.pauta,
         processos: sessao.pauta.processos.map(processoPauta => ({
           ...processoPauta,
@@ -87,7 +87,7 @@ export async function GET(
             ...processoPauta.processo,
           }
         }))
-      },
+      } : null,
       decisoes: sessao.decisoes.map(decisao => ({
         ...decisao,
         processo: {
@@ -151,13 +151,19 @@ export async function PUT(
     if (body.ata !== undefined) {
       updateData.ata = body.ata
     }
+
+    if (body.agenda !== undefined) {
+      updateData.agenda = body.agenda
+    }
     if (body.dataFim) {
       updateData.dataFim = new Date(body.dataFim)
-      // Se está finalizando a sessão, atualizar status da pauta
-      await prisma.pauta.update({
-        where: { id: sessaoAtual.pautaId },
-        data: { status: 'fechada' }
-      })
+      // Se está finalizando a sessão e há pauta, atualizar status da pauta
+      if (sessaoAtual.pautaId) {
+        await prisma.pauta.update({
+          where: { id: sessaoAtual.pautaId },
+          data: { status: 'fechada' }
+        })
+      }
     }
     if (body.conselheiros && Array.isArray(body.conselheiros)) {
       // Verificar se todos os conselheiros são elegíveis (ativos)
@@ -223,11 +229,13 @@ export async function PUT(
         entidadeId: id,
         dadosAnteriores: {
           ata: sessaoAtual.ata,
+          agenda: sessaoAtual.agenda,
           dataFim: sessaoAtual.dataFim,
           conselheiros: sessaoAtual.conselheiros.map(c => c.id)
         },
         dadosNovos: {
           ata: sessaoAtualizada.ata,
+          agenda: sessaoAtualizada.agenda,
           dataFim: sessaoAtualizada.dataFim,
           conselheiros: sessaoAtualizada.conselheiros.map(c => c.id)
         }
@@ -236,7 +244,7 @@ export async function PUT(
     // Converter valores Decimal para number antes de retornar
     const sessaoAtualizadaSerializada = {
       ...sessaoAtualizada,
-      pauta: {
+      pauta: sessaoAtualizada.pauta ? {
         ...sessaoAtualizada.pauta,
         processos: sessaoAtualizada.pauta.processos.map(processoPauta => ({
           ...processoPauta,
@@ -244,7 +252,7 @@ export async function PUT(
             ...processoPauta.processo,
           }
         }))
-      },
+      } : null,
       decisoes: sessaoAtualizada.decisoes.map(decisao => ({
         ...decisao,
         processo: {
@@ -378,7 +386,7 @@ export async function PATCH(
     // Converter valores Decimal para number antes de retornar
     const sessaoAtualizadaSerializada = {
       ...sessaoAtualizada,
-      pauta: {
+      pauta: sessaoAtualizada.pauta ? {
         ...sessaoAtualizada.pauta,
         processos: sessaoAtualizada.pauta.processos.map(processoPauta => ({
           ...processoPauta,
@@ -386,7 +394,7 @@ export async function PATCH(
             ...processoPauta.processo,
           }
         }))
-      },
+      } : null,
       decisoes: sessaoAtualizada.decisoes.map(decisao => ({
         ...decisao,
         processo: {
@@ -441,11 +449,13 @@ export async function DELETE(
         { status: 400 }
       )
     }
-    // Retornar pauta ao status aberta
-    await prisma.pauta.update({
-      where: { id: sessao.pautaId },
-      data: { status: 'aberta' }
-    })
+    // Retornar pauta ao status aberta (apenas se houver pauta)
+    if (sessao.pautaId) {
+      await prisma.pauta.update({
+        where: { id: sessao.pautaId },
+        data: { status: 'aberta' }
+      })
+    }
     await prisma.sessaoJulgamento.delete({
       where: { id }
     })
@@ -457,7 +467,9 @@ export async function DELETE(
         entidade: 'SessaoJulgamento',
         entidadeId: id,
         dadosAnteriores: {
-          pautaNumero: sessao.pauta.numero,
+          tipoSessao: sessao.tipoSessao,
+          pautaNumero: sessao.pauta?.numero || null,
+          agenda: sessao.agenda || null,
           dataInicio: sessao.dataInicio,
           dataFim: sessao.dataFim
         }

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Pagination } from '@/components/ui/pagination'
 import {
   Plus,
   Search,
@@ -85,6 +86,8 @@ export default function AcordosPage() {
   const [tipoFilter, setTipoFilter] = useState('all')
   const [modalidadeFilter, setModalidadeFilter] = useState('all')
   const [showFilters, setShowFilters] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(15)
 
   // Carregamento inicial
   useEffect(() => {
@@ -135,6 +138,18 @@ export default function AcordosPage() {
 
     return searchMatch && statusMatch && tipoMatch && modalidadeMatch
   })
+
+  // Paginação local
+  const totalFilteredAcordos = filteredAcordos.length
+  const totalPages = Math.ceil(totalFilteredAcordos / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedAcordos = filteredAcordos.slice(startIndex, endIndex)
+
+  // Reset para primeira página quando filtros mudarem
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, statusFilter, tipoFilter, modalidadeFilter])
 
   const canCreate = user?.role === 'ADMIN' || user?.role === 'FUNCIONARIO'
 
@@ -215,7 +230,7 @@ export default function AcordosPage() {
   }
 
   // Estatísticas baseadas nos acordos filtrados
-  const totalAcordos = filteredAcordos.length
+  const totalAcordos = totalFilteredAcordos
   const acordosAtivos = filteredAcordos.filter(a => a.status === 'ativo').length
   const acordosVencidos = filteredAcordos.filter(a => {
     const hoje = new Date()
@@ -462,199 +477,213 @@ export default function AcordosPage() {
       </div>
 
       {/* Lista de Acordos */}
-      <div className="space-y-4">
-        {filteredAcordos.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <HandCoins className="h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {acordos.length === 0 ? 'Nenhum acordo encontrado' : 'Nenhum acordo corresponde aos filtros'}
-              </h3>
-              <p className="text-gray-600 mb-4">
-                {acordos.length === 0 ? 'Comece criando seu primeiro acordo de pagamento.' : 'Tente ajustar os filtros ou criar um novo acordo.'}
-              </p>
-              {canCreate && (
-                <Link href="/acordos/novo">
-                  <Button className="cursor-pointer">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Criar Acordo
-                  </Button>
-                </Link>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          filteredAcordos.map((acordo) => {
-            const progresso = getProgressoPagamento(acordo)
-            const vencido = isVencido(new Date(acordo.dataVencimento))
+      <Card>
+        <CardHeader>
+          <CardTitle>Acordos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {totalFilteredAcordos === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <HandCoins className="h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {acordos.length === 0 ? 'Nenhum acordo encontrado' : 'Nenhum acordo corresponde aos filtros'}
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  {acordos.length === 0 ? 'Comece criando seu primeiro acordo de pagamento.' : 'Tente ajustar os filtros ou criar um novo acordo.'}
+                </p>
+                {canCreate && (
+                  <Link href="/acordos/novo">
+                    <Button className="cursor-pointer">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Criar Acordo
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <>
+                {paginatedAcordos.map((acordo) => {
+                  const progresso = getProgressoPagamento(acordo)
+                  const vencido = isVencido(new Date(acordo.dataVencimento))
 
-            return (
-              <Card key={acordo.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-3 flex-1">
-                      {/* Cabeçalho do Acordo */}
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <Link
-                          href={`/processos/${acordo.processo?.id || ''}`}
-                          className="font-semibold text-lg hover:text-blue-600 transition-colors"
-                        >
-                          {acordo.processo?.numero || 'Processo não encontrado'}
-                        </Link>
-                        <Badge className={getStatusColor(acordo.status)}>
-                          {getStatusLabel(acordo.status)}
-                        </Badge>
-                        {vencido && acordo.status === 'ativo' && (
-                          <Badge className="bg-red-100 text-red-800">
-                            <AlertTriangle className="mr-1 h-3 w-3" />
-                            Vencido
-                          </Badge>
-                        )}
-                        {/* Badge para tipo de processo */}
-                        <Badge variant="outline" className={getTipoProcessoInfo(acordo.processo?.tipo || '').color}>
-                          {getTipoProcessoInfo(acordo.processo?.tipo || '').label}
-                        </Badge>
-                      </div>
-
-                      {/* Informações do Contribuinte */}
-                      <div>
-                        <p className="font-medium">{acordo.processo?.contribuinte?.nome || 'Contribuinte não encontrado'}</p>
-                        <p className="text-sm text-gray-600">{acordo.processo?.contribuinte?.cpfCnpj ? formatarCpfCnpj(acordo.processo.contribuinte.cpfCnpj) : ''}</p>
-                      </div>
-
-
-                      {/* Valores e Progresso */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">
-                            {acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' ? 'Progresso do Pagamento' : 'Progresso do Acordo'}
-                          </span>
-                          <span className="font-medium">{progresso.percentual}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${progresso.percentual}%` }}
-                          />
-                        </div>
-                        {acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' ? (
-                          <div className="grid grid-cols-3 gap-2 text-xs">
-                            <div>
-                              <span className="text-gray-500">Total:</span>
-                              <p className="font-medium">
-                                {formatarMoeda(progresso.valorTotal)}
-                              </p>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Pago:</span>
-                              <p className="font-medium text-green-600">
-                                {formatarMoeda(progresso.valorPago)}
-                              </p>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Pendente:</span>
-                              <p className="font-medium text-yellow-600">
-                                {formatarMoeda(progresso.valorPendente)}
-                              </p>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                              <span className="text-gray-500">
-                                {acordo.processo?.tipo === 'COMPENSACAO' ? 'Valor dos Créditos:' :
-                                  acordo.processo?.tipo === 'DACAO_PAGAMENTO' ? 'Valor do Imóvel:' : 'Valor Total:'}
-                              </span>
-                              <p className="font-medium">
-                                {formatarMoeda(progresso.valorTotal)}
-                              </p>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Status:</span>
-                              <p className={`font-medium ${acordo.status === 'cumprido' ? 'text-green-600' : acordo.status === 'ativo' ? 'text-yellow-600' : 'text-red-600'}`}>
+                  return (
+                    <Card key={acordo.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-3 flex-1">
+                            {/* Cabeçalho do Acordo */}
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <Link
+                                href={`/processos/${acordo.processo?.id || ''}`}
+                                className="font-semibold text-lg hover:text-blue-600 transition-colors"
+                              >
+                                {acordo.processo?.numero || 'Processo não encontrado'}
+                              </Link>
+                              <Badge className={getStatusColor(acordo.status)}>
                                 {getStatusLabel(acordo.status)}
-                              </p>
+                              </Badge>
+                              {vencido && acordo.status === 'ativo' && (
+                                <Badge className="bg-red-100 text-red-800">
+                                  <AlertTriangle className="mr-1 h-3 w-3" />
+                                  Vencido
+                                </Badge>
+                              )}
+                              {/* Badge para tipo de processo */}
+                              <Badge variant="outline" className={getTipoProcessoInfo(acordo.processo?.tipo || '').color}>
+                                {getTipoProcessoInfo(acordo.processo?.tipo || '').label}
+                              </Badge>
                             </div>
-                          </div>
-                        )}
-                      </div>
 
-                      {/* Informações do Acordo */}
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          <span>Assinado: {new Date(acordo.dataAssinatura).toLocaleDateString('pt-BR')}</span>
-                        </div>
-                        {acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' && (
-                          <>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4" />
-                              <span>Vence: {new Date(acordo.dataVencimento).toLocaleDateString('pt-BR')}</span>
+                            {/* Informações do Contribuinte */}
+                            <div>
+                              <p className="font-medium">{acordo.processo?.contribuinte?.nome || 'Contribuinte não encontrado'}</p>
+                              <p className="text-sm text-gray-600">{acordo.processo?.contribuinte?.cpfCnpj ? formatarCpfCnpj(acordo.processo.contribuinte.cpfCnpj) : ''}</p>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <FileText className="h-4 w-4" />
-                              <span>{getDisplayParcelasInfo(acordo)}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <DollarSign className="h-4 w-4" />
-                              <span>{(acordo.parcelas || []).reduce((total, p) => total + (p.pagamentos?.length || 0), 0)} pagamento{(acordo.parcelas || []).reduce((total, p) => total + (p.pagamentos?.length || 0), 0) !== 1 ? 's' : ''}</span>
-                            </div>
-                          </>
-                        )}
-                      </div>
 
-                      {/* Próximas Parcelas - apenas para transação excepcional */}
-                      {acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' && (acordo.parcelas || []).filter(p => p.status === 'pendente').length > 0 && (
-                        <div className="border-t pt-3">
-                          <h4 className="text-sm font-medium text-gray-900 mb-2">
-                            Próximas Parcelas:
-                          </h4>
-                          <div className="space-y-1">
-                            {(acordo.parcelas || [])
-                              .filter(p => p.status === 'pendente')
-                              .slice(0, 2)
-                              .map((parcela) => (
-                                <div key={parcela.id} className="text-sm flex items-center justify-between">
-                                  <span>
-                                    {parcela.numero === 0 ? 'Entrada' : `Parcela ${parcela.numero}`} - {new Date(parcela.dataVencimento).toLocaleDateString('pt-BR')}
-                                  </span>
-                                  <span className="font-medium">
-                                    {formatarMoeda(parcela.valor)}
-                                  </span>
+                            {/* Valores e Progresso */}
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-600">
+                                  {acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' ? 'Progresso do Pagamento' : 'Progresso do Acordo'}
+                                </span>
+                                <span className="font-medium">{progresso.percentual}%</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div
+                                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                  style={{ width: `${progresso.percentual}%` }}
+                                />
+                              </div>
+                              {acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' ? (
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                  <div>
+                                    <span className="text-gray-500">Total:</span>
+                                    <p className="font-medium">
+                                      {formatarMoeda(progresso.valorTotal)}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">Pago:</span>
+                                    <p className="font-medium text-green-600">
+                                      {formatarMoeda(progresso.valorPago)}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">Pendente:</span>
+                                    <p className="font-medium text-yellow-600">
+                                      {formatarMoeda(progresso.valorPendente)}
+                                    </p>
+                                  </div>
                                 </div>
-                              ))}
-                            {(acordo.parcelas || []).filter(p => p.status === 'pendente').length > 2 && (
-                              <div className="text-xs text-gray-500">
-                                ... e mais {(acordo.parcelas || []).filter(p => p.status === 'pendente').length - 2} parcela{(acordo.parcelas || []).filter(p => p.status === 'pendente').length - 2 !== 1 ? 's' : ''}
+                              ) : (
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  <div>
+                                    <span className="text-gray-500">
+                                      {acordo.processo?.tipo === 'COMPENSACAO' ? 'Valor dos Créditos:' :
+                                        acordo.processo?.tipo === 'DACAO_PAGAMENTO' ? 'Valor do Imóvel:' : 'Valor Total:'}
+                                    </span>
+                                    <p className="font-medium">
+                                      {formatarMoeda(progresso.valorTotal)}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">Status:</span>
+                                    <p className={`font-medium ${acordo.status === 'cumprido' ? 'text-green-600' : acordo.status === 'ativo' ? 'text-yellow-600' : 'text-red-600'}`}>
+                                      {getStatusLabel(acordo.status)}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Informações do Acordo */}
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                <span>Assinado: {new Date(acordo.dataAssinatura).toLocaleDateString('pt-BR')}</span>
+                              </div>
+                              {acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' && (
+                                <>
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4" />
+                                    <span>Vence: {new Date(acordo.dataVencimento).toLocaleDateString('pt-BR')}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4" />
+                                    <span>{getDisplayParcelasInfo(acordo)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <DollarSign className="h-4 w-4" />
+                                    <span>{(acordo.parcelas || []).reduce((total, p) => total + (p.pagamentos?.length || 0), 0)} pagamento{(acordo.parcelas || []).reduce((total, p) => total + (p.pagamentos?.length || 0), 0) !== 1 ? 's' : ''}</span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Próximas Parcelas - apenas para transação excepcional */}
+                            {acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' && (acordo.parcelas || []).filter(p => p.status === 'pendente').length > 0 && (
+                              <div className="border-t pt-3">
+                                <h4 className="text-sm font-medium text-gray-900 mb-2">
+                                  Próximas Parcelas:
+                                </h4>
+                                <div className="space-y-1">
+                                  {(acordo.parcelas || [])
+                                    .filter(p => p.status === 'pendente')
+                                    .slice(0, 2)
+                                    .map((parcela) => (
+                                      <div key={parcela.id} className="text-sm flex items-center justify-between">
+                                        <span>
+                                          {parcela.numero === 0 ? 'Entrada' : `Parcela ${parcela.numero}`} - {new Date(parcela.dataVencimento).toLocaleDateString('pt-BR')}
+                                        </span>
+                                        <span className="font-medium">
+                                          {formatarMoeda(parcela.valor)}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  {(acordo.parcelas || []).filter(p => p.status === 'pendente').length > 2 && (
+                                    <div className="text-xs text-gray-500">
+                                      ... e mais {(acordo.parcelas || []).filter(p => p.status === 'pendente').length - 2} parcela{(acordo.parcelas || []).filter(p => p.status === 'pendente').length - 2 !== 1 ? 's' : ''}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>
+
+                          {/* Ações */}
+                          <div className="flex flex-col gap-2 ml-4">
+                            <Link href={`/acordos/${acordo.id}`}>
+                              <Button variant="outline" size="sm" className="w-full cursor-pointer">
+                                Ver Detalhes
+                              </Button>
+                            </Link>
+
+                            <Link href={`/processos/${acordo.processo?.id || ''}`}>
+                              <Button variant="ghost" size="sm" className="w-full cursor-pointer">
+                                Ver Processo
+                              </Button>
+                            </Link>
+                          </div>
                         </div>
-                      )}
-                    </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
 
-                    {/* Ações */}
-                    <div className="flex flex-col gap-2 ml-4">
-                      <Link href={`/acordos/${acordo.id}`}>
-                        <Button variant="outline" size="sm" className="w-full cursor-pointer">
-                          Ver Detalhes
-                        </Button>
-                      </Link>
-
-                      <Link href={`/processos/${acordo.processo?.id || ''}`}>
-                        <Button variant="ghost" size="sm" className="w-full cursor-pointer">
-                          Ver Processo
-                        </Button>
-                      </Link>
-
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })
-        )}
-      </div>
+                {/* Paginação */}
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalFilteredAcordos}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                />
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Acordos Vencidos */}
       {acordosVencidos > 0 && (

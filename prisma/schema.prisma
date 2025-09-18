@@ -303,22 +303,29 @@ model ProcessoPauta {
 
 model SessaoJulgamento {
   id                String          @id @default(cuid())
-  
-  pautaId           String          @unique
-  pauta             Pauta           @relation(fields: [pautaId], references: [id])
-  
+
+  // Tipo de sessão (obrigatório)
+  tipoSessao        TipoSessao      @default(JULGAMENTO)
+
+  // Pauta opcional (apenas para sessões de julgamento)
+  pautaId           String?         @unique
+  pauta             Pauta?          @relation(fields: [pautaId], references: [id])
+
+  // Agenda para sessões administrativas
+  agenda            String?         @db.Text
+
   dataInicio        DateTime
   dataFim           DateTime?
   ata               String?         @db.Text
   numeroAta         String?
   assuntosAdministrativos String?   @db.Text
-  
+
   presidenteId      String?
   presidente        Conselheiro?    @relation("SessaoPresidente", fields: [presidenteId], references: [id])
-  
+
   conselheiros      Conselheiro[]   @relation("SessaoConselheiro")
   decisoes          Decisao[]
-  
+
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 }
@@ -678,4 +685,9 @@ model PropostaTransacao {
 enum MetodoPagamento {
   A_VISTA
   PARCELADO
+}
+
+enum TipoSessao {
+  JULGAMENTO
+  ADMINISTRATIVA
 }

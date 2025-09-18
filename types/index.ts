@@ -70,7 +70,7 @@ export type PautaWithRelations = Pauta & {
 }
 
 export type SessaoWithRelations = SessaoJulgamento & {
-  pauta: Pauta
+  pauta?: Pauta | null
   conselheiros: User[]
 }
 
@@ -80,6 +80,8 @@ export type SessionUser = {
   name: string
   role: 'ADMIN' | 'FUNCIONARIO' | 'VISUALIZADOR'
 }
+
+export type TipoSessao = 'JULGAMENTO' | 'ADMINISTRATIVA'
 
 // Interfaces para filtros de busca nas APIs
 export interface PrismaWhereFilter {
@@ -197,6 +199,9 @@ export interface PautaUpdateData {
 }
 
 export interface SessaoUpdateData {
+  tipoSessao?: TipoSessao
+  pautaId?: string | null
+  agenda?: string
   ata?: string
   dataFim?: Date
   conselheiros?: {

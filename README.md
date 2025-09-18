@@ -85,9 +85,9 @@ ccf-sistema/
 - Histórico de movimentações
 
 ### 3. Pautas e Sessões de Julgamento
-- Criação e gestão de pautas
+- Criação e gestão de pautas de julgamento e administrativas
 - Distribuição de processos para relatores
-- Controle de sessões de julgamento
+- Controle de sessões de julgamento e administrativas
 - Registro de decisões e votos
 - Geração de atas automáticas
 
@@ -229,10 +229,10 @@ npm run db:clear
 - Histórico de movimentações
 
 ### Pautas e Sessões
-- Criação de pautas
+- Criação de pautas de julgamento e administrativas
 - Distribuição para relatores
-- Controle de sessões
-- Registro de decisões
+- Controle de sessões de julgamento e administrativas
+- Registro de decisões e deliberações
 - Votação eletrônica
 - Geração de atas
 

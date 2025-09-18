@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Pagination } from '@/components/ui/pagination'
 import {
   Plus,
   Search,
@@ -43,6 +44,8 @@ export default function SetoresAdminPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [selectedSetor, setSelectedSetor] = useState<Setor | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(15)
   const [formData, setFormData] = useState({
     nome: '',
     sigla: '',
@@ -190,15 +193,27 @@ export default function SetoresAdminPage() {
     (setor.responsavel && setor.responsavel.toLowerCase().includes(search.toLowerCase()))
   )
 
+  // Paginação local
+  const totalFilteredSetores = filteredSetores.length
+  const totalPages = Math.ceil(totalFilteredSetores / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedSetores = filteredSetores.slice(startIndex, endIndex)
+
+  // Reset para primeira página quando filtros mudarem
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search])
+
   if (status === 'loading' || loading) {
     return <div>Carregando...</div>
   }
 
   const stats = {
-    total: setores.length,
-    ativos: setores.filter(s => s.ativo).length,
-    inativos: setores.filter(s => !s.ativo).length,
-    comResponsavel: setores.filter(s => s.responsavel).length
+    total: totalFilteredSetores,
+    ativos: filteredSetores.filter(s => s.ativo).length,
+    inativos: filteredSetores.filter(s => !s.ativo).length,
+    comResponsavel: filteredSetores.filter(s => s.responsavel).length
   }
 
   return (
@@ -348,72 +363,83 @@ export default function SetoresAdminPage() {
         <CardHeader>
           <CardTitle>Setores Cadastrados</CardTitle>
           <CardDescription>
-            {filteredSetores.length} de {setores.length} setores
+            {totalFilteredSetores} de {setores.length} setores
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredSetores.map((setor) => (
-              <div key={setor.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <span className="font-bold text-blue-600 text-sm">
-                      {setor.sigla}
-                    </span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium">{setor.nome}</h3>
-                      <Badge variant={setor.ativo ? "default" : "secondary"}>
-                        {setor.ativo ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <Building2 className="h-3 w-3" />
-                        {setor.sigla}
-                      </div>
-                      {setor.email && (
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {setor.email}
-                        </div>
-                      )}
-                      {setor.responsavel && (
-                        <div className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          {setor.responsavel}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openEditDialog(setor)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteSetor(setor)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+            {totalFilteredSetores === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                Nenhum setor encontrado
               </div>
-            ))}
-          </div>
+            ) : (
+              <>
+                {paginatedSetores.map((setor) => (
+                  <div key={setor.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <span className="font-bold text-blue-600 text-sm">
+                          {setor.sigla}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium">{setor.nome}</h3>
+                          <Badge variant={setor.ativo ? "default" : "secondary"}>
+                            {setor.ativo ? "Ativo" : "Inativo"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                          <div className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {setor.sigla}
+                          </div>
+                          {setor.email && (
+                            <div className="flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              {setor.email}
+                            </div>
+                          )}
+                          {setor.responsavel && (
+                            <div className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {setor.responsavel}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditDialog(setor)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteSetor(setor)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
 
-          {filteredSetores.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              Nenhum setor encontrado
-            </div>
-          )}
+                {/* Paginação */}
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalFilteredSetores}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                />
+              </>
+            )}
+          </div>
         </CardContent>
       </Card>
 

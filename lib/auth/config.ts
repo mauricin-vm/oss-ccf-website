@@ -92,17 +92,16 @@ export const authOptions: NextAuthOptions = {
   },
   cookies: {
     sessionToken: {
-      name: process.env.NODE_ENV === 'production' 
-        ? `__Secure-next-auth.session-token`
-        : `next-auth.session-token`,
+      name: `next-auth.session-token`, // Usar nome simples sempre
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: process.env.NODE_ENV === 'production'
+        secure: process.env.NODE_ENV === 'development'
+        // secure: false // Forçar false para HTTP
       }
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === 'development'
+  debug: false // Debug desabilitado para produção
 }

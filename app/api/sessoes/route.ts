@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
     // Converter valores Decimal para number antes de retornar
     const sessoesSerializadas = sessoes.map(sessao => ({
       ...sessao,
-      pauta: {
+      pauta: sessao.pauta ? {
         ...sessao.pauta,
         processos: sessao.pauta.processos.map(processoPauta => ({
           ...processoPauta,
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
             ...processoPauta.processo,
           }
         }))
-      },
+      } : null,
       decisoes: sessao.decisoes.map(decisao => ({
         ...decisao,
         processo: {
@@ -164,39 +164,51 @@ export async function POST(request: NextRequest) {
       )
     }
     const data = validationResult.data
-    // Verificar se a pauta existe e está aberta
-    const pauta = await prisma.pauta.findUnique({
-      where: { id: data.pautaId },
-      include: {
-        processos: {
-          include: {
-            processo: {
-              include: {
-                contribuinte: true
+
+    // Para sessões de julgamento, verificar se a pauta existe e está aberta
+    let pauta = null
+    if (data.tipoSessao === 'JULGAMENTO') {
+      if (!data.pautaId) {
+        return NextResponse.json(
+          { error: 'Pauta é obrigatória para sessões de julgamento' },
+          { status: 400 }
+        )
+      }
+
+      pauta = await prisma.pauta.findUnique({
+        where: { id: data.pautaId },
+        include: {
+          processos: {
+            include: {
+              processo: {
+                include: {
+                  contribuinte: true
+                }
               }
             }
-          }
-        },
-        sessao: true
+          },
+          sessao: true
+        }
+      })
+
+      if (!pauta) {
+        return NextResponse.json(
+          { error: 'Pauta não encontrada' },
+          { status: 404 }
+        )
       }
-    })
-    if (!pauta) {
-      return NextResponse.json(
-        { error: 'Pauta não encontrada' },
-        { status: 404 }
-      )
-    }
-    if (pauta.status !== 'aberta') {
-      return NextResponse.json(
-        { error: 'Apenas pautas com status "aberta" podem ter sessões criadas' },
-        { status: 400 }
-      )
-    }
-    if (pauta.sessao) {
-      return NextResponse.json(
-        { error: 'Esta pauta já possui uma sessão de julgamento' },
-        { status: 400 }
-      )
+      if (pauta.status !== 'aberta') {
+        return NextResponse.json(
+          { error: 'Apenas pautas com status "aberta" podem ter sessões criadas' },
+          { status: 400 }
+        )
+      }
+      if (pauta.sessao) {
+        return NextResponse.json(
+          { error: 'Esta pauta já possui uma sessão de julgamento' },
+          { status: 400 }
+        )
+      }
     }
     // Verificar se o presidente existe e está ativo (se fornecido)
     let presidente = null
@@ -227,7 +239,9 @@ export async function POST(request: NextRequest) {
     // Criar a sessão
     const sessao = await prisma.sessaoJulgamento.create({
       data: {
-        pautaId: data.pautaId,
+        tipoSessao: data.tipoSessao,
+        pautaId: data.pautaId || null,
+        agenda: data.agenda || null,
         dataInicio: data.dataInicio,
         ata: data.ata || '',
         presidenteId: data.presidenteId || null,
@@ -268,11 +282,14 @@ export async function POST(request: NextRequest) {
         }
       }
     })
-    // Atualizar status da pauta para EM_JULGAMENTO
-    await prisma.pauta.update({
-      where: { id: data.pautaId },
-      data: { status: 'em_julgamento' }
-    })
+
+    // Atualizar status da pauta para EM_JULGAMENTO apenas para sessões de julgamento
+    if (data.tipoSessao === 'JULGAMENTO' && data.pautaId) {
+      await prisma.pauta.update({
+        where: { id: data.pautaId },
+        data: { status: 'em_julgamento' }
+      })
+    }
     // Log de auditoria
     await prisma.logAuditoria.create({
       data: {
@@ -281,9 +298,11 @@ export async function POST(request: NextRequest) {
         entidade: 'SessaoJulgamento',
         entidadeId: sessao.id,
         dadosNovos: {
-          pautaNumero: pauta.numero,
+          tipoSessao: sessao.tipoSessao,
+          pautaNumero: pauta?.numero || null,
+          agenda: sessao.agenda || null,
           dataInicio: sessao.dataInicio,
-          totalProcessos: pauta.processos.length,
+          totalProcessos: pauta?.processos.length || 0,
           presidente: presidente ? {
             id: presidente.id,
             nome: presidente.nome,
@@ -294,18 +313,18 @@ export async function POST(request: NextRequest) {
             nome: c.nome,
             email: c.email
           })),
-          processos: pauta.processos.map(p => ({
+          processos: pauta?.processos.map(p => ({
             numero: p.processo.numero,
             contribuinte: p.processo.contribuinte.nome,
             ordem: p.ordem
-          }))
+          })) || []
         }
       }
     })
     // Converter valores Decimal para number antes de retornar
     const sessaoSerializada = {
       ...sessao,
-      pauta: {
+      pauta: sessao.pauta ? {
         ...sessao.pauta,
         processos: sessao.pauta.processos.map(processoPauta => ({
           ...processoPauta,
@@ -313,7 +332,7 @@ export async function POST(request: NextRequest) {
             ...processoPauta.processo,
           }
         }))
-      }
+      } : null
     }
     return NextResponse.json(sessaoSerializada, { status: 201 })
   } catch (error) {

@@ -7,11 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  Plus, 
-  Search, 
-  FileText, 
-  Calendar, 
+import { Pagination } from '@/components/ui/pagination'
+import {
+  Plus,
+  Search,
+  FileText,
+  Calendar,
   User,
   DollarSign,
   Filter,
@@ -48,6 +49,8 @@ export default function ProcessosPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [tipoFilter, setTipoFilter] = useState('all')
   const [showFilters, setShowFilters] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(15)
 
   // Carregamento inicial - buscar todos os processos
   useEffect(() => {
@@ -102,10 +105,10 @@ export default function ProcessosPage() {
     }
   }
 
-  // Filtragem local (client-side) - igual ao tramitações
+  // Filtragem local (client-side)
   const filteredProcessos = processos.filter((processo) => {
     // Filtro por texto de busca
-    const searchMatch = !searchTerm || 
+    const searchMatch = !searchTerm ||
       processo.numero.toLowerCase().includes(searchTerm.toLowerCase()) ||
       processo.contribuinte.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (processo.observacoes && processo.observacoes.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -118,6 +121,18 @@ export default function ProcessosPage() {
 
     return searchMatch && statusMatch && tipoMatch
   })
+
+  // Paginação local
+  const totalFilteredProcessos = filteredProcessos.length
+  const totalPages = Math.ceil(totalFilteredProcessos / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedProcessos = filteredProcessos.slice(startIndex, endIndex)
+
+  // Reset para primeira página quando filtros mudarem
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, statusFilter, tipoFilter])
 
 
 
@@ -242,7 +257,7 @@ export default function ProcessosPage() {
               <FileText className="h-5 w-5 text-blue-600" />
               <div>
                 <p className="text-sm font-medium text-gray-600">Total</p>
-                <p className="text-2xl font-bold">{filteredProcessos.length}</p>
+                <p className="text-2xl font-bold">{totalFilteredProcessos}</p>
               </div>
             </div>
           </CardContent>
@@ -292,74 +307,90 @@ export default function ProcessosPage() {
       </div>
 
       {/* Lista de Processos */}
-      <div className="space-y-4">
-        {filteredProcessos.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <FileText className="h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {processos.length === 0 ? 'Nenhum processo encontrado' : 'Nenhum processo corresponde aos filtros'}
-              </h3>
-              <p className="text-gray-600 mb-4">
-                {processos.length === 0 ? 'Comece criando seu primeiro processo.' : 'Tente ajustar os filtros ou criar um novo processo.'}
-              </p>
-              {canCreate && (
-                <Link href="/processos/novo">
-                  <Button className="cursor-pointer">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Criar Processo
-                  </Button>
-                </Link>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          filteredProcessos.map((processo) => (
-            <Card key={processo.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-lg">{processo.numero}</h3>
-                      <Badge className={getTipoProcessoInfo(processo.tipo).color}>
-                        {getTipoProcessoInfo(processo.tipo).label}
-                      </Badge>
-                      <Badge className={getStatusInfo(processo.status).color}>
-                        {getStatusInfo(processo.status).label}
-                      </Badge>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        <span>{processo.contribuinte.nome}</span>
+      <Card>
+        <CardHeader>
+          <CardTitle>Processos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {totalFilteredProcessos === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <FileText className="h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {processos.length === 0 ? 'Nenhum processo encontrado' : 'Nenhum processo corresponde aos filtros'}
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  {processos.length === 0 ? 'Comece criando seu primeiro processo.' : 'Tente ajustar os filtros ou criar um novo processo.'}
+                </p>
+                {canCreate && (
+                  <Link href="/processos/novo">
+                    <Button className="cursor-pointer">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Criar Processo
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <>
+                {paginatedProcessos.map((processo) => (
+                  <Card key={processo.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-lg">{processo.numero}</h3>
+                            <Badge className={getTipoProcessoInfo(processo.tipo).color}>
+                              {getTipoProcessoInfo(processo.tipo).label}
+                            </Badge>
+                            <Badge className={getStatusInfo(processo.status).color}>
+                              {getStatusInfo(processo.status).label}
+                            </Badge>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              <span>{processo.contribuinte.nome}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              <span>{new Date(processo.dataAbertura).toLocaleDateString('pt-BR')}</span>
+                            </div>
+                          </div>
+
+                          {processo.observacoes && (
+                            <p className="text-sm text-gray-700 mt-2">
+                              {processo.observacoes}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Link href={`/processos/${processo.id}`}>
+                            <Button variant="outline" size="sm" className="cursor-pointer">
+                              Ver Detalhes
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        <span>{new Date(processo.dataAbertura).toLocaleDateString('pt-BR')}</span>
-                      </div>
-                    </div>
-                    
-                    {processo.observacoes && (
-                      <p className="text-sm text-gray-700 mt-2">
-                        {processo.observacoes}
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Link href={`/processos/${processo.id}`}>
-                      <Button variant="outline" size="sm" className="cursor-pointer">
-                        Ver Detalhes
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {/* Paginação */}
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalFilteredProcessos}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                />
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

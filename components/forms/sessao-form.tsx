@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { sessaoSchema, type SessaoInput } from '@/lib/validations/pauta'
+import { TipoSessao } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -63,6 +64,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
   const [selectedConselheiros, setSelectedConselheiros] = useState<string[]>([])
   const [selectedPresidente, setSelectedPresidente] = useState<string>('')
   const [searchPauta, setSearchPauta] = useState('')
+  const [tipoSessao, setTipoSessao] = useState<TipoSessao>('JULGAMENTO')
 
   const {
     register,
@@ -72,6 +74,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
   } = useForm<SessaoInput>({
     resolver: zodResolver(sessaoSchema),
     defaultValues: {
+      tipoSessao: 'JULGAMENTO',
       dataInicio: new Date(),
       presidenteId: '',
       conselheiros: []
@@ -161,6 +164,11 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
     setValue('presidenteId', selectedPresidente || '')
   }, [selectedPresidente, setValue])
 
+  // Atualizar campo de tipo de sessão quando seleção muda
+  useEffect(() => {
+    setValue('tipoSessao', tipoSessao)
+  }, [tipoSessao, setValue])
+
   const onSubmit = async (data: SessaoInput) => {
     setIsLoading(true)
     setError(null)
@@ -239,135 +247,226 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
         </Alert>
       )}
 
-      {/* Seleção de Pauta */}
+      {/* Seleção de Tipo de Sessão */}
       <Card>
         <CardHeader>
-          <CardTitle>Pauta para Julgamento</CardTitle>
+          <CardTitle>Tipo de Sessão</CardTitle>
           <CardDescription>
-            Selecione a pauta que será julgada nesta sessão
+            Selecione se esta é uma sessão para julgamento de processos ou apenas administrativa
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {isLoadingPauta ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-            </div>
-          ) : !selectedPauta ? (
-            <div className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Buscar pauta..."
-                  value={searchPauta}
-                  onChange={(e) => setSearchPauta(e.target.value)}
-                  className="pl-10"
-                  disabled={isLoading}
-                />
-              </div>
-
-              {pautasFiltradas.length > 0 && (
-                <div className="border rounded-lg">
-                  {pautasFiltradas.map((pauta) => (
-                    <div
-                      key={pauta.id}
-                      onClick={() => handleSelectPauta(pauta)}
-                      className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{pauta.numero}</p>
-                          <p className="text-sm text-gray-600">
-                            {formatLocalDate(pauta.dataPauta)} - {pauta.processos.length} processo{pauta.processos.length !== 1 ? 's' : ''}
-                          </p>
-                        </div>
-                        <Badge className="bg-blue-100 text-blue-800">
-                          {pauta.status === 'aberta' ? 'Aberta' : pauta.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div
+              className={`p-4 border rounded-lg cursor-pointer transition-colors ${tipoSessao === 'JULGAMENTO'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
+                }`}
+              onClick={() => setTipoSessao('JULGAMENTO')}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-4 h-4 rounded-full border-2 ${tipoSessao === 'JULGAMENTO'
+                    ? 'border-blue-500 bg-blue-500'
+                    : 'border-gray-300'
+                  }`}>
+                  {tipoSessao === 'JULGAMENTO' && (
+                    <div className="w-2 h-2 rounded-full bg-white m-0.5"></div>
+                  )}
                 </div>
-              )}
-
-              {searchPauta.length > 0 && pautasFiltradas.length === 0 && (
-                <p className="text-center text-gray-500 py-4">
-                  Nenhuma pauta encontrada
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-medium text-blue-900">{selectedPauta.numero}</h4>
-                  <p className="text-sm text-blue-700">
-                    {formatLocalDate(selectedPauta.dataPauta)} - {selectedPauta.processos.length} processo{selectedPauta.processos.length !== 1 ? 's' : ''}
+                  <h4 className="font-medium">Sessão de Julgamento</h4>
+                  <p className="text-sm text-gray-600">
+                    Para julgar processos de uma pauta específica
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="cursor-pointer"
-                  onClick={() => {
-                    setSelectedPauta(null)
-                    setValue('pautaId', '')
-                  }}
-                >
-                  Alterar
-                </Button>
               </div>
+            </div>
 
-              {/* Lista de Processos da Pauta */}
-              <div className="mt-4 space-y-2">
-                <h5 className="text-sm font-medium text-blue-900">Processos para Julgamento:</h5>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {selectedPauta.processos.map((processoPauta) => (
-                    <div key={processoPauta.processo.id} className="text-sm bg-white p-2 rounded border">
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-xs font-bold">
-                          {processoPauta.ordem}
-                        </span>
-                        <div className="flex-1">
-                          <p className="font-medium">{processoPauta.processo.numero}</p>
-                          <p className="text-xs text-gray-600">{processoPauta.processo.contribuinte.nome}</p>
-                          
-                          {/* Relator técnico (sempre) */}
-                          {processoPauta.relator && (
-                            <p className="text-xs text-purple-600">
-                              Relator: {processoPauta.relator}
-                            </p>
-                          )}
-                          
-                          {/* Revisores */}
-                          {processoPauta.revisores && processoPauta.revisores.length > 0 && (
-                            <p className="text-xs text-blue-600">
-                              {processoPauta.revisores.length === 1 ? 'Revisor' : 'Revisores'}: {processoPauta.revisores.join(', ')}
-                            </p>
-                          )}
-                          
-                          {/* Distribuição (se diferente do relator) */}
-                          {processoPauta.distribuidoPara && processoPauta.distribuidoPara !== processoPauta.relator && (
-                            <p className="text-xs text-green-600">
-                              Distribuído para: {processoPauta.distribuidoPara}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+            <div
+              className={`p-4 border rounded-lg cursor-pointer transition-colors ${tipoSessao === 'ADMINISTRATIVA'
+                  ? 'border-green-500 bg-green-50'
+                  : 'border-gray-200 hover:border-gray-300'
+                }`}
+              onClick={() => setTipoSessao('ADMINISTRATIVA')}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-4 h-4 rounded-full border-2 ${tipoSessao === 'ADMINISTRATIVA'
+                    ? 'border-green-500 bg-green-500'
+                    : 'border-gray-300'
+                  }`}>
+                  {tipoSessao === 'ADMINISTRATIVA' && (
+                    <div className="w-2 h-2 rounded-full bg-white m-0.5"></div>
+                  )}
+                </div>
+                <div>
+                  <h4 className="font-medium">Sessão Administrativa</h4>
+                  <p className="text-sm text-gray-600">
+                    Para tratar apenas assuntos administrativos
+                  </p>
                 </div>
               </div>
             </div>
-          )}
-          {errors.pautaId && (
-            <p className="text-sm text-red-500">{errors.pautaId.message}</p>
-          )}
+          </div>
         </CardContent>
       </Card>
 
+      {/* Campo de Agenda para Sessões Administrativas */}
+      {tipoSessao === 'ADMINISTRATIVA' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Agenda da Sessão</CardTitle>
+            <CardDescription>
+              Descreva os assuntos que serão tratados nesta sessão administrativa
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <textarea
+                id="agenda"
+                {...register('agenda')}
+                className="w-full p-3 border rounded-lg resize-vertical min-h-[100px]"
+                placeholder="Descreva os assuntos administrativos que serão tratados..."
+                disabled={isLoading}
+              />
+              {errors.agenda && (
+                <p className="text-sm text-red-500">{errors.agenda.message}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Seleção de Pauta - Apenas para Sessões de Julgamento */}
+      {tipoSessao === 'JULGAMENTO' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pauta para Julgamento</CardTitle>
+            <CardDescription>
+              Selecione a pauta que será julgada nesta sessão
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isLoadingPauta ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            ) : !selectedPauta ? (
+              <div className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Buscar pauta..."
+                    value={searchPauta}
+                    onChange={(e) => setSearchPauta(e.target.value)}
+                    className="pl-10"
+                    disabled={isLoading}
+                  />
+                </div>
+
+                {pautasFiltradas.length > 0 && (
+                  <div className="border rounded-lg">
+                    {pautasFiltradas.map((pauta) => (
+                      <div
+                        key={pauta.id}
+                        onClick={() => handleSelectPauta(pauta)}
+                        className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{pauta.numero}</p>
+                            <p className="text-sm text-gray-600">
+                              {formatLocalDate(pauta.dataPauta)} - {pauta.processos.length} processo{pauta.processos.length !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                          <Badge className="bg-blue-100 text-blue-800">
+                            {pauta.status === 'aberta' ? 'Aberta' : pauta.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {searchPauta.length > 0 && pautasFiltradas.length === 0 && (
+                  <p className="text-center text-gray-500 py-4">
+                    Nenhuma pauta encontrada
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-blue-900">{selectedPauta.numero}</h4>
+                    <p className="text-sm text-blue-700">
+                      {formatLocalDate(selectedPauta.dataPauta)} - {selectedPauta.processos.length} processo{selectedPauta.processos.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="cursor-pointer"
+                    onClick={() => {
+                      setSelectedPauta(null)
+                      setValue('pautaId', '')
+                    }}
+                  >
+                    Alterar
+                  </Button>
+                </div>
+
+                {/* Lista de Processos da Pauta */}
+                <div className="mt-4 space-y-2">
+                  <h5 className="text-sm font-medium text-blue-900">Processos para Julgamento:</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {selectedPauta.processos.map((processoPauta) => (
+                      <div key={processoPauta.processo.id} className="text-sm bg-white p-2 rounded border">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-xs font-bold">
+                            {processoPauta.ordem}
+                          </span>
+                          <div className="flex-1">
+                            <p className="font-medium">{processoPauta.processo.numero}</p>
+                            <p className="text-xs text-gray-600">{processoPauta.processo.contribuinte.nome}</p>
+
+                            {/* Relator técnico (sempre) */}
+                            {processoPauta.relator && (
+                              <p className="text-xs text-purple-600">
+                                Relator: {processoPauta.relator}
+                              </p>
+                            )}
+
+                            {/* Revisores */}
+                            {processoPauta.revisores && processoPauta.revisores.length > 0 && (
+                              <p className="text-xs text-blue-600">
+                                {processoPauta.revisores.length === 1 ? 'Revisor' : 'Revisores'}: {processoPauta.revisores.join(', ')}
+                              </p>
+                            )}
+
+                            {/* Distribuição (se diferente do relator) */}
+                            {processoPauta.distribuidoPara && processoPauta.distribuidoPara !== processoPauta.relator && (
+                              <p className="text-xs text-green-600">
+                                Distribuído para: {processoPauta.distribuidoPara}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            {errors.pautaId && (
+              <p className="text-sm text-red-500">{errors.pautaId.message}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Informações da Sessão */}
-      {selectedPauta && (
+      {(tipoSessao === 'JULGAMENTO' ? selectedPauta : true) && (
         <Card>
           <CardHeader>
             <CardTitle>Dados da Sessão</CardTitle>
@@ -433,7 +532,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
       )}
 
       {/* Seleção de Conselheiros */}
-      {selectedPauta && (
+      {(tipoSessao === 'JULGAMENTO' ? selectedPauta : true) && (
         <Card>
           <CardHeader>
             <CardTitle>Conselheiros Participantes <span className="text-red-500">*</span></CardTitle>
@@ -510,7 +609,11 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
         <Button
           type="submit"
           className="cursor-pointer"
-          disabled={isLoading || !selectedPauta || selectedConselheiros.length === 0}
+          disabled={
+            isLoading ||
+            selectedConselheiros.length === 0 ||
+            (tipoSessao === 'JULGAMENTO' && !selectedPauta)
+          }
         >
           {isLoading ? (
             <>

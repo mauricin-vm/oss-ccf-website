@@ -230,6 +230,10 @@ A tramitação controla a movimentação dos processos entre setores.
    - **Em Julgamento**: Sessão ativa
    - **Fechada**: Julgamento concluído
 
+#### Tipos de Pauta
+- **Pauta de Julgamento**: Para sessões com decisões de processos
+- **Pauta Administrativa**: Para reuniões administrativas e deliberações gerais
+
 #### Criando Nova Pauta
 
 > ⚠️ **Permissão necessária**: Funcionário ou Administrador
@@ -237,11 +241,14 @@ A tramitação controla a movimentação dos processos entre setores.
 1. **Clique em "Nova Pauta"**
 2. **Defina**:
    - Número da pauta
+   - Tipo da pauta (Julgamento ou Administrativa)
    - Data prevista para julgamento
    - Observações iniciais
 3. **Salve a pauta**
 
 #### Adicionando Processos à Pauta
+> 📋 **Nota**: Aplicável apenas para Pautas de Julgamento
+
 1. **Abra a pauta** desejada
 2. **Clique em "Adicionar Processo"**
 3. **Busque e selecione** o processo
@@ -251,16 +258,28 @@ A tramitação controla a movimentação dos processos entre setores.
    - Revisores (se aplicável)
 5. **Confirme a inclusão**
 
+#### Configurando Pauta Administrativa
+Para pautas administrativas:
+1. **Defina a agenda** de assuntos a serem discutidos
+2. **Convide participantes** necessários
+3. **Adicione documentos** de apoio (se necessário)
+4. **Configure data/hora** da reunião
+
 #### Organizando a Pauta
 - **Reordenar**: Arraste os processos para mudar a ordem
 - **Remover**: Clique no X para retirar da pauta
 - **Editar**: Altere relator ou revisores
 
-### Sessões de Julgamento
+### Sessões de Julgamento e Administrativas
+
+#### Tipos de Sessão
+- **Sessão de Julgamento**: Para decidir processos incluídos em pauta específica
+- **Sessão Administrativa**: Para tratar assuntos administrativos e deliberações gerais
 
 #### Criando uma Sessão
 1. **Na pauta**, clique em **"Iniciar Sessão"**
 2. **Configure**:
+   - Tipo de sessão (automático com base na pauta)
    - Data e hora de início
    - Presidente da sessão
    - Conselheiros presentes
@@ -268,7 +287,8 @@ A tramitação controla a movimentação dos processos entre setores.
 
 #### Durante a Sessão
 
-##### Julgando Processos
+##### Para Sessões de Julgamento
+**Julgando Processos**
 Para cada processo na pauta:
 
 1. **Clique em "Julgar"**
@@ -278,6 +298,13 @@ Para cada processo na pauta:
    - **Vista**: Solicitação de mais tempo
    - **Diligência**: Solicitação de informações
    - **Negociação**: Encaminhado para acordo
+
+##### Para Sessões Administrativas
+**Conduzindo a Reunião**
+1. **Siga a agenda** definida na pauta
+2. **Registre deliberações** e decisões tomadas
+3. **Documente participações** dos conselheiros
+4. **Anote ações** a serem executadas
 
 ##### Para Julgamentos (Decisão Final)
 1. **Selecione o tipo de decisão**:
@@ -295,9 +322,16 @@ Para cada processo na pauta:
    - Se acompanha outro voto
 
 ##### Finalizando a Sessão
+**Para Sessões de Julgamento:**
 1. **Complete todos os julgamentos**
 2. **Adicione assuntos administrativos** (se houver)
 3. **Revise a ata** gerada automaticamente (EM DESENVOLVIMENTO)
+4. **Clique em "Finalizar Sessão"**
+
+**Para Sessões Administrativas:**
+1. **Finalize todos os assuntos** da agenda
+2. **Confirme deliberações** tomadas
+3. **Revise a ata** da reunião (EM DESENVOLVIMENTO)
 4. **Clique em "Finalizar Sessão"**
 
 ### Acompanhando Decisões

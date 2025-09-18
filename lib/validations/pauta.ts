@@ -14,14 +14,31 @@ export const pautaSchema = z.object({
 })
 
 export const sessaoSchema = z.object({
-  pautaId: z.string().min(1, 'Pauta é obrigatória'),
+  tipoSessao: z.enum(['JULGAMENTO', 'ADMINISTRATIVA'], {
+    message: 'Tipo de sessão é obrigatório'
+  }),
+  pautaId: z.string().optional(),
+  agenda: z.string().optional(),
   dataInicio: z.date({
     message: 'Data de início é obrigatória'
   }),
   presidenteId: z.string().min(1, 'Presidente da sessão é obrigatório'),
   conselheiros: z.array(z.string()).min(1, 'Pelo menos um conselheiro deve participar'),
   ata: z.string().optional()
-})
+}).refine(
+  (data) => {
+    // Se é sessão de julgamento, pauta é obrigatória
+    if (data.tipoSessao === 'JULGAMENTO') {
+      return data.pautaId && data.pautaId.length > 0
+    }
+    // Se é sessão administrativa, agenda é opcional
+    return true
+  },
+  {
+    message: 'Pauta é obrigatória para sessões de julgamento',
+    path: ['pautaId']
+  }
+)
 
 export const decisaoSchema = z.object({
   processoId: z.string().min(1, 'Processo é obrigatório'),

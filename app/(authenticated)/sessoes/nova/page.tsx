@@ -11,7 +11,7 @@ import { SessionUser } from '@/types'
 
 export default async function NovaSessaoPage() {
   const session = await getServerSession(authOptions)
-  
+
   if (!session) {
     redirect('/login')
   }
@@ -33,9 +33,9 @@ export default async function NovaSessaoPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold">Nova Sessão de Julgamento</h1>
+            <h1 className="text-3xl font-bold">Nova Sessão</h1>
             <p className="text-gray-600">
-              Crie uma nova sessão para julgar os processos de uma pauta
+              Crie uma nova sessão para analisar os processos de uma pauta
             </p>
           </div>
         </div>

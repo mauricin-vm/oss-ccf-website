@@ -21,6 +21,7 @@ import SessaoActions from '@/components/sessao/sessao-actions'
 import EditarInformacoesSessaoForm from '@/components/forms/editar-informacoes-sessao-form'
 import AssuntosAdministrativosForm from '@/components/forms/assuntos-administrativos-form'
 import EditarConselheirosForm from '@/components/forms/editar-conselheiros-sessao-form'
+import EditarAgendaSessaoForm from '@/components/forms/editar-agenda-sessao-form'
 import { formatLocalDate } from '@/lib/utils/date'
 import { getResultadoBadge, getTipoResultadoInfo, getPosicaoVotoInfo, getCardBackground as getCardBackgroundFromConstants } from '@/lib/constants/status'
 
@@ -109,7 +110,7 @@ async function getSessao(id: string) {
   // Converter valores Decimal para number
   return {
     ...sessao,
-    pauta: {
+    pauta: sessao.pauta ? {
       ...sessao.pauta,
       processos: sessao.pauta.processos.map(processoPauta => ({
         ...processoPauta,
@@ -117,7 +118,7 @@ async function getSessao(id: string) {
           ...processoPauta.processo
         }
       }))
-    },
+    } : null,
     decisoes: sessao.decisoes.map(decisao => ({
       ...decisao,
       processo: {
@@ -177,7 +178,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
   }
 
   const getProgressoJulgamento = () => {
-    const totalProcessos = sessao.pauta.processos.length
+    const totalProcessos = sessao.pauta?.processos.length || 0
     const processosJulgados = sessao.decisoes.length
     const percentual = totalProcessos > 0 ? Math.round((processosJulgados / totalProcessos) * 100) : 0
 
@@ -191,7 +192,7 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
       julgados: 0
     }
 
-    sessao.pauta.processos.forEach(processoPauta => {
+    sessao.pauta?.processos.forEach(processoPauta => {
       const decisao = sessao.decisoes.find(d => d.processoId === processoPauta.processo.id)
 
       if (!decisao) {
@@ -274,7 +275,11 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
             </Badge>
           </div>
           <p className="text-gray-600">
-            Pauta: {sessao.pauta.numero} - {formatLocalDate(sessao.pauta.dataPauta.toISOString().split('T')[0])}
+            {sessao.pauta ? (
+              <>Pauta: {sessao.pauta.numero} - {formatLocalDate(sessao.pauta.dataPauta.toISOString().split('T')[0])}</>
+            ) : (
+              `Tipo: ${sessao.tipoSessao === 'ADMINISTRATIVA' ? 'Sessão Administrativa' : 'Sessão de Julgamento'}`
+            )}
           </p>
         </div>
         <div className="flex gap-2">
@@ -391,281 +396,314 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
         </Card>
       </div>
 
-      {/* Progresso do Julgamento */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Progresso do Julgamento
-          </CardTitle>
-          <CardDescription>
-            {progresso.julgados} de {progresso.total} processos julgados ({progresso.percentual}%)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div
-                className="bg-blue-600 h-3 rounded-full transition-all duration-300"
-                style={{ width: `${progresso.percentual}%` }}
-              />
-            </div>
-            <div className="grid grid-cols-6 gap-3 text-center">
-              <div>
-                <p className="text-xl font-bold text-gray-600">{progresso.contadores.pendentes}</p>
-                <p className="text-xs text-gray-600">Pendentes</p>
-              </div>
-              <div>
-                <p className="text-xl font-bold text-red-600">{progresso.contadores.suspensos}</p>
-                <p className="text-xs text-gray-600">Suspensos</p>
-              </div>
-              <div>
-                <p className="text-xl font-bold text-purple-600">{progresso.contadores.diligencias}</p>
-                <p className="text-xs text-gray-600">Diligências</p>
-              </div>
-              <div>
-                <p className="text-xl font-bold text-blue-600">{progresso.contadores.vistas}</p>
-                <p className="text-xs text-gray-600">Vistas</p>
-              </div>
-              <div>
-                <p className="text-xl font-bold text-amber-600">{progresso.contadores.negociacao}</p>
-                <p className="text-xs text-gray-600">Negociação</p>
-              </div>
-              <div>
-                <p className="text-xl font-bold text-green-600">{progresso.contadores.julgados}</p>
-                <p className="text-xs text-gray-600">Julgados</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Processos da Pauta */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Processos para Julgamento</CardTitle>
-          <CardDescription>
-            Lista de processos incluídos nesta sessão ordenados por ordem de julgamento
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {sessao.pauta.processos.map((processoPauta) => {
-              const decisao = sessao.decisoes.find(d => d.processoId === processoPauta.processo.id)
-              const isJulgado = !!decisao
-              const cardBackground = getCardBackground(decisao)
-              
-
-              return (
+      {/* Progresso do Julgamento - Apenas para Sessões de Julgamento */}
+      {sessao.pauta && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Progresso do Julgamento
+            </CardTitle>
+            <CardDescription>
+              {progresso.julgados} de {progresso.total} processos julgados ({progresso.percentual}%)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="w-full bg-gray-200 rounded-full h-3">
                 <div
-                  key={processoPauta.processo.id}
-                  className={`border rounded-lg p-4 ${cardBackground}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                        isJulgado ?
-                          getTipoResultadoInfo(decisao.tipoResultado).color
-                          : 'bg-blue-100 text-blue-800'
-                        }`}>
-                        {processoPauta.ordem}
-                      </span>
-                      <div>
-                        <Link
-                          href={`/processos/${processoPauta.processo.id}`}
-                          className="font-medium hover:text-blue-600"
-                        >
-                          {processoPauta.processo.numero}
-                        </Link>
-                        <p className="text-sm text-gray-600">{processoPauta.processo.contribuinte.nome}</p>
-                        {processoPauta.relator && (
-                          <p className="text-sm text-blue-600">Relator: {processoPauta.relator}</p>
-                        )}
-                        {processoPauta.revisores && Array.isArray(processoPauta.revisores) && processoPauta.revisores.length > 0 && (
-                          <p className="text-sm text-blue-600">
-                            Revisor{processoPauta.revisores.length > 1 ? 'es' : ''}: {formatarListaNomes(processoPauta.revisores)}
-                          </p>
-                        )}
-                        {processoPauta.distribuidoPara && (
-                          <p className="text-sm text-green-600">Distribuição: {processoPauta.distribuidoPara}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right space-y-2">
-                      {isJulgado ? (
-                        <div className="space-y-2">
-                          {getResultadoBadgeComponent(decisao)}
-                          {canEdit && isActive && (
-                            <div className="flex items-center justify-end gap-2">
-                              <Link
-                                href={`/sessoes/${sessao.id}/decisoes/${decisao.id}/editar`}
-                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                              >
-                                Editar
-                              </Link>
-                              {user.role === 'ADMIN' && (
-                                <ExcluirDecisaoButton 
-                                  sessaoId={sessao.id} 
-                                  decisaoId={decisao.id} 
-                                />
-                              )}
-                            </div>
+                  className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                  style={{ width: `${progresso.percentual}%` }}
+                />
+              </div>
+              <div className="grid grid-cols-6 gap-3 text-center">
+                <div>
+                  <p className="text-xl font-bold text-gray-600">{progresso.contadores.pendentes}</p>
+                  <p className="text-xs text-gray-600">Pendentes</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-red-600">{progresso.contadores.suspensos}</p>
+                  <p className="text-xs text-gray-600">Suspensos</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-purple-600">{progresso.contadores.diligencias}</p>
+                  <p className="text-xs text-gray-600">Diligências</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-blue-600">{progresso.contadores.vistas}</p>
+                  <p className="text-xs text-gray-600">Vistas</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-amber-600">{progresso.contadores.negociacao}</p>
+                  <p className="text-xs text-gray-600">Negociação</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-green-600">{progresso.contadores.julgados}</p>
+                  <p className="text-xs text-gray-600">Julgados</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Processos da Pauta - Apenas para Sessões de Julgamento */}
+      {sessao.pauta && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Processos para Julgamento</CardTitle>
+            <CardDescription>
+              Lista de processos incluídos nesta sessão ordenados por ordem de julgamento
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {sessao.pauta.processos.map((processoPauta) => {
+                const decisao = sessao.decisoes.find(d => d.processoId === processoPauta.processo.id)
+                const isJulgado = !!decisao
+                const cardBackground = getCardBackground(decisao)
+
+
+                return (
+                  <div
+                    key={processoPauta.processo.id}
+                    className={`border rounded-lg p-4 ${cardBackground}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isJulgado ?
+                            getTipoResultadoInfo(decisao.tipoResultado).color
+                            : 'bg-blue-100 text-blue-800'
+                          }`}>
+                          {processoPauta.ordem}
+                        </span>
+                        <div>
+                          <Link
+                            href={`/processos/${processoPauta.processo.id}`}
+                            className="font-medium hover:text-blue-600"
+                          >
+                            {processoPauta.processo.numero}
+                          </Link>
+                          <p className="text-sm text-gray-600">{processoPauta.processo.contribuinte.nome}</p>
+                          {processoPauta.relator && (
+                            <p className="text-sm text-blue-600">Relator: {processoPauta.relator}</p>
+                          )}
+                          {processoPauta.revisores && Array.isArray(processoPauta.revisores) && processoPauta.revisores.length > 0 && (
+                            <p className="text-sm text-blue-600">
+                              Revisor{processoPauta.revisores.length > 1 ? 'es' : ''}: {formatarListaNomes(processoPauta.revisores)}
+                            </p>
+                          )}
+                          {processoPauta.distribuidoPara && (
+                            <p className="text-sm text-green-600">Distribuição: {processoPauta.distribuidoPara}</p>
                           )}
                         </div>
-                      ) : (
-                        <Badge variant="outline">Aguardando</Badge>
-                      )}
-                      {canEdit && !isJulgado && isActive && (
-                        <div>
-                          <Link href={`/sessoes/${sessao.id}/decisoes/nova?processo=${processoPauta.processo.id}`}>
-                            <Button size="sm" variant="outline" className="cursor-pointer">
-                              <Gavel className="mr-1 h-3 w-3" />
-                              Julgar
-                            </Button>
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {decisao && (
-                    <div className="mt-3 space-y-2">
-                      <div className="p-3 bg-white rounded border">
-                        <h5 className="text-sm font-medium mb-2">Ata:</h5>
-                        <p className="text-sm text-gray-700">{processoPauta.ataTexto || 'Texto da ata não informado'}</p>
-
-                        {decisao.votos && decisao.votos.length > 0 && (
-                          <div className="mt-3 pt-2 border-t">
-                            <h6 className="text-xs font-medium text-gray-600 mb-3">Votos registrados:</h6>
-
-                            {/* Layout organizado - mesmo da página de nova decisão */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {/* Relatores/Revisores */}
-                              {decisao.votos.filter((voto: VotoDecisao) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto)).length > 0 && (
-                                <Card className="p-3">
-                                  <div className="font-medium text-gray-800 mb-2 text-sm">Relatores/Revisores</div>
-                                  <div className="space-y-1">
-                                    {decisao.votos
-                                      .filter((voto: VotoDecisao) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto))
-                                      .map((voto: VotoDecisao, index: number) => (
-                                        <div key={index} className="flex items-center justify-between text-xs">
-                                          <div className="flex items-center gap-2">
-                                            <Badge variant={voto.tipoVoto === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
-                                              {voto.tipoVoto === 'RELATOR' ? 'Relator' : 'Revisor'}
-                                            </Badge>
-                                            <span className="truncate font-medium">{voto.nomeVotante}</span>
-                                          </div>
-                                          <span className={`font-medium text-xs ${
-                                            voto.acompanhaVoto ? 'text-blue-600' :
-                                            getPosicaoVotoInfo(voto.posicaoVoto || '').color
-                                          }`}>
-                                            {voto.acompanhaVoto
-                                              ? `Acomp. ${voto.acompanhaVoto?.split(' ')[0]}`
-                                              : voto.posicaoVoto}
-                                          </span>
-                                        </div>
-                                      ))}
-                                  </div>
-                                </Card>
-                              )}
-
-                              {/* Conselheiros */}
-                              <Card className="p-3">
-                                <div className="font-medium text-gray-800 mb-3 text-sm">Conselheiros</div>
-                                <div className="max-h-24 overflow-y-auto space-y-1">
-                                  {/* Votos válidos agrupados */}
-                                  {['DEFERIDO', 'INDEFERIDO', 'PARCIAL'].map(posicao => {
-                                    const conselheirosComEssePosicao = decisao.votos
-                                      .filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
-                                      .map((voto: Record<string, unknown>) => voto.nomeVotante)
-
-                                    if (conselheirosComEssePosicao.length === 0) return null
-
-                                    return (
-                                      <div key={posicao} className="text-xs">
-                                        <span className={`font-medium ${getPosicaoVotoInfo(posicao).color}`}>
-                                          {posicao}:
-                                        </span>
-                                        <span className="ml-1 text-gray-700">
-                                          {formatarListaNomes(conselheirosComEssePosicao as string[])}
-                                        </span>
-                                      </div>
-                                    )
-                                  })}
-
-                                  {/* Abstenções agrupadas */}
-                                  {decisao.votos.filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(voto.posicaoVoto as string)).length > 0 && (
-                                    <div className="border-t pt-1 mt-1">
-                                      {['AUSENTE', 'IMPEDIDO', 'ABSTENCAO'].map(posicao => {
-                                        const conselheirosComEssePosicao = decisao.votos
-                                          .filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
-                                          .map((voto: Record<string, unknown>) => voto.nomeVotante)
-
-                                        if (conselheirosComEssePosicao.length === 0) return null
-
-                                        return (
-                                          <div key={posicao} className="text-xs">
-                                            <span className="font-medium text-gray-600">
-                                              {posicao === 'ABSTENCAO' ? 'ABSTENÇÃO' :
-                                               posicao === 'AUSENTE' ? 'AUSENTE' : 'IMPEDIDO'}:
-                                            </span>
-                                            <span className="ml-1 text-gray-600">
-                                              {formatarListaNomes(conselheirosComEssePosicao as string[])}
-                                            </span>
-                                          </div>
-                                        )
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
-                              </Card>
-                            </div>
+                      </div>
+                      <div className="text-right space-y-2">
+                        {isJulgado ? (
+                          <div className="space-y-2">
+                            {getResultadoBadgeComponent(decisao)}
+                            {canEdit && isActive && (
+                              <div className="flex items-center justify-end gap-2">
+                                <Link
+                                  href={`/sessoes/${sessao.id}/decisoes/${decisao.id}/editar`}
+                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                >
+                                  Editar
+                                </Link>
+                                {user.role === 'ADMIN' && (
+                                  <ExcluirDecisaoButton
+                                    sessaoId={sessao.id}
+                                    decisaoId={decisao.id}
+                                  />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <Badge variant="outline">Aguardando</Badge>
+                        )}
+                        {canEdit && !isJulgado && isActive && (
+                          <div>
+                            <Link href={`/sessoes/${sessao.id}/decisoes/nova?processo=${processoPauta.processo.id}`}>
+                              <Button size="sm" variant="outline" className="cursor-pointer">
+                                <Gavel className="mr-1 h-3 w-3" />
+                                Julgar
+                              </Button>
+                            </Link>
                           </div>
                         )}
-
-                        {/* Voto do Presidente se houve empate */}
-                        {sessao.presidente && decisao.votos.find((voto: Record<string, unknown>) =>
-                          voto.conselheiroId === sessao.presidente?.id ||
-                          voto.nomeVotante === sessao.presidente?.nome
-                        ) && (
-                          <Card className="p-3 mt-4 border-yellow-300 bg-yellow-50">
-                            <div className="font-medium text-gray-800 mb-2 text-sm flex items-center gap-2">
-                              ⚖️ Voto de Desempate - Presidente
-                            </div>
-                            <div className="flex items-center justify-between text-xs">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700">
-                                  Presidente
-                                </Badge>
-                                <span className="truncate font-medium">{sessao.presidente.nome}</span>
-                              </div>
-                              <span className={`font-medium text-xs ${
-                                getPosicaoVotoInfo(String(decisao.votos.find((voto: Record<string, unknown>) =>
-                                  voto.conselheiroId === sessao.presidente?.id ||
-                                  voto.nomeVotante === sessao.presidente?.nome
-                                )?.posicaoVoto || '')).color
-                              }`}>
-                                {decisao.votos.find((voto: Record<string, unknown>) =>
-                                  voto.conselheiroId === sessao.presidente?.id ||
-                                  voto.nomeVotante === sessao.presidente?.nome
-                                )?.posicaoVoto}
-                              </span>
-                            </div>
-                          </Card>
-                        )}
-
-                        <p className="text-xs text-gray-500 mt-2">
-                          Registrada em {new Date(decisao.dataDecisao).toLocaleString('pt-BR')}
-                        </p>
                       </div>
                     </div>
-                  )}
+
+                    {decisao && (
+                      <div className="mt-3 space-y-2">
+                        <div className="p-3 bg-white rounded border">
+                          <h5 className="text-sm font-medium mb-2">Ata:</h5>
+                          <p className="text-sm text-gray-700">{processoPauta.ataTexto || 'Texto da ata não informado'}</p>
+
+                          {decisao.votos && decisao.votos.length > 0 && (
+                            <div className="mt-3 pt-2 border-t">
+                              <h6 className="text-xs font-medium text-gray-600 mb-3">Votos registrados:</h6>
+
+                              {/* Layout organizado - mesmo da página de nova decisão */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Relatores/Revisores */}
+                                {decisao.votos.filter((voto: VotoDecisao) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto)).length > 0 && (
+                                  <Card className="p-3">
+                                    <div className="font-medium text-gray-800 mb-2 text-sm">Relatores/Revisores</div>
+                                    <div className="space-y-1">
+                                      {decisao.votos
+                                        .filter((voto: VotoDecisao) => ['RELATOR', 'REVISOR'].includes(voto.tipoVoto))
+                                        .map((voto: VotoDecisao, index: number) => (
+                                          <div key={index} className="flex items-center justify-between text-xs">
+                                            <div className="flex items-center gap-2">
+                                              <Badge variant={voto.tipoVoto === 'RELATOR' ? 'default' : 'secondary'} className="text-xs">
+                                                {voto.tipoVoto === 'RELATOR' ? 'Relator' : 'Revisor'}
+                                              </Badge>
+                                              <span className="truncate font-medium">{voto.nomeVotante}</span>
+                                            </div>
+                                            <span className={`font-medium text-xs ${voto.acompanhaVoto ? 'text-blue-600' :
+                                                getPosicaoVotoInfo(voto.posicaoVoto || '').color
+                                              }`}>
+                                              {voto.acompanhaVoto
+                                                ? `Acomp. ${voto.acompanhaVoto?.split(' ')[0]}`
+                                                : voto.posicaoVoto}
+                                            </span>
+                                          </div>
+                                        ))}
+                                    </div>
+                                  </Card>
+                                )}
+
+                                {/* Conselheiros */}
+                                <Card className="p-3">
+                                  <div className="font-medium text-gray-800 mb-3 text-sm">Conselheiros</div>
+                                  <div className="max-h-24 overflow-y-auto space-y-1">
+                                    {/* Votos válidos agrupados */}
+                                    {['DEFERIDO', 'INDEFERIDO', 'PARCIAL'].map(posicao => {
+                                      const conselheirosComEssePosicao = decisao.votos
+                                        .filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                        .map((voto: Record<string, unknown>) => voto.nomeVotante)
+
+                                      if (conselheirosComEssePosicao.length === 0) return null
+
+                                      return (
+                                        <div key={posicao} className="text-xs">
+                                          <span className={`font-medium ${getPosicaoVotoInfo(posicao).color}`}>
+                                            {posicao}:
+                                          </span>
+                                          <span className="ml-1 text-gray-700">
+                                            {formatarListaNomes(conselheirosComEssePosicao as string[])}
+                                          </span>
+                                        </div>
+                                      )
+                                    })}
+
+                                    {/* Abstenções agrupadas */}
+                                    {decisao.votos.filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && ['ABSTENCAO', 'AUSENTE', 'IMPEDIDO'].includes(voto.posicaoVoto as string)).length > 0 && (
+                                      <div className="border-t pt-1 mt-1">
+                                        {['AUSENTE', 'IMPEDIDO', 'ABSTENCAO'].map(posicao => {
+                                          const conselheirosComEssePosicao = decisao.votos
+                                            .filter((voto: Record<string, unknown>) => voto.tipoVoto === 'CONSELHEIRO' && voto.posicaoVoto === posicao)
+                                            .map((voto: Record<string, unknown>) => voto.nomeVotante)
+
+                                          if (conselheirosComEssePosicao.length === 0) return null
+
+                                          return (
+                                            <div key={posicao} className="text-xs">
+                                              <span className="font-medium text-gray-600">
+                                                {posicao === 'ABSTENCAO' ? 'ABSTENÇÃO' :
+                                                  posicao === 'AUSENTE' ? 'AUSENTE' : 'IMPEDIDO'}:
+                                              </span>
+                                              <span className="ml-1 text-gray-600">
+                                                {formatarListaNomes(conselheirosComEssePosicao as string[])}
+                                              </span>
+                                            </div>
+                                          )
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                </Card>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Voto do Presidente se houve empate */}
+                          {sessao.presidente && decisao.votos.find((voto: Record<string, unknown>) =>
+                            voto.conselheiroId === sessao.presidente?.id ||
+                            voto.nomeVotante === sessao.presidente?.nome
+                          ) && (
+                              <Card className="p-3 mt-4 border-yellow-300 bg-yellow-50">
+                                <div className="font-medium text-gray-800 mb-2 text-sm flex items-center gap-2">
+                                  ⚖️ Voto de Desempate - Presidente
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700">
+                                      Presidente
+                                    </Badge>
+                                    <span className="truncate font-medium">{sessao.presidente.nome}</span>
+                                  </div>
+                                  <span className={`font-medium text-xs ${getPosicaoVotoInfo(String(decisao.votos.find((voto: Record<string, unknown>) =>
+                                    voto.conselheiroId === sessao.presidente?.id ||
+                                    voto.nomeVotante === sessao.presidente?.nome
+                                  )?.posicaoVoto || '')).color
+                                    }`}>
+                                    {decisao.votos.find((voto: Record<string, unknown>) =>
+                                      voto.conselheiroId === sessao.presidente?.id ||
+                                      voto.nomeVotante === sessao.presidente?.nome
+                                    )?.posicaoVoto}
+                                  </span>
+                                </div>
+                              </Card>
+                            )}
+
+                          <p className="text-xs text-gray-500 mt-2">
+                            Registrada em {new Date(decisao.dataDecisao).toLocaleString('pt-BR')}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Seção de Agenda para Sessões Administrativas */}
+      {sessao.tipoSessao === 'ADMINISTRATIVA' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Agenda da Sessão</CardTitle>
+            <CardDescription>
+              Assuntos tratados nesta sessão administrativa
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {sessao.agenda ? (
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-gray-700 whitespace-pre-wrap">{sessao.agenda}</p>
                 </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+              ) : (
+                <p className="text-gray-500 italic">Nenhuma agenda específica foi definida para esta sessão.</p>
+              )}
+
+              {canEdit && isActive && (
+                <div className="flex gap-2 pt-4 border-t">
+                  <EditarAgendaSessaoForm
+                    sessaoId={sessao.id}
+                    currentAgenda={sessao.agenda || ''}
+                  />
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
     </div>
   )

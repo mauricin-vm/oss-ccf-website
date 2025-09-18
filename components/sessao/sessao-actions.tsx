@@ -33,9 +33,10 @@ interface SessaoActionsProps {
     id: string
     dataFim: Date | null
     decisoes: Array<{ id: string }>
-    pauta: {
+    pauta?: {
       processos: Array<{ id: string }>
-    }
+    } | null
+    tipoSessao?: string
   }
 }
 
@@ -46,9 +47,15 @@ export default function SessaoActions({ sessao }: SessaoActionsProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   const isActive = !sessao.dataFim
-  const totalProcessos = sessao.pauta.processos.length
+  const totalProcessos = sessao.pauta?.processos.length || 0
   const processosJulgados = sessao.decisoes.length
-  const canFinalize = totalProcessos > 0 && processosJulgados === totalProcessos && isActive
+
+  // Para sessões de julgamento, pode finalizar quando todos os processos foram julgados
+  // Para sessões administrativas, pode finalizar a qualquer momento
+  const canFinalize = isActive && (
+    sessao.tipoSessao === 'ADMINISTRATIVA' ||
+    (totalProcessos > 0 && processosJulgados === totalProcessos)
+  )
   const canDelete = sessao.decisoes.length === 0 && isActive
 
   // Se não há nenhuma ação disponível, não mostrar o botão
@@ -145,10 +152,21 @@ export default function SessaoActions({ sessao }: SessaoActionsProps) {
       <AlertDialog open={showFinalizarDialog} onOpenChange={setShowFinalizarDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Finalizar Sessão de Julgamento</AlertDialogTitle>
+            <AlertDialogTitle>
+              Finalizar {sessao.tipoSessao === 'ADMINISTRATIVA' ? 'Sessão Administrativa' : 'Sessão de Julgamento'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja finalizar esta sessão? Todos os {totalProcessos} processos 
-              foram julgados e a sessão será marcada como finalizada.
+              {sessao.tipoSessao === 'ADMINISTRATIVA' ? (
+                <>
+                  Tem certeza que deseja finalizar esta sessão administrativa?
+                  A sessão será marcada como finalizada.
+                </>
+              ) : (
+                <>
+                  Tem certeza que deseja finalizar esta sessão? Todos os {totalProcessos} processos
+                  foram julgados e a sessão será marcada como finalizada.
+                </>
+              )}
               <br /><br />
               <strong>Esta ação não pode ser desfeita.</strong>
             </AlertDialogDescription>
@@ -179,10 +197,20 @@ export default function SessaoActions({ sessao }: SessaoActionsProps) {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Deletar Sessão de Julgamento</AlertDialogTitle>
+            <AlertDialogTitle>
+              Deletar {sessao.tipoSessao === 'ADMINISTRATIVA' ? 'Sessão Administrativa' : 'Sessão de Julgamento'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja deletar esta sessão? A pauta voltará ao status &quot;aberta&quot; 
-              e poderá ser utilizada para criar uma nova sessão.
+              {sessao.tipoSessao === 'ADMINISTRATIVA' ? (
+                <>
+                  Tem certeza que deseja deletar esta sessão administrativa?
+                </>
+              ) : (
+                <>
+                  Tem certeza que deseja deletar esta sessão? A pauta voltará ao status &quot;aberta&quot;
+                  e poderá ser utilizada para criar uma nova sessão.
+                </>
+              )}
               <br /><br />
               <strong>Esta ação não pode ser desfeita.</strong>
             </AlertDialogDescription>
