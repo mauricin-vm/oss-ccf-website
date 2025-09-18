@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Calendar } from '@/components/ui/calendar'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { CalendarIcon, Filter, X, RotateCcw } from 'lucide-react'
+import { CalendarIcon, Filter, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -28,31 +28,31 @@ interface FiltersPanelProps {
   activeFiltersCount: number
 }
 
-export function FiltersPanel({ filters, onFiltersChange, activeFiltersCount }: FiltersPanelProps) {
+export function FiltersPanel({ filters, onFiltersChange }: FiltersPanelProps) {
   const [showStartCalendar, setShowStartCalendar] = useState(false)
   const [showEndCalendar, setShowEndCalendar] = useState(false)
   const startCalendarRef = useRef<HTMLDivElement>(null)
   const endCalendarRef = useRef<HTMLDivElement>(null)
 
-  const handleValueChange = (key: keyof FiltersState, value: any) => {
+  const handleValueChange = (key: keyof FiltersState, value: string[] | Date | number | undefined) => {
     onFiltersChange({
       ...filters,
       [key]: value
     })
   }
 
-  const clearAllFilters = () => {
-    onFiltersChange({
-      dataInicio: undefined,
-      dataFim: undefined,
-      tiposProcesso: [],
-      statusProcesso: [],
-      statusParcelas: [],
-      tiposDecisao: [],
-      valorMinimo: undefined,
-      valorMaximo: undefined
-    })
-  }
+  // const clearAllFilters = () => {
+  //   onFiltersChange({
+  //     dataInicio: undefined,
+  //     dataFim: undefined,
+  //     tiposProcesso: [],
+  //     statusProcesso: [],
+  //     statusParcelas: [],
+  //     tiposDecisao: [],
+  //     valorMinimo: undefined,
+  //     valorMaximo: undefined
+  //   })
+  // }
 
   const hasActiveFilters = (filters.dataInicio || filters.dataFim) ? true : false
   const localActiveFiltersCount = (filters.dataInicio ? 1 : 0) + (filters.dataFim ? 1 : 0)

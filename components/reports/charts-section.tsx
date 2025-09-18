@@ -1,7 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { BarChart3, DollarSign, PieChart } from 'lucide-react'
+import { BarChart3, PieChart } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
 const PieChartResults = dynamic(() => import('@/components/charts/pie-chart-results').then(mod => ({ default: mod.PieChartResults })), {
@@ -14,10 +14,6 @@ const BarChartTipos = dynamic(() => import('@/components/charts/bar-chart-tipos'
   loading: () => <div className="h-80 flex items-center justify-center">Carregando gráfico...</div>
 })
 
-const BarChartResultados = dynamic(() => import('@/components/charts/bar-chart-resultados').then(mod => ({ default: mod.BarChartResultados })), {
-  ssr: false,
-  loading: () => <div className="h-80 flex items-center justify-center">Carregando gráfico...</div>
-})
 
 interface ChartsSectionProps {
   decisoesPorTipo: Array<{

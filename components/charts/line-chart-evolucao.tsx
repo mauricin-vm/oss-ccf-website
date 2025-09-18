@@ -67,7 +67,7 @@ export function LineChartEvolucao({ data }: LineChartEvolucaoProps) {
             tickFormatter={(value) => `R$ ${(value / 1000000).toFixed(1)}M`}
           />
           <Tooltip
-            formatter={(value: number, name: string, props: any) => {
+            formatter={(value: number, name: string, props: { payload?: { acordos?: { valor: number; quantidade: number }; parcelas?: { valor: number; quantidade: number }; total?: { valor: number; quantidade: number }; mes: string } }) => {
               const data = props.payload
               return [
                 <div key="content" className="space-y-2">
@@ -76,15 +76,15 @@ export function LineChartEvolucao({ data }: LineChartEvolucaoProps) {
                   </div>
                   <div className="space-y-1 text-sm">
                     <div>
-                      Acordos: R$ {data.acordos.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      <span className="text-gray-500"> ({data.acordos.quantidade} acordos)</span>
+                      Acordos: R$ {data?.acordos?.valor?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+                      <span className="text-gray-500"> ({data?.acordos?.quantidade || 0} acordos)</span>
                     </div>
                     <div>
-                      Parcelas: R$ {data.parcelas.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      <span className="text-gray-500"> ({data.parcelas.quantidade} parcelas)</span>
+                      Parcelas: R$ {data?.parcelas?.valor?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+                      <span className="text-gray-500"> ({data?.parcelas?.quantidade || 0} parcelas)</span>
                     </div>
                     <div className="border-t pt-1">
-                      Total de Itens: {data.total.quantidade}
+                      Total de Itens: {data?.total?.quantidade || 0}
                     </div>
                   </div>
                 </div>,

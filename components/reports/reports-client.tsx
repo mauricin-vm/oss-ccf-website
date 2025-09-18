@@ -20,28 +20,65 @@ import { FiltersPanel } from '@/components/reports/filters-panel'
 import { useReportFilters } from '@/hooks/use-report-filters'
 
 interface ReportsClientProps {
-  initialData: any
-  relatóriosRecentes: any
+  initialData: {
+    totais: {
+      processos: number
+      pautas: number
+      sessoes: number
+      acordos: number
+    }
+    parcelas: {
+      total: number
+      abertas: number
+      vencidas: number
+      pagas: number
+    }
+    processosPorTipo: Array<{ tipo: string; _count: { id: number } }>
+    processosPorStatus: Array<{ status: string; _count: { id: number } }>
+    sessoesAtivas: number
+    acordosVencidos: number
+    valores: {
+      totalAcordos: number
+      recebido: number
+    }
+    decisoesPorTipo: Array<{ tipoDecisao: string | null; _count: { id: number } }>
+    valoresPorTipoProcesso: Array<{ tipo: string; _count: number; _sum: { valorTotal: number } }>
+    valoresPorResultado: Array<{ tipoDecisao: string | null; valorTotal: number }>
+    evolucaoMensal: Array<{
+      mes: number
+      ano: number
+      valor: number
+      acordos: { valor: number; quantidade: number }
+      parcelas: { valor: number; quantidade: number }
+      total: { valor: number; quantidade: number }
+    }>
+  }
+  relatóriosRecentes: {
+    processosRecentes: number
+    acordosRecentes: number
+    pagamentosRecentes: number
+    sessoesRecentes: number
+  }
 }
 
 export function ReportsClient({ initialData, relatóriosRecentes }: ReportsClientProps) {
-  const { filters, setFilters, activeFiltersCount, data: dashboardData, loading } = useReportFilters(initialData)
+  const { filters, setFilters, activeFiltersCount, data: dashboardData } = useReportFilters(initialData)
 
-  const getStatusProcessoLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      'RECEPCIONADO': 'Recepcionado',
-      'EM_ANALISE': 'Em Análise',
-      'EM_PAUTA': 'Em Pauta',
-      'SUSPENSO': 'Suspenso',
-      'PEDIDO_VISTA': 'Pedido Vista',
-      'PEDIDO_DILIGENCIA': 'Pedido Diligência',
-      'EM_NEGOCIACAO': 'Em Negociação',
-      'JULGADO': 'Julgado',
-      'EM_CUMPRIMENTO': 'Em Cumprimento',
-      'CONCLUIDO': 'Concluído'
-    }
-    return labels[status] || status
-  }
+  // const getStatusProcessoLabel = (status: string) => {
+  //   const labels: Record<string, string> = {
+  //     'RECEPCIONADO': 'Recepcionado',
+  //     'EM_ANALISE': 'Em Análise',
+  //     'EM_PAUTA': 'Em Pauta',
+  //     'SUSPENSO': 'Suspenso',
+  //     'PEDIDO_VISTA': 'Pedido Vista',
+  //     'PEDIDO_DILIGENCIA': 'Pedido Diligência',
+  //     'EM_NEGOCIACAO': 'Em Negociação',
+  //     'JULGADO': 'Julgado',
+  //     'EM_CUMPRIMENTO': 'Em Cumprimento',
+  //     'CONCLUIDO': 'Concluído'
+  //   }
+  //   return labels[status] || status
+  // }
 
   const getTipoProcessoLabel = (tipo: string) => {
     const labels: Record<string, string> = {
@@ -61,14 +98,14 @@ export function ReportsClient({ initialData, relatóriosRecentes }: ReportsClien
     return colors[tipo] || 'bg-gray-100 text-gray-800'
   }
 
-  const getTipoDecisaoLabel = (tipo: string) => {
-    const labels: Record<string, string> = {
-      'DEFERIDO': 'Deferido',
-      'INDEFERIDO': 'Indeferido',
-      'PARCIAL': 'Deferido Parcial'
-    }
-    return labels[tipo] || tipo
-  }
+  // const getTipoDecisaoLabel = (tipo: string) => {
+  //   const labels: Record<string, string> = {
+  //     'DEFERIDO': 'Deferido',
+  //     'INDEFERIDO': 'Indeferido',
+  //     'PARCIAL': 'Deferido Parcial'
+  //   }
+  //   return labels[tipo] || tipo
+  // }
 
   const totalAcordos = Number(activeFiltersCount > 0
     ? (dashboardData.valores?.totalAcordos || 0)
@@ -226,7 +263,7 @@ export function ReportsClient({ initialData, relatóriosRecentes }: ReportsClien
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {(dashboardData.valoresPorTipoProcesso || []).map((item: any) => (
+              {(dashboardData.valoresPorTipoProcesso || []).map((item: { tipo: string; _count: number; _sum: { valorTotal: number } }) => (
                 <div key={item.tipo} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Badge className={getTipoProcessoColor(item.tipo)}>
@@ -303,13 +340,14 @@ export function ReportsClient({ initialData, relatóriosRecentes }: ReportsClien
       {/* Gráficos */}
       <ChartsSection
         decisoesPorTipo={dashboardData.decisoesPorTipo || initialData.decisoesPorTipo || []}
-        valoresPorTipoProcesso={(dashboardData.valoresPorTipoProcesso || initialData.valoresPorTipoProcesso || []).map((item: any) => ({
-          ...item,
+        valoresPorTipoProcesso={(dashboardData.valoresPorTipoProcesso || initialData.valoresPorTipoProcesso || []).map((item: { tipo: string; _count: number; _sum: { valorTotal: number } }) => ({
+          tipo: item.tipo as 'COMPENSACAO' | 'DACAO_PAGAMENTO' | 'TRANSACAO_EXCEPCIONAL',
+          _count: item._count,
           _sum: {
             valorTotal: Number(item._sum.valorTotal)
           }
         }))}
-        valoresPorResultado={(dashboardData.valoresPorResultado || initialData.valoresPorResultado || []).map((item: any) => ({
+        valoresPorResultado={(dashboardData.valoresPorResultado || initialData.valoresPorResultado || []).map((item: { tipoDecisao: string | null; valorTotal: number }) => ({
           ...item,
           valorTotal: Number(item.valorTotal)
         }))}
@@ -384,7 +422,7 @@ export function ReportsClient({ initialData, relatóriosRecentes }: ReportsClien
               ].map((stage, index) => {
                 const count = stage.statuses.reduce((total, status) => {
                   const processoData = (dashboardData.processosPorStatus || initialData.processosPorStatus || [])
-                    .find((p: any) => p.status === status)
+                    .find((p: { status: string; _count: { id: number } }) => p.status === status)
                   return total + (processoData?._count.id || 0)
                 }, 0)
 

@@ -3,7 +3,39 @@
 import { useState, useMemo, useEffect } from 'react'
 import { FiltersState } from '@/components/reports/filters-panel'
 
-export function useReportFilters(initialData: any) {
+export function useReportFilters(initialData: {
+  totais: {
+    processos: number
+    pautas: number
+    sessoes: number
+    acordos: number
+  }
+  parcelas: {
+    total: number
+    abertas: number
+    vencidas: number
+    pagas: number
+  }
+  processosPorTipo: Array<{ tipo: string; _count: { id: number } }>
+  processosPorStatus: Array<{ status: string; _count: { id: number } }>
+  sessoesAtivas: number
+  acordosVencidos: number
+  valores: {
+    totalAcordos: number
+    recebido: number
+  }
+  decisoesPorTipo: Array<{ tipoDecisao: string | null; _count: { id: number } }>
+  valoresPorTipoProcesso: Array<{ tipo: string; _count: number; _sum: { valorTotal: number } }>
+  valoresPorResultado: Array<{ tipoDecisao: string | null; valorTotal: number }>
+  evolucaoMensal: Array<{
+    mes: number
+    ano: number
+    valor: number
+    acordos: { valor: number; quantidade: number }
+    parcelas: { valor: number; quantidade: number }
+    total: { valor: number; quantidade: number }
+  }>
+}) {
   const [filters, setFilters] = useState<FiltersState>({
     dataInicio: undefined,
     dataFim: undefined,

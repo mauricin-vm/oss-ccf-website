@@ -72,7 +72,7 @@ export function PieChartResults({ data, values }: PieChartResultsProps) {
               borderRadius: '8px',
               padding: '12px'
             }}
-            formatter={(value: number, name: string, props: any) => {
+            formatter={(value: number, name: string, props: { payload?: { valorTotal?: number } }) => {
               const valorTotal = props.payload?.valorTotal || 0
               return [
                 <div key="content" className="space-y-1">

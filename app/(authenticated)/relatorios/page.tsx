@@ -3,7 +3,7 @@ import { ReportsClient } from '@/components/reports/reports-client'
 
 async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date }) {
   // Criar filtro de período baseado nas datas
-  const dateFilter: any = {}
+  const dateFilter: { createdAt?: { gte?: Date; lte?: Date } } = {}
   if (filters?.dataInicio && filters?.dataFim) {
     dateFilter.createdAt = {
       gte: filters.dataInicio,
@@ -198,7 +198,7 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
       return {
         tipo,
         _count: count,
-        _sum: { valorTotal: tipo === 'TRANSACAO_EXCEPCIONAL' ? (valueSum._sum.valorFinal || 0) : (valueSum._sum.valorTotal || 0) }
+        _sum: { valorTotal: tipo === 'TRANSACAO_EXCEPCIONAL' ? ('valorFinal' in valueSum._sum ? (valueSum._sum.valorFinal || 0) : 0) : ('valorTotal' in valueSum._sum ? (valueSum._sum.valorTotal || 0) : 0) }
       }
     })),
 

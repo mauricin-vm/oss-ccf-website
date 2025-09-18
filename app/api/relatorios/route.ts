@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const dataFim = searchParams.get('dataFim')
 
   // Criar filtro de período baseado nas datas
-  const dateFilter: any = {}
+  const dateFilter: { createdAt?: { gte?: Date; lte?: Date } } = {}
   if (dataInicio && dataFim) {
     dateFilter.createdAt = {
       gte: new Date(dataInicio),
@@ -203,7 +203,7 @@ export async function GET(request: NextRequest) {
         return {
           tipo,
           _count: count,
-          _sum: { valorTotal: tipo === 'TRANSACAO_EXCEPCIONAL' ? (valueSum._sum.valorFinal || 0) : (valueSum._sum.valorTotal || 0) }
+          _sum: { valorTotal: tipo === 'TRANSACAO_EXCEPCIONAL' ? ('valorFinal' in valueSum._sum ? (valueSum._sum.valorFinal || 0) : 0) : ('valorTotal' in valueSum._sum ? (valueSum._sum.valorTotal || 0) : 0) }
         }
       })),
 
@@ -279,13 +279,13 @@ export async function GET(request: NextRequest) {
         const ultimoMes = new Date(endDate.getFullYear(), endDate.getMonth(), 1)
         const primeiroMes = new Date(ultimoMes.getFullYear(), ultimoMes.getMonth() - 11, 1)
 
-        let mesAtual = new Date(primeiroMes)
+        const mesAtual = new Date(primeiroMes)
 
         while (mesAtual <= ultimoMes) {
           const inicioMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1)
           const fimMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0, 23, 59, 59)
 
-          let filtroMes = {
+          const filtroMes = {
             dataAssinatura: {
               gte: inicioMes,
               lte: fimMes
