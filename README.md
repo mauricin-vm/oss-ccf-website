@@ -287,5 +287,5 @@ Para contribuir com o projeto:
 
 ---
 
-**Sistema CCF** - Modernizando a gestão da Câmara de Conciliação Fiscal
+**Sistema CCF** - Modernizando a gestão da Câmara de Conciliação Fiscal<br>
 **Feito por:** Maurício Valente Martins e Tiago Amado Vera Veron
