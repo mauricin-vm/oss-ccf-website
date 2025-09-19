@@ -169,7 +169,7 @@ export async function PUT(
       )
     }
     // Verificar se o processo existe na pauta
-    const processoNaPauta = decisaoExistente.sessao.pauta.processos.find(
+    const processoNaPauta = decisaoExistente.sessao.pauta?.processos.find(
       p => p.processo.id === data.processoId
     )
     if (!processoNaPauta) {
@@ -409,7 +409,7 @@ export async function DELETE(
       )
     }
     // Encontrar o processo na pauta
-    const processoNaPauta = decisaoExistente.sessao.pauta.processos.find(
+    const processoNaPauta = decisaoExistente.sessao.pauta?.processos.find(
       p => p.processo.id === decisaoExistente.processoId
     )
     // Usar transação para garantir consistência

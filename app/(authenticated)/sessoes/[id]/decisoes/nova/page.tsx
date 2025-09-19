@@ -63,7 +63,7 @@ export default async function NovaDecisaoPage({ params }: NovaDecisaoPageProps) 
   }
 
   // Verificar se ainda há processos para julgar
-  const totalProcessos = sessao.pauta.processos.length
+  const totalProcessos = sessao.pauta?.processos.length || 0
   const processosJulgados = sessao.decisoes.length
   
   if (processosJulgados >= totalProcessos) {
@@ -81,7 +81,7 @@ export default async function NovaDecisaoPage({ params }: NovaDecisaoPageProps) 
         <div className="flex-1">
           <h1 className="text-3xl font-bold">Nova Decisão</h1>
           <p className="text-gray-600">
-            Registre a decisão de julgamento para um processo da {sessao.pauta.numero}
+            Registre a decisão de julgamento para um processo da {sessao.pauta?.numero}
           </p>
         </div>
       </div>
@@ -116,7 +116,7 @@ export default async function NovaDecisaoPage({ params }: NovaDecisaoPageProps) 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
               <span className="text-gray-600 block">Pauta:</span>
-              <span className="font-medium">{sessao.pauta.numero}</span>
+              <span className="font-medium">{sessao.pauta?.numero}</span>
             </div>
             <div>
               <span className="text-gray-600 block">Progresso:</span>

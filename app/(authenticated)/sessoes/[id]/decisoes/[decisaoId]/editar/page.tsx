@@ -85,7 +85,7 @@ export default async function EditarDecisaoPage({ params }: EditarDecisaoPagePro
   }
 
   // Buscar o processo na pauta para obter relator e revisores
-  const processoNaPauta = decisao.sessao?.pauta.processos.find(
+  const processoNaPauta = decisao.sessao?.pauta?.processos.find(
     p => p.processo.id === decisao.processoId
   )
 

@@ -208,7 +208,7 @@ export async function POST(
       )
     }
     // Verificar se o processo existe na pauta
-    const processoNaPauta = sessao.pauta.processos.find(
+    const processoNaPauta = sessao.pauta?.processos.find(
       p => p.processo.id === data.processoId
     )
     if (!processoNaPauta) {
@@ -400,7 +400,7 @@ export async function POST(
     })
     const decisao = result
     // Verificar se todos os processos foram julgados
-    const totalProcessos = sessao.pauta.processos.length
+    const totalProcessos = sessao.pauta?.processos.length || 0
     const totalDecisoes = sessao.decisoes.length + 1 // +1 pela decisão que acabamos de criar
     // Log de auditoria
     await prisma.logAuditoria.create({
