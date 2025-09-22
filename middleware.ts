@@ -11,7 +11,7 @@ export default withAuth(
       const originalPath = req.nextUrl.pathname + req.nextUrl.search
       const loginUrl = new URL('/login', req.url)
       loginUrl.searchParams.set('callbackUrl', originalPath)
-      
+
       return NextResponse.redirect(loginUrl)
     }
 
@@ -22,9 +22,9 @@ export default withAuth(
 
     // Rotas de modificação - ADMIN e FUNCIONARIO
     if (
-      (path.includes('/novo') || 
-       path.includes('/editar') || 
-       path.includes('/deletar')) &&
+      (path.includes('/novo') ||
+        path.includes('/editar') ||
+        path.includes('/deletar')) &&
       token?.role === 'VISUALIZADOR'
     ) {
       return NextResponse.redirect(new URL('/dashboard', req.url))

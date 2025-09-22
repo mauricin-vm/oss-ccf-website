@@ -210,6 +210,23 @@ function convertResultadoToEnum(resultado) {
   return 'JULGADO'
 }
 
+// Função para converter decisão para TipoDecisao
+function convertDecisaoToEnum(decisao) {
+  if (!decisao || decisao.trim() === '') {
+    return 'DEFERIDO' // Padrão para casos sem decisão especificada
+  }
+
+  const decisaoNormalizada = normalizeString(decisao)
+
+  if (decisaoNormalizada.includes('indeferido') || decisaoNormalizada.includes('negado')) {
+    return 'INDEFERIDO'
+  } else if (decisaoNormalizada.includes('parcial')) {
+    return 'PARCIAL'
+  } else {
+    return 'DEFERIDO'
+  }
+}
+
 // 1. VERIFICAÇÃO INICIAL DOS DADOS (APENAS CONSELHEIROS)
 async function verificarDadosInicial() {
   try {
@@ -503,6 +520,25 @@ async function criarProcessosFaltantes() {
           }
         })
 
+        // Criar log de auditoria para criação do processo
+        await prisma.logAuditoria.create({
+          data: {
+            usuarioId: usuarioSistema.id,
+            acao: 'CREATE',
+            entidade: 'Processo',
+            entidadeId: novoProcesso.id,
+            dadosNovos: {
+              numero: novoProcesso.numero,
+              tipo: novoProcesso.tipo,
+              contribuinte: contribuinte.nome,
+              dataAbertura: novoProcesso.dataAbertura,
+              migracao: true,
+              observacoes: novoProcesso.observacoes
+            },
+            createdAt: new Date(processoData.dataAbertura)
+          }
+        })
+
         console.log(`✅ Processo criado: ${novoProcesso.numero} (ID: ${novoProcesso.id})`)
 
         // Verificar imediatamente se foi criado corretamente
@@ -652,6 +688,17 @@ async function migrarPautas() {
 
         console.log(`✅ Pauta criada: ${pauta.numero}`)
 
+        // Mapear conselheiros antes de criar ProcessoPauta
+        const conselheirosMap = new Map()
+        for (const procValido of processosValidos) {
+          if (!conselheirosMap.has(procValido.relator)) {
+            conselheirosMap.set(procValido.relator, await findConselheiroByName(procValido.relator))
+          }
+          if (procValido.revisor && procValido.revisor.trim() && !conselheirosMap.has(procValido.revisor)) {
+            conselheirosMap.set(procValido.revisor, await findConselheiroByName(procValido.revisor))
+          }
+        }
+
         // Criar ProcessoPauta para cada processo
         for (let i = 0; i < processosValidos.length; i++) {
           const procValido = processosValidos[i]
@@ -671,16 +718,16 @@ async function migrarPautas() {
             continue
           }
 
-          const relatorConselheiro = await findConselheiroByName(procValido.relator)
-          let revisorConselheiro = null
-          if (procValido.revisor && procValido.revisor.trim()) {
-            revisorConselheiro = await findConselheiroByName(procValido.revisor)
-          }
+          const relatorConselheiro = conselheirosMap.get(procValido.relator)
+          const revisorConselheiro = procValido.revisor && procValido.revisor.trim() ? conselheirosMap.get(procValido.revisor) : null
 
           const revisores = []
           if (revisorConselheiro) {
             revisores.push(revisorConselheiro.nome)
           }
+
+          // Criar ProcessoPauta com resultado da sessão
+          const statusSessaoEnum = convertResultadoToEnum(procValido.resultado)
 
           await prisma.processoPauta.create({
             data: {
@@ -690,7 +737,14 @@ async function migrarPautas() {
               relator: relatorConselheiro ? relatorConselheiro.nome : procValido.relator,
               distribuidoPara: relatorConselheiro ? relatorConselheiro.nome : procValido.relator,
               revisores: revisores,
-              statusSessao: convertResultadoToEnum(procValido.resultado)
+              statusSessao: statusSessaoEnum,
+              // Registrar informações específicas da sessão
+              ataTexto: procValido.textoAta || null,
+              observacoesSessao: procValido.decisao || null,
+              // Campos específicos por tipo de resultado
+              motivoSuspensao: statusSessaoEnum === 'SUSPENSO' ? 'Processo suspenso durante migração de dados' : null,
+              prazoVista: statusSessaoEnum === 'PEDIDO_VISTA' ? dataPauta : null,
+              prazoDiligencia: statusSessaoEnum === 'PEDIDO_DILIGENCIA' ? 15 : null // 15 dias padrão
             }
           })
         }
@@ -712,17 +766,34 @@ async function migrarPautas() {
           }
         })
 
-        // Atualizar status dos processos para JULGADO
-        const processosIds = processosValidos.map(p => p.processo.id)
-        await prisma.processo.updateMany({
-          where: { id: { in: processosIds } },
-          data: { status: 'JULGADO' }
-        })
+        // Atualizar status dos processos baseado no resultado
+        for (const procValido of processosValidos) {
+          const statusEnum = convertResultadoToEnum(procValido.resultado)
+          let novoStatus = 'EM_ANALISE'
+
+          if (statusEnum === 'JULGADO') {
+            novoStatus = 'JULGADO'
+          } else if (statusEnum === 'PEDIDO_VISTA') {
+            novoStatus = 'PEDIDO_VISTA'
+          } else if (statusEnum === 'EM_NEGOCIACAO') {
+            novoStatus = 'EM_NEGOCIACAO'
+          } else if (statusEnum === 'SUSPENSO') {
+            novoStatus = 'SUSPENSO'
+          } else if (statusEnum === 'PEDIDO_DILIGENCIA') {
+            novoStatus = 'PEDIDO_DILIGENCIA'
+          }
+
+          await prisma.processo.update({
+            where: { id: procValido.processo.id },
+            data: { status: novoStatus }
+          })
+        }
 
         // Criar históricos e tramitações
         for (const procValido of processosValidos) {
           const distribucaoInfo = procValido.relator ? ` - Distribuído para: ${procValido.relator}` : ''
 
+          // Histórico de inclusão na pauta
           await prisma.historicoProcesso.create({
             data: {
               processoId: procValido.processo.id,
@@ -734,6 +805,53 @@ async function migrarPautas() {
             }
           })
 
+          // Histórico específico do resultado do julgamento (30 minutos após inclusão na pauta)
+          const dataResultado = new Date(dataPauta.getTime() + 30 * 60 * 1000) // +30 minutos
+          const statusEnum = convertResultadoToEnum(procValido.resultado)
+          let tituloResultado = 'Resultado do julgamento'
+          let descricaoResultado = `Processo julgado na ${numeroPauta} em ${dataPauta.toLocaleDateString('pt-BR')}.`
+
+          if (statusEnum === 'JULGADO') {
+            descricaoResultado += ` Resultado: ${procValido.resultado}`
+            if (procValido.decisao) {
+              descricaoResultado += ` - Decisão: ${procValido.decisao}`
+            }
+            if (procValido.textoAta) {
+              descricaoResultado += ` - Ata: ${procValido.textoAta}`
+            }
+          } else if (statusEnum === 'PEDIDO_VISTA') {
+            tituloResultado = 'Pedido de vista'
+            descricaoResultado += ` Resultado: Pedido de vista solicitado.`
+          } else if (statusEnum === 'EM_NEGOCIACAO') {
+            tituloResultado = 'Processo em negociação'
+            descricaoResultado += ` Resultado: Processo encaminhado para negociação.`
+          } else if (statusEnum === 'SUSPENSO') {
+            tituloResultado = 'Processo suspenso'
+            descricaoResultado += ` Resultado: Processo suspenso.`
+          } else if (statusEnum === 'PEDIDO_DILIGENCIA') {
+            tituloResultado = 'Pedido de diligência'
+            descricaoResultado += ` Resultado: Pedido de diligência solicitado.`
+          }
+
+          if (procValido.relator) {
+            descricaoResultado += ` Relator: ${procValido.relator}.`
+          }
+          if (procValido.revisor) {
+            descricaoResultado += ` Revisor: ${procValido.revisor}.`
+          }
+
+          await prisma.historicoProcesso.create({
+            data: {
+              processoId: procValido.processo.id,
+              usuarioId: usuarioSistema.id,
+              titulo: tituloResultado,
+              descricao: descricaoResultado,
+              tipo: 'JULGAMENTO',
+              createdAt: dataResultado
+            }
+          })
+
+          // Tramitação
           if (procValido.relator) {
             await prisma.tramitacao.create({
               data: {
@@ -742,11 +860,140 @@ async function migrarPautas() {
                 setorOrigem: 'CCF',
                 setorDestino: procValido.relator,
                 dataEnvio: dataPauta,
+                dataRecebimento: dataPauta,
                 prazoResposta: dataPauta,
                 observacoes: `Processo distribuído na ${numeroPauta} para julgamento em ${dataPauta.toLocaleDateString('pt-BR')}. Resultado: ${procValido.resultado}${procValido.revisor ? ` - Revisor: ${procValido.revisor}` : ''}`
               }
             })
           }
+
+          // Para todos os tipos de resultado, criar decisão (não apenas JULGADO)
+          const tipoDecisao = statusEnum === 'JULGADO' ? convertDecisaoToEnum(procValido.decisao) : null
+
+          // Criar decisão para todos os resultados
+          const textoObservacoes = []
+          if (procValido.textoAta && procValido.textoAta.trim()) {
+            textoObservacoes.push(`Ata: ${procValido.textoAta}`)
+          }
+          if (procValido.decisao && procValido.decisao.trim()) {
+            textoObservacoes.push(`Decisão: ${procValido.decisao}`)
+          }
+          textoObservacoes.push(`Processo ${procValido.resultado.toLowerCase()} na ${numeroPauta} em ${dataPauta.toLocaleDateString('pt-BR')}`)
+
+          // Dados específicos por tipo de resultado
+          const dadosDecisao = {
+            processoId: procValido.processo.id,
+            sessaoId: sessao.id,
+            tipoResultado: statusEnum,
+            tipoDecisao: tipoDecisao,
+            observacoes: textoObservacoes.join('. '),
+            dataDecisao: dataResultado,
+            // Campos específicos
+            motivoSuspensao: statusEnum === 'SUSPENSO' ? 'Processo suspenso durante migração de dados' : null,
+            conselheiroPedidoVista: statusEnum === 'PEDIDO_VISTA' && procValido.revisor ? procValido.revisor : null,
+            prazoVista: statusEnum === 'PEDIDO_VISTA' ? dataPauta : null,
+            especificacaoDiligencia: statusEnum === 'PEDIDO_DILIGENCIA' ? 'Diligência solicitada durante migração' : null,
+            prazoDiligencia: statusEnum === 'PEDIDO_DILIGENCIA' ? 15 : null
+          }
+
+          const decisao = await prisma.decisao.create({
+            data: dadosDecisao
+          })
+
+          // Para processos julgados, criar votos
+          if (statusEnum === 'JULGADO') {
+            const relatorConselheiro = conselheirosMap.get(procValido.relator)
+            const revisorConselheiro = procValido.revisor && procValido.revisor.trim() ? conselheirosMap.get(procValido.revisor) : null
+
+            // Criar voto do relator
+            await prisma.voto.create({
+              data: {
+                decisaoId: decisao.id,
+                conselheiroId: relatorConselheiro?.id,
+                tipoVoto: 'RELATOR',
+                nomeVotante: procValido.relator,
+                textoVoto: `Voto do relator: ${tipoDecisao}`,
+                posicaoVoto: tipoDecisao,
+                ordemApresentacao: 1,
+                isPresidente: false
+              }
+            })
+
+            // Criar voto do revisor (se existir)
+            if (revisorConselheiro) {
+              await prisma.voto.create({
+                data: {
+                  decisaoId: decisao.id,
+                  conselheiroId: revisorConselheiro.id,
+                  tipoVoto: 'REVISOR',
+                  nomeVotante: procValido.revisor,
+                  textoVoto: `Voto do revisor acompanhando o relator: ${tipoDecisao}`,
+                  posicaoVoto: tipoDecisao,
+                  acompanhaVoto: 'relator',
+                  ordemApresentacao: 2,
+                  isPresidente: false
+                }
+              })
+            }
+
+            // Criar votos dos conselheiros participantes (todos acompanham o relator)
+            let ordemVoto = revisorConselheiro ? 3 : 2
+            for (const conselheiroId of conselheirosParticipantes) {
+              // Não votar se for o próprio relator ou revisor
+              if (conselheiroId === relatorConselheiro?.id || conselheiroId === revisorConselheiro?.id) {
+                continue
+              }
+
+              const conselheiro = await prisma.conselheiro.findUnique({
+                where: { id: conselheiroId }
+              })
+
+              if (conselheiro) {
+                const isPresidenteVotando = conselheiroId === presidente.id
+
+                await prisma.voto.create({
+                  data: {
+                    decisaoId: decisao.id,
+                    conselheiroId: conselheiroId,
+                    tipoVoto: 'CONSELHEIRO',
+                    nomeVotante: conselheiro.nome,
+                    textoVoto: `Conselheiro acompanha o voto do relator: ${tipoDecisao}`,
+                    posicaoVoto: tipoDecisao,
+                    acompanhaVoto: 'relator',
+                    ordemApresentacao: ordemVoto,
+                    isPresidente: isPresidenteVotando
+                  }
+                })
+                ordemVoto++
+              }
+            }
+
+            console.log(`    📊 Decisão criada com ${ordemVoto - 1} votos registrados`)
+          }
+
+          // Log de auditoria específico do resultado
+          await prisma.logAuditoria.create({
+            data: {
+              usuarioId: usuarioSistema.id,
+              acao: 'UPDATE',
+              entidade: 'Processo',
+              entidadeId: procValido.processo.id,
+              dadosNovos: {
+                numeroProcesso: procValido.processo.numero,
+                resultado: procValido.resultado,
+                decisao: procValido.decisao,
+                textoAta: procValido.textoAta,
+                relator: procValido.relator,
+                revisor: procValido.revisor,
+                statusAnterior: procValido.processo.status,
+                novoStatus: statusEnum,
+                pauta: numeroPauta,
+                dataSessao: dataPauta,
+                migracao: true
+              },
+              createdAt: dataPauta
+            }
+          })
         }
 
         // Criar histórico da pauta
@@ -813,11 +1060,106 @@ async function migrarPautas() {
       }
     }
 
+    // Coletar estatísticas dos resultados
+    const estatisticasResultados = {}
+    const processosComRevisor = []
+    const todosProcessos = []
+    let totalVotosCriados = 0
+    let totalDecisoesCriadas = 0
+
+    // Processar dados para estatísticas
+    for (const ata of sessesComProcessos) {
+      for (const procData of ata.processos) {
+        const resultado = procData.resultado
+        estatisticasResultados[resultado] = (estatisticasResultados[resultado] || 0) + 1
+
+        // Coletar todos os processos
+        todosProcessos.push({
+          numero: procData.numeroprocesso,
+          relator: procData.relator,
+          revisor: procData.revisor && procData.revisor.trim() ? procData.revisor : null,
+          resultado: procData.resultado,
+          ata: ata.numeroanoata,
+          dataAta: ata.dataata
+        })
+
+        // Processos especificamente com revisor
+        if (procData.revisor && procData.revisor.trim()) {
+          processosComRevisor.push({
+            numero: procData.numeroprocesso,
+            relator: procData.relator,
+            revisor: procData.revisor,
+            resultado: procData.resultado,
+            ata: ata.numeroanoata,
+            dataAta: ata.dataata
+          })
+        }
+
+        // Contar decisões e votos que serão criados
+        totalDecisoesCriadas++ // Decisão criada para todos os tipos de resultado
+
+        if (convertResultadoToEnum(resultado) === 'JULGADO') {
+          // Relator sempre vota
+          totalVotosCriados++
+          // Revisor vota se existir
+          if (procData.revisor && procData.revisor.trim()) {
+            totalVotosCriados++
+          }
+          // Conselheiros participantes (estimativa: conselheiros - relator - revisor)
+          const conselheirosParticipantesEstimativa = ata.conselheirosparticipantes ? ata.conselheirosparticipantes.length : 0
+          totalVotosCriados += Math.max(0, conselheirosParticipantesEstimativa - (procData.revisor ? 2 : 1))
+        }
+      }
+    }
+
     console.log(`\n🎉 Migração de pautas concluída!`)
     console.log(`================================`)
     console.log(`✅ Pautas criadas: ${pautasCriadas}`)
     console.log(`📋 Sessões de julgamento criadas: ${pautasCriadas}`)
+    console.log(`⚖️  Decisões criadas: ${totalDecisoesCriadas}`)
+    console.log(`🗳️  Votos registrados: ${totalVotosCriados}`)
     console.log(`❌ Erros: ${erros}`)
+
+    console.log(`\n📊 ESTATÍSTICAS DOS RESULTADOS:`)
+    console.log(`===============================`)
+    Object.entries(estatisticasResultados).forEach(([resultado, count]) => {
+      console.log(`${resultado}: ${count} processos`)
+    })
+
+    // Separar processos com e sem revisor
+    const processosSemRevisor = todosProcessos.filter(p => !p.revisor)
+
+    console.log(`\n📋 RESUMO DE RELATORES E REVISORES:`)
+    console.log(`=====================================`)
+    console.log(`📊 Total de processos: ${todosProcessos.length}`)
+    console.log(`👤 Processos apenas com relator: ${processosSemRevisor.length}`)
+    console.log(`👥 Processos com relator e revisor: ${processosComRevisor.length}`)
+
+    if (processosComRevisor.length > 0) {
+      console.log(`\n👥 PROCESSOS COM RELATOR E REVISOR (${processosComRevisor.length} encontrados):`)
+      console.log(`====================================================`)
+      processosComRevisor.forEach((proc, index) => {
+        console.log(`\n${index + 1}. Processo: ${proc.numero}`)
+        console.log(`   Ata: ${proc.ata} (${proc.dataAta})`)
+        console.log(`   👤 Relator: ${proc.relator}`)
+        console.log(`   👥 Revisor: ${proc.revisor}`)
+        console.log(`   📋 Resultado: ${proc.resultado}`)
+      })
+      console.log(`\n💡 IMPORTANTE: Verifique se os revisores foram corretamente identificados.`)
+      console.log(`Os revisores são registrados no campo 'revisores' das pautas criadas.`)
+      console.log(`Para processos julgados, ambos (relator e revisor) têm votos registrados.`)
+    }
+
+    if (processosSemRevisor.length > 0) {
+      console.log(`\n👤 PROCESSOS APENAS COM RELATOR (${processosSemRevisor.length} encontrados):`)
+      console.log(`==============================================`)
+      processosSemRevisor.slice(0, 10).forEach((proc, index) => {
+        console.log(`${index + 1}. ${proc.numero} - Relator: ${proc.relator} (${proc.resultado})`)
+      })
+      if (processosSemRevisor.length > 10) {
+        console.log(`... e mais ${processosSemRevisor.length - 10} processos`)
+      }
+    }
 
     // Exibir processos não encontrados detalhadamente
     if (processosNaoEncontradosDetalhados.length > 0) {

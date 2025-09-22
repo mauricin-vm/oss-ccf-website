@@ -214,7 +214,16 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
             "w-full text-gray-400 hover:bg-gray-800 hover:text-white cursor-pointer transition-all duration-300",
             isCollapsed ? "justify-center px-2" : "justify-start"
           )}
-          onClick={() => signOut({ callbackUrl: '/login' })}
+          onClick={async () => {
+            try {
+              // Limpar cookies manualmente primeiro
+              await fetch('/api/auth/signout-all', { method: 'POST' })
+            } catch (error) {
+              console.error('Erro ao limpar cookies:', error)
+            }
+            // Fazer signOut do NextAuth
+            await signOut({ callbackUrl: '/login', redirect: true })
+          }}
           title={isCollapsed ? 'Sair' : undefined}
         >
           <LogOut className={cn("h-4 w-4", !isCollapsed && "mr-2")} />

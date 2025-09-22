@@ -97,11 +97,10 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: process.env.NODE_ENV === 'development'
-        // secure: false // Forçar false para HTTP
+        secure: process.env.NODE_ENV === 'production'
       }
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: false // Debug desabilitado para produção
+  debug: process.env.NODE_ENV === 'development'
 }

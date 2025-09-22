@@ -80,13 +80,9 @@ function LoginContent() {
       if (result?.error) {
         setError('Email ou senha inválidos')
       } else if (result?.ok) {
-        // Login bem-sucedido, redirecionar manualmente
+        // Login bem-sucedido, usar router para redirecionamento suave
         const redirectUrl = getRedirectUrl()
-        
-        // Usar um pequeno delay para garantir que a sessão seja estabelecida
-        setTimeout(() => {
-          window.location.href = redirectUrl
-        }, 100)
+        router.push(redirectUrl)
       }
     } catch (error) {
       console.error('Login error:', error)
@@ -133,9 +129,9 @@ function LoginContent() {
       if (result?.error) {
         setError('Conta criada, mas erro ao fazer login. Tente fazer login manualmente.')
       } else if (result?.ok) {
-        // Login bem-sucedido após registro, redirecionar manualmente
+        // Login bem-sucedido após registro, usar router para redirecionamento suave
         const redirectUrl = getRedirectUrl()
-        window.location.href = redirectUrl
+        router.push(redirectUrl)
       }
     } catch (error) {
       setRegisterError(error instanceof Error ? error.message : 'Erro ao criar conta')
