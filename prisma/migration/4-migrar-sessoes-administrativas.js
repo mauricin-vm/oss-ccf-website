@@ -40,7 +40,9 @@ async function main() {
       }
 
       // Converter data
-      const dataInicio = new Date(ata.dataata)
+      const [recDia, recMes, recAno] = ata.dataata.split("/"); // "23/09/2025"
+      const dataInicio = new Date(`${recAno}-${recMes}-${recDia}`);
+      dataInicio.setHours(12, 0, 0, 0)
       if (isNaN(dataInicio.getTime())) {
         throw new Error(`Data inválida: ${ata.dataata}`)
       }

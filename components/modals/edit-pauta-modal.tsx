@@ -15,8 +15,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, AlertCircle, Calendar } from 'lucide-react'
+import { Loader2, Calendar } from 'lucide-react'
+import { toast } from 'sonner'
 
 const editPautaSchema = z.object({
   numero: z.string().min(1, 'Número da pauta é obrigatório'),
@@ -44,12 +44,12 @@ export default function EditPautaModal({
   onSuccess,
   pauta
 }: EditPautaModalProps) {
-  const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   const {
     register,
     handleSubmit,
+    setValue,
     reset,
     formState: { errors }
   } = useForm<EditPautaInput>({
@@ -58,7 +58,8 @@ export default function EditPautaModal({
       numero: pauta.numero,
       dataPauta: new Date(pauta.dataPauta).toISOString().split('T')[0],
       observacoes: pauta.observacoes || ''
-    }
+    },
+    shouldFocusError: false // Desabilitar foco automático para controlarmos manualmente
   })
 
   // Reset form when pauta changes
@@ -72,9 +73,44 @@ export default function EditPautaModal({
     }
   }, [pauta, reset])
 
+  // Função para lidar com erros de validação do formulário
+  const onInvalid = (errors: any) => {
+    // Ordem lógica dos campos no formulário
+    const fieldOrder = [
+      'numero',
+      'dataPauta',
+      'observacoes'
+    ]
+
+    // Procurar pelo primeiro erro na ordem dos campos
+    for (const field of fieldOrder) {
+      if (errors[field]?.message) {
+        toast.warning(errors[field].message)
+
+        // Focar no campo com erro após um pequeno delay
+        setTimeout(() => {
+          const element = document.getElementById(field)
+          if (element) {
+            element.focus()
+            element.style.borderColor = '#ef4444'
+            element.style.boxShadow = '0 0 0 1px #ef4444'
+          }
+        }, 100)
+        break
+      }
+    }
+  }
+
+  const clearFieldError = (fieldId: string) => {
+    const element = document.getElementById(fieldId)
+    if (element) {
+      element.style.borderColor = ''
+      element.style.boxShadow = ''
+    }
+  }
+
   const onSubmit = async (data: EditPautaInput) => {
     setIsLoading(true)
-    setError(null)
 
     try {
       const response = await fetch(`/api/pautas/${pauta.id}`, {
@@ -97,10 +133,11 @@ export default function EditPautaModal({
         throw new Error(errorData.error || 'Erro ao atualizar pauta')
       }
 
+      toast.success('Pauta atualizada com sucesso!')
       onSuccess()
       onClose()
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Erro inesperado')
+      toast.error(error instanceof Error ? error.message : 'Erro inesperado')
     } finally {
       setIsLoading(false)
     }
@@ -109,7 +146,6 @@ export default function EditPautaModal({
   const handleClose = () => {
     if (!isLoading) {
       onClose()
-      setError(null)
     }
   }
 
@@ -123,25 +159,22 @@ export default function EditPautaModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+        <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-4" noValidate>
 
           <div className="space-y-2">
             <Label htmlFor="numero">Número da Pauta <span className="text-red-500">*</span></Label>
             <Input
               id="numero"
               {...register('numero')}
+              onChange={(e) => {
+                setValue('numero', e.target.value)
+                clearFieldError('numero')
+              }}
+              onFocus={() => clearFieldError('numero')}
               disabled={isLoading}
               placeholder="Ex: Pauta 11-09-2025"
+              className={errors.numero ? 'border-red-500 focus-visible:ring-red-500' : ''}
             />
-            {errors.numero && (
-              <p className="text-sm text-red-500">{errors.numero.message}</p>
-            )}
           </div>
 
           <div className="space-y-2">
@@ -152,13 +185,15 @@ export default function EditPautaModal({
                 id="dataPauta"
                 type="date"
                 {...register('dataPauta')}
-                className="pl-10"
+                onChange={(e) => {
+                  setValue('dataPauta', e.target.value)
+                  clearFieldError('dataPauta')
+                }}
+                onFocus={() => clearFieldError('dataPauta')}
+                className={`pl-10 ${errors.dataPauta ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                 disabled={isLoading}
               />
             </div>
-            {errors.dataPauta && (
-              <p className="text-sm text-red-500">{errors.dataPauta.message}</p>
-            )}
           </div>
 
           <div className="space-y-2">
@@ -168,11 +203,14 @@ export default function EditPautaModal({
               placeholder="Informações adicionais sobre a pauta..."
               rows={3}
               {...register('observacoes')}
+              onChange={(e) => {
+                setValue('observacoes', e.target.value)
+                clearFieldError('observacoes')
+              }}
+              onFocus={() => clearFieldError('observacoes')}
               disabled={isLoading}
+              className={errors.observacoes ? 'border-red-500 focus-visible:ring-red-500' : ''}
             />
-            {errors.observacoes && (
-              <p className="text-sm text-red-500">{errors.observacoes.message}</p>
-            )}
           </div>
 
           <div className="flex gap-3 justify-end pt-4">

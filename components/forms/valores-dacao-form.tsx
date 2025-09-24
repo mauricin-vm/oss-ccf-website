@@ -259,6 +259,18 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
     loadValoresExistentes()
   }, [processoId, appendInscricaoOferecida, appendInscricaoCompensar, setValue])
 
+  // Função helper para limpar erros visuais de um campo
+  const clearFieldError = (fieldId: string) => {
+    setTimeout(() => {
+      const element = document.getElementById(fieldId)
+      if (element) {
+        element.style.borderColor = ''
+        element.style.boxShadow = ''
+        element.removeAttribute('data-error')
+      }
+    }, 50)
+  }
+
   // Funções dos modais de Inscrições Oferecidas
   const openInscricaoOferecidaModal = () => {
     setInscricaoOferecidaForm({
@@ -269,6 +281,20 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
       descricao: ''
     })
     setEditingInscricaoOferecida(null)
+
+    // Limpar estilos de erro quando abrir o modal
+    setTimeout(() => {
+      const fieldIds = ['modal-numero-inscricao', 'modal-valor-inscricao']
+      fieldIds.forEach(id => {
+        const element = document.getElementById(id)
+        if (element) {
+          element.style.borderColor = ''
+          element.style.boxShadow = ''
+          element.removeAttribute('data-error')
+        }
+      })
+    }, 100)
+
     setShowInscricaoOferecidaModal(true)
   }
 
@@ -282,15 +308,70 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
       dataVencimento: inscricao.dataVencimento || '',
       descricao: inscricao.descricao || ''
     })
+
+    // Limpar estilos de erro quando abrir o modal para edição
+    setTimeout(() => {
+      const fieldIds = ['modal-numero-inscricao', 'modal-valor-inscricao']
+      fieldIds.forEach(id => {
+        const element = document.getElementById(id)
+        if (element) {
+          element.style.borderColor = ''
+          element.style.boxShadow = ''
+          element.removeAttribute('data-error')
+        }
+      })
+    }, 100)
+
     setShowInscricaoOferecidaModal(true)
   }
 
   const handleSaveInscricaoOferecida = () => {
+    // Validar campos na ordem: numeroInscricao -> valor
+    const errors: string[] = []
+    let firstErrorField: string | null = null
+
+    // Validar número da inscrição
+    if (!inscricaoOferecidaForm.numeroInscricao.trim()) {
+      errors.push('Número da inscrição é obrigatório')
+      if (!firstErrorField) firstErrorField = 'modal-numero-inscricao'
+    }
+
+    // Validar valor
     const valor = parseCurrencyToNumber(inscricaoOferecidaForm.valor)
-    if (!inscricaoOferecidaForm.numeroInscricao || valor <= 0) {
-      toast.error('Preencha todos os campos obrigatórios')
+    if (valor <= 0) {
+      errors.push('Valor é obrigatório e deve ser maior que zero')
+      if (!firstErrorField) firstErrorField = 'modal-valor-inscricao'
+    }
+
+    // Se houver erros, mostrar toast e focar no primeiro campo com erro
+    if (errors.length > 0) {
+      toast.warning(errors[0]) // Mostrar apenas o primeiro erro
+
+      if (firstErrorField) {
+        setTimeout(() => {
+          const element = document.getElementById(firstErrorField!)
+          if (element) {
+            element.focus()
+            // Aplicar classes de erro com !important via style para garantir que funcionem
+            element.style.borderColor = '#ef4444'
+            element.style.boxShadow = '0 0 0 1px #ef4444'
+            element.setAttribute('data-error', 'true')
+          }
+        }, 100)
+      }
       return
     }
+
+    // Limpar estilos de erro dos campos
+    const fieldIds = ['modal-numero-inscricao', 'modal-valor-inscricao']
+    fieldIds.forEach(id => {
+      const element = document.getElementById(id)
+      if (element) {
+        element.style.borderColor = ''
+        element.style.boxShadow = ''
+        element.removeAttribute('data-error')
+      }
+    })
 
     const inscricaoData = {
       numeroInscricao: inscricaoOferecidaForm.numeroInscricao,
@@ -326,13 +407,39 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
       debitos: [{ descricao: '', valor: '', dataVencimento: '' }]
     })
     setEditingInscricaoCompensar(null)
+
+    // Limpar estilos de erro quando abrir o modal
+    setTimeout(() => {
+      const mainField = document.getElementById('modal-inscricao-numero')
+      if (mainField) {
+        mainField.style.borderColor = ''
+        mainField.style.boxShadow = ''
+        mainField.removeAttribute('data-error')
+      }
+
+      // Limpar campos de débitos (normalmente 1 no início)
+      const fieldIds = [
+        'modal-debito-descricao-0',
+        'modal-debito-valor-0',
+        'modal-debito-vencimento-0'
+      ]
+      fieldIds.forEach(id => {
+        const element = document.getElementById(id)
+        if (element) {
+          element.style.borderColor = ''
+          element.style.boxShadow = ''
+          element.removeAttribute('data-error')
+        }
+      })
+    }, 100)
+
     setShowInscricaoCompensarModal(true)
   }
 
   const openEditInscricaoCompensarModal = (index: number) => {
     const inscricao = watch(`inscricoesCompensar.${index}`)
     setEditingInscricaoCompensar({ index, inscricao })
-    setInscricaoCompensarForm({
+    const formData = {
       numeroInscricao: inscricao.numeroInscricao,
       tipoInscricao: inscricao.tipoInscricao,
       debitos: (inscricao.debitos as DebitoFormData[])?.map((d: DebitoFormData) => ({
@@ -340,7 +447,36 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
         valor: d.valor ? parseFloat(d.valor.toString()).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
         dataVencimento: d.dataVencimento || ''
       })) || [{ descricao: '', valor: '', dataVencimento: '' }]
-    })
+    }
+    setInscricaoCompensarForm(formData)
+
+    // Limpar estilos de erro quando abrir o modal para edição
+    setTimeout(() => {
+      const mainField = document.getElementById('modal-inscricao-numero')
+      if (mainField) {
+        mainField.style.borderColor = ''
+        mainField.style.boxShadow = ''
+        mainField.removeAttribute('data-error')
+      }
+
+      // Limpar campos de débitos baseado no número de débitos existentes
+      for (let i = 0; i < formData.debitos.length; i++) {
+        const fieldIds = [
+          `modal-debito-descricao-${i}`,
+          `modal-debito-valor-${i}`,
+          `modal-debito-vencimento-${i}`
+        ]
+        fieldIds.forEach(id => {
+          const element = document.getElementById(id)
+          if (element) {
+            element.style.borderColor = ''
+            element.style.boxShadow = ''
+            element.removeAttribute('data-error')
+          }
+        })
+      }
+    }, 100)
+
     setShowInscricaoCompensarModal(true)
   }
 
@@ -365,20 +501,97 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
   }
 
   const handleSaveInscricaoCompensar = () => {
-    if (!inscricaoCompensarForm.numeroInscricao) {
-      toast.error('Número da inscrição é obrigatório')
+    // Validar campos na ordem: numeroInscricao -> débitos
+    const errors: string[] = []
+    let firstErrorField: string | null = null
+
+    // Validar número da inscrição
+    if (!inscricaoCompensarForm.numeroInscricao.trim()) {
+      errors.push('Número da inscrição é obrigatório')
+      if (!firstErrorField) firstErrorField = 'modal-inscricao-numero'
+    }
+
+    // Validar débitos - pelo menos um débito completo
+    let hasValidDebito = false
+    let firstDebitoError: string | null = null
+
+    for (let i = 0; i < inscricaoCompensarForm.debitos.length; i++) {
+      const debito = inscricaoCompensarForm.debitos[i]
+
+      // Verificar se o débito tem todos os campos preenchidos
+      if (debito.descricao.trim() || debito.valor.trim() || debito.dataVencimento.trim()) {
+        // Se começou a preencher, deve completar todos os campos
+        if (!debito.descricao.trim()) {
+          errors.push(`Descrição do débito ${i + 1} é obrigatória`)
+          if (!firstErrorField) firstErrorField = `modal-debito-descricao-${i}`
+        } else if (!debito.valor.trim() || parseCurrencyToNumber(debito.valor) <= 0) {
+          errors.push(`Valor do débito ${i + 1} é obrigatório e deve ser maior que zero`)
+          if (!firstErrorField) firstErrorField = `modal-debito-valor-${i}`
+        } else if (!debito.dataVencimento.trim()) {
+          errors.push(`Data de vencimento do débito ${i + 1} é obrigatória`)
+          if (!firstErrorField) firstErrorField = `modal-debito-vencimento-${i}`
+        } else {
+          hasValidDebito = true
+        }
+      }
+    }
+
+    if (!hasValidDebito) {
+      errors.push('Pelo menos um débito completo deve ser informado')
+      if (!firstErrorField) firstErrorField = 'modal-debito-descricao-0'
+    }
+
+    // Se houver erros, mostrar toast e focar no primeiro campo com erro
+    if (errors.length > 0) {
+      toast.warning(errors[0]) // Mostrar apenas o primeiro erro
+
+      if (firstErrorField) {
+        setTimeout(() => {
+          const element = document.getElementById(firstErrorField!)
+          if (element) {
+            element.focus()
+            element.style.borderColor = '#ef4444'
+            element.style.boxShadow = '0 0 0 1px #ef4444'
+            element.setAttribute('data-error', 'true')
+          }
+        }, 100)
+      }
       return
     }
 
-    // Validar débitos
+    // Limpar estilos de erro de todos os campos
+    const clearAllErrors = () => {
+      // Limpar campo principal
+      const mainField = document.getElementById('modal-inscricao-numero')
+      if (mainField) {
+        mainField.style.borderColor = ''
+        mainField.style.boxShadow = ''
+        mainField.removeAttribute('data-error')
+      }
+
+      // Limpar campos de débitos
+      for (let i = 0; i < inscricaoCompensarForm.debitos.length; i++) {
+        const fieldIds = [
+          `modal-debito-descricao-${i}`,
+          `modal-debito-valor-${i}`,
+          `modal-debito-vencimento-${i}`
+        ]
+        fieldIds.forEach(id => {
+          const element = document.getElementById(id)
+          if (element) {
+            element.style.borderColor = ''
+            element.style.boxShadow = ''
+            element.removeAttribute('data-error')
+          }
+        })
+      }
+    }
+    clearAllErrors()
+
+    // Validar débitos para salvar apenas os completos
     const debitosValidos = inscricaoCompensarForm.debitos.filter(d =>
-      d.descricao && d.valor && d.dataVencimento
+      d.descricao.trim() && d.valor.trim() && d.dataVencimento.trim() && parseCurrencyToNumber(d.valor) > 0
     )
-
-    if (debitosValidos.length === 0) {
-      toast.error('Pelo menos um débito deve ser informado')
-      return
-    }
 
     const inscricaoData = {
       numeroInscricao: inscricaoCompensarForm.numeroInscricao,
@@ -786,7 +999,10 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
               <Input
                 id="modal-numero-inscricao"
                 value={inscricaoOferecidaForm.numeroInscricao}
-                onChange={(e) => setInscricaoOferecidaForm({ ...inscricaoOferecidaForm, numeroInscricao: e.target.value })}
+                onChange={(e) => {
+                  setInscricaoOferecidaForm({ ...inscricaoOferecidaForm, numeroInscricao: e.target.value })
+                  clearFieldError('modal-numero-inscricao')
+                }}
                 placeholder="Ex: IMOB-2024-001"
               />
             </div>
@@ -800,6 +1016,7 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
                 onChange={(e) => {
                   const formatted = formatCurrency(e.target.value)
                   setInscricaoOferecidaForm({ ...inscricaoOferecidaForm, valor: formatted })
+                  clearFieldError('modal-valor-inscricao')
                 }}
                 placeholder="Ex: 25.000,00"
               />
@@ -867,7 +1084,10 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
                 <Input
                   id="modal-inscricao-numero"
                   value={inscricaoCompensarForm.numeroInscricao}
-                  onChange={(e) => setInscricaoCompensarForm({ ...inscricaoCompensarForm, numeroInscricao: e.target.value })}
+                  onChange={(e) => {
+                    setInscricaoCompensarForm({ ...inscricaoCompensarForm, numeroInscricao: e.target.value })
+                    clearFieldError('modal-inscricao-numero')
+                  }}
                   placeholder="Ex: 123.456.789"
                 />
               </div>
@@ -921,36 +1141,43 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
 
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-2">
-                        <Label htmlFor={`debito-desc-${index}`}>Descrição <span className="text-red-500">*</span></Label>
+                        <Label htmlFor={`modal-debito-descricao-${index}`}>Descrição <span className="text-red-500">*</span></Label>
                         <Input
-                          id={`debito-desc-${index}`}
+                          id={`modal-debito-descricao-${index}`}
                           value={debito.descricao}
-                          onChange={(e) => updateDebito(index, 'descricao', e.target.value)}
+                          onChange={(e) => {
+                            updateDebito(index, 'descricao', e.target.value)
+                            clearFieldError(`modal-debito-descricao-${index}`)
+                          }}
                           placeholder="Ex: IPTU 2024"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor={`debito-valor-${index}`}>Valor Lançado <span className="text-red-500">*</span></Label>
+                        <Label htmlFor={`modal-debito-valor-${index}`}>Valor Lançado <span className="text-red-500">*</span></Label>
                         <Input
-                          id={`debito-valor-${index}`}
+                          id={`modal-debito-valor-${index}`}
                           type="text"
                           value={debito.valor}
                           onChange={(e) => {
                             const formatted = formatCurrency(e.target.value)
                             updateDebito(index, 'valor', formatted)
+                            clearFieldError(`modal-debito-valor-${index}`)
                           }}
                           placeholder="Ex: 1.500,00"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor={`debito-vencimento-${index}`}>Data de Vencimento <span className="text-red-500">*</span></Label>
+                        <Label htmlFor={`modal-debito-vencimento-${index}`}>Data de Vencimento <span className="text-red-500">*</span></Label>
                         <Input
-                          id={`debito-vencimento-${index}`}
+                          id={`modal-debito-vencimento-${index}`}
                           type="date"
                           value={debito.dataVencimento}
-                          onChange={(e) => updateDebito(index, 'dataVencimento', e.target.value)}
+                          onChange={(e) => {
+                            updateDebito(index, 'dataVencimento', e.target.value)
+                            clearFieldError(`modal-debito-vencimento-${index}`)
+                          }}
                         />
                       </div>
                     </div>
@@ -980,7 +1207,6 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
               <Button
                 type="button"
                 onClick={handleSaveInscricaoCompensar}
-                disabled={!inscricaoCompensarForm.numeroInscricao || inscricaoCompensarForm.debitos.some(d => !d.descricao || !d.valor || !d.dataVencimento)}
                 className="cursor-pointer"
               >
                 {editingInscricaoCompensar ? 'Atualizar' : 'Adicionar'}

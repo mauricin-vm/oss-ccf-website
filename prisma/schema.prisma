@@ -69,12 +69,6 @@ enum StatusPagamento {
   CANCELADO
 }
 
-enum StatusAcordoDetalhe {
-  PENDENTE
-  APROVADO
-  EXECUTADO
-  CANCELADO
-}
 
 // Models
 model User {
@@ -164,7 +158,6 @@ model Imovel {
   proprietario      Contribuinte    @relation(fields: [proprietarioId], references: [id])
   
   processos         ProcessoImovel[]
-  acordoDetalhes    AcordoDetalhes[]
   
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -197,7 +190,6 @@ model Credito {
   descricao         String?         @db.Text
   
   processos         ProcessoCredito[]
-  acordoDetalhes    AcordoDetalhes[]
   
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -370,118 +362,203 @@ model Decisao {
 
 model Acordo {
   id                String          @id @default(cuid())
-  
+
   processoId        String
   processo          Processo        @relation(fields: [processoId], references: [id])
-  
+
   numeroTermo       String          @unique
+  tipoProcesso      TipoProcesso
   dataAssinatura    DateTime
   dataVencimento    DateTime
-  valorTotal        Decimal         @db.Decimal(15, 2)
-  valorDesconto     Decimal         @default(0) @db.Decimal(15, 2)
-  percentualDesconto Decimal        @default(0) @db.Decimal(5, 2)
-  valorFinal        Decimal         @db.Decimal(15, 2)
-  modalidadePagamento String        // 'avista' ou 'parcelado'
-  numeroParcelas    Int
-  valorEntrada      Decimal?        @db.Decimal(15, 2)
-  status            String          @default("ativo") // ativo, cumprido, vencido, cancelado, renegociado
-  clausulasEspeciais String?        @db.Text
   observacoes       String?         @db.Text
-  
+  status            String          @default("ativo") // ativo, cumprido, vencido, cancelado
+
+  // Relacionamentos com tabelas específicas
   parcelas          Parcela[]
-  detalhes          AcordoDetalhes[]
-  
+  transacao         AcordoTransacao?
+  compensacao       AcordoCompensacao?
+  dacao            AcordoDacao?
+  inscricoes        AcordoInscricao[]
+  creditos          AcordoCredito[]
+
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
+
+  @@index([processoId])
+  @@index([tipoProcesso])
+  @@index([status])
+}
+
+enum TipoParcela {
+  ENTRADA
+  PARCELA_ACORDO
+  PARCELA_HONORARIOS
 }
 
 model Parcela {
   id                String          @id @default(cuid())
-  
+
   acordoId          String
   acordo            Acordo          @relation(fields: [acordoId], references: [id])
-  
+
+  tipoParcela       TipoParcela     @default(PARCELA_ACORDO)
   numero            Int
   valor             Decimal         @db.Decimal(15, 2)
   dataVencimento    DateTime
   dataPagamento     DateTime?
   status            StatusPagamento @default(PENDENTE)
-  
+
   pagamentos        PagamentoParcela[]
-  
+
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
-  
+
   @@index([acordoId])
+  @@index([tipoParcela])
   @@index([status])
 }
 
 model PagamentoParcela {
   id                String          @id @default(cuid())
-  
+
   parcelaId         String
   parcela           Parcela         @relation(fields: [parcelaId], references: [id])
-  
+
   valorPago         Decimal         @db.Decimal(15, 2)
   dataPagamento     DateTime
   formaPagamento    String          // PIX, TED, DINHEIRO, etc
   numeroComprovante String?
   observacoes       String?         @db.Text
-  
+
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
-  
+
   @@index([parcelaId])
   @@index([dataPagamento])
 }
 
-model AcordoDetalhes {
-  id                String          @id @default(cuid())
-  
-  acordoId          String
-  acordo            Acordo          @relation(fields: [acordoId], references: [id], onDelete: Cascade)
-  
-  tipo              String          // 'dacao', 'compensacao', 'transacao'
-  descricao         String
-  valorOriginal     Decimal         @db.Decimal(15, 2)
-  valorNegociado    Decimal         @db.Decimal(15, 2)
-  status            StatusAcordoDetalhe @default(PENDENTE)
-  dataExecucao      DateTime?
-  observacoes       String?         @db.Text
-  
-  // Referencias específicas
-  imovelId          String?
-  imovel            Imovel?         @relation(fields: [imovelId], references: [id])
-  
-  creditoId         String?  
-  credito           Credito?        @relation(fields: [creditoId], references: [id])
-  
-  inscricoes        AcordoInscricao[]
-  
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  
+model AcordoTransacao {
+  id                          String    @id @default(cuid())
+
+  acordoId                    String    @unique
+  acordo                      Acordo    @relation(fields: [acordoId], references: [id])
+
+  valorTotalProposto          Decimal   @db.Decimal(15, 2)
+  metodoPagamento             String    // 'avista' ou 'parcelado'
+  valorEntrada                Decimal?  @db.Decimal(15, 2)
+  quantidadeParcelas          Int
+  valorParcela                Decimal?  @db.Decimal(15, 2)
+  custasAdvocaticias          Decimal?  @db.Decimal(15, 2)
+  honorariosValor             Decimal?  @db.Decimal(15, 2)
+  honorariosMetodoPagamento   String?   // 'avista' ou 'parcelado'
+  honorariosParcelas          Int?
+  honorariosValorParcela      Decimal?  @db.Decimal(15, 2)
+
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+
   @@index([acordoId])
-  @@index([tipo])
-  @@index([status])
+}
+
+model AcordoCompensacao {
+  id                String    @id @default(cuid())
+
+  acordoId          String    @unique
+  acordo            Acordo    @relation(fields: [acordoId], references: [id])
+
+  valorTotalCreditos Decimal  @db.Decimal(15, 2)
+  valorTotalDebitos  Decimal  @db.Decimal(15, 2)
+  valorLiquido       Decimal  @db.Decimal(15, 2)
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([acordoId])
+}
+
+model AcordoDacao {
+  id                    String    @id @default(cuid())
+
+  acordoId              String    @unique
+  acordo                Acordo    @relation(fields: [acordoId], references: [id])
+
+  valorTotalOferecido   Decimal   @db.Decimal(15, 2)
+  valorTotalCompensar   Decimal   @db.Decimal(15, 2)
+  valorLiquido          Decimal   @db.Decimal(15, 2)
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([acordoId])
+}
+
+enum FinalidadeInscricao {
+  INCLUIDA_ACORDO
+  OFERECIDA_COMPENSACAO
+  OFERECIDA_DACAO
+}
+
+enum TipoInscricao {
+  IMOBILIARIA
+  ECONOMICA
 }
 
 model AcordoInscricao {
-  id                String          @id @default(cuid())
+  id                String              @id @default(cuid())
 
-  acordoDetalheId   String
-  acordoDetalhe     AcordoDetalhes  @relation(fields: [acordoDetalheId], references: [id], onDelete: Cascade)
+  acordoId          String
+  acordo            Acordo              @relation(fields: [acordoId], references: [id], onDelete: Cascade)
 
   numeroInscricao   String
-  tipoInscricao     String          // 'imobiliaria', 'economica'
-  valorDebito       Decimal         @db.Decimal(15, 2)
-  valorAbatido      Decimal         @db.Decimal(15, 2)
-  percentualAbatido Decimal         @db.Decimal(5, 2)
-  situacao          String          // 'pendente', 'abatido', 'quitado'
-  descricaoDebitos  Json?           // Lista dos débitos desta inscrição
+  tipoInscricao     TipoInscricao
+  finalidade        FinalidadeInscricao
+  valorTotal        Decimal             @db.Decimal(15, 2)
+  descricao         String?             @db.Text
+  dataVencimento    DateTime?
 
-  @@index([acordoDetalheId])
+  debitos           AcordoDebito[]
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([acordoId])
   @@index([numeroInscricao])
+  @@index([finalidade])
+}
+
+model AcordoDebito {
+  id                String          @id @default(cuid())
+
+  inscricaoId       String
+  inscricao         AcordoInscricao @relation(fields: [inscricaoId], references: [id], onDelete: Cascade)
+
+  descricao         String
+  valorLancado      Decimal         @db.Decimal(15, 2)
+  dataVencimento    DateTime
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([inscricaoId])
+}
+
+model AcordoCredito {
+  id                String    @id @default(cuid())
+
+  acordoId          String
+  acordo            Acordo    @relation(fields: [acordoId], references: [id], onDelete: Cascade)
+
+  tipoCredito       String
+  numeroCredito     String
+  valor             Decimal   @db.Decimal(15, 2)
+  descricao         String?   @db.Text
+  dataVencimento    DateTime?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([acordoId])
+  @@index([numeroCredito])
 }
 
 model Setor {

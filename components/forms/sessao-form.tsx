@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, AlertCircle, Calendar, Users, Search, User } from 'lucide-react'
 import { formatLocalDate } from '@/lib/utils/date'
+import { toast } from 'sonner'
 
 interface SessaoFormProps {
   onSuccess?: () => void
@@ -78,8 +79,48 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
       dataInicio: new Date(),
       presidenteId: '',
       conselheiros: []
-    }
+    },
+    shouldFocusError: false
   })
+
+  // Função para lidar com erros de validação do formulário
+  const onInvalid = (errors: any) => {
+    // Ordem lógica dos campos no formulário
+    const fieldOrder = [
+      'tipoSessao',
+      'agenda',
+      'pautaId',
+      'dataInicio',
+      'presidenteId',
+      'conselheiros'
+    ]
+
+    // Procurar pelo primeiro erro na ordem dos campos
+    for (const field of fieldOrder) {
+      if (errors[field]?.message) {
+        toast.warning(errors[field].message)
+
+        // Focar no campo com erro após um pequeno delay
+        setTimeout(() => {
+          const element = document.getElementById(field)
+          if (element) {
+            element.focus()
+            element.style.borderColor = '#ef4444'
+            element.style.boxShadow = '0 0 0 1px #ef4444'
+          }
+        }, 100)
+        break
+      }
+    }
+  }
+
+  const clearFieldError = (fieldId: string) => {
+    const element = document.getElementById(fieldId)
+    if (element) {
+      element.style.borderColor = ''
+      element.style.boxShadow = ''
+    }
+  }
 
   // Buscar pautas elegíveis
   useEffect(() => {
@@ -92,6 +133,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
         }
       } catch (error) {
         console.error('Erro ao buscar pautas:', error)
+        toast.error('Erro ao carregar pautas disponíveis')
       }
     }
 
@@ -123,6 +165,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
         }
       } catch (error) {
         console.error('Erro ao buscar conselheiros:', error)
+        toast.error('Erro ao carregar lista de conselheiros')
       }
     }
 
@@ -145,6 +188,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
         }
       } catch (error) {
         console.error('Erro ao buscar pauta:', error)
+        toast.error('Erro ao carregar dados da pauta')
       } finally {
         setIsLoadingPauta(false)
       }
@@ -189,13 +233,17 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
 
       const resultado = await response.json()
 
+      toast.success('Sessão iniciada com sucesso!')
+
       if (onSuccess) {
         onSuccess()
       } else {
         router.push(`/sessoes/${resultado.id}`)
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Erro inesperado')
+      const errorMessage = error instanceof Error ? error.message : 'Erro inesperado'
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -239,13 +287,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
   const conselheirosParticipantes = selectedConselheiros.filter(id => id !== selectedPresidente)
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6" noValidate>
 
       {/* Seleção de Tipo de Sessão */}
       <Card>
@@ -324,13 +366,15 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
               <textarea
                 id="agenda"
                 {...register('agenda')}
-                className="w-full p-3 border rounded-lg resize-vertical min-h-[100px]"
+                onChange={(e) => {
+                  setValue('agenda', e.target.value)
+                  clearFieldError('agenda')
+                }}
+                onFocus={() => clearFieldError('agenda')}
+                className={`w-full p-3 border rounded-lg resize-vertical min-h-[100px] ${errors.agenda ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                 placeholder="Descreva os assuntos administrativos que serão tratados..."
                 disabled={isLoading}
               />
-              {errors.agenda && (
-                <p className="text-sm text-red-500">{errors.agenda.message}</p>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -355,10 +399,15 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
+                    id="pautaId"
                     placeholder="Buscar pauta..."
                     value={searchPauta}
-                    onChange={(e) => setSearchPauta(e.target.value)}
-                    className="pl-10"
+                    onChange={(e) => {
+                      setSearchPauta(e.target.value)
+                      clearFieldError('pautaId')
+                    }}
+                    onFocus={() => clearFieldError('pautaId')}
+                    className={`pl-10 ${errors.pautaId ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                     disabled={isLoading}
                   />
                 </div>
@@ -458,9 +507,6 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
                 </div>
               </div>
             )}
-            {errors.pautaId && (
-              <p className="text-sm text-red-500">{errors.pautaId.message}</p>
-            )}
           </CardContent>
         </Card>
       )}
@@ -486,24 +532,33 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
                     {...register('dataInicio', {
                       setValueAs: (value) => value ? new Date(value) : undefined
                     })}
-                    className="pl-10 w-full"
+                    onChange={(e) => {
+                      setValue('dataInicio', new Date(e.target.value))
+                      clearFieldError('dataInicio')
+                    }}
+                    onFocus={() => clearFieldError('dataInicio')}
+                    className={`pl-10 w-full ${errors.dataInicio ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                     disabled={isLoading}
                     defaultValue={new Date().toISOString().slice(0, 16)}
                   />
                 </div>
-                {errors.dataInicio && (
-                  <p className="text-sm text-red-500">{errors.dataInicio.message}</p>
-                )}
               </div>
 
               <div className="space-y-2">
                 <Label>Presidente da Sessão <span className="text-red-500">*</span></Label>
                 <Select
                   value={selectedPresidente || ''}
-                  onValueChange={handlePresidenteChange}
+                  onValueChange={(value) => {
+                    handlePresidenteChange(value)
+                    clearFieldError('presidenteId')
+                  }}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger
+                    id="presidenteId"
+                    className={`w-full ${errors.presidenteId ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    onFocus={() => clearFieldError('presidenteId')}
+                  >
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-gray-400" />
                       <SelectValue placeholder="Selecionar presidente" />
@@ -521,9 +576,6 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
                   <p className="text-xs text-blue-600">
                     Presidente não aparecerá na lista de participantes
                   </p>
-                )}
-                {errors.presidenteId && (
-                  <p className="text-sm text-red-500">{errors.presidenteId.message}</p>
                 )}
               </div>
             </div>
@@ -587,9 +639,6 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
               </div>
             )}
 
-            {errors.conselheiros && (
-              <p className="text-sm text-red-500">{errors.conselheiros.message}</p>
-            )}
           </CardContent>
         </Card>
       )}
@@ -609,11 +658,7 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
         <Button
           type="submit"
           className="cursor-pointer"
-          disabled={
-            isLoading ||
-            selectedConselheiros.length === 0 ||
-            (tipoSessao === 'JULGAMENTO' && !selectedPauta)
-          }
+          disabled={isLoading}
         >
           {isLoading ? (
             <>

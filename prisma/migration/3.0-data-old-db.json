@@ -2,12 +2,12 @@
   "atas": [
     {
       "numeroanoata": "0001/2019",
-      "dataata": "2019-09-20 00:00:00",
+      "dataata": "20/09/2019",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "DENIR DE SOUZA NANTES",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA",
         "CLAUDEMIR DE LIMA SILVA",
@@ -21,7 +21,7 @@
     },
     {
       "numeroanoata": "0002/2019",
-      "dataata": "2019-10-15 00:00:00",
+      "dataata": "15/10/2019",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -35,7 +35,7 @@
     },
     {
       "numeroanoata": "0003/2019",
-      "dataata": "2019-11-07 00:00:00",
+      "dataata": "07/11/2019",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -49,7 +49,7 @@
     },
     {
       "numeroanoata": "0004/2019",
-      "dataata": "2019-11-12 00:00:00",
+      "dataata": "12/11/2019",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -61,7 +61,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "94834/2024-55",
+          "numeroprocesso": "90806/2019-19",
           "relator": "Cecília Saad Cruz Rizkallah",
           "revisor": "",
           "resultado": "Julgado",
@@ -72,11 +72,11 @@
     },
     {
       "numeroanoata": "0005/2019",
-      "dataata": "2019-12-05 00:00:00",
+      "dataata": "05/12/2019",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "LARISSA ZIRBES FARIA",
         "SINOMAR TIAGO RODRIGUES",
@@ -86,11 +86,11 @@
     },
     {
       "numeroanoata": "0006/2019",
-      "dataata": "2019-12-06 00:00:00",
+      "dataata": "06/12/2019",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "LARISSA ZIRBES FARIA",
         "DENIR DE SOUZA NANTES",
@@ -98,7 +98,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "48875/2024-42",
+          "numeroprocesso": "46398/2017-15",
           "relator": "Ronney Alencar Moreira",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -106,7 +106,7 @@
           "textoata": "Não houve. Processo baixado em diligência para que o requerente apresente os documentos comprobatórios dos créditos informados no processo."
         },
         {
-          "numeroprocesso": "97211/2022-27",
+          "numeroprocesso": "96219/2018-17",
           "relator": "Cecília Saad Cruz Rizkallah",
           "revisor": "",
           "resultado": "Suspenso",
@@ -117,7 +117,7 @@
     },
     {
       "numeroanoata": "0007/2019",
-      "dataata": "2019-12-19 00:00:00",
+      "dataata": "19/12/2019",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -129,7 +129,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "85867/2023-32",
+          "numeroprocesso": "85429/2019-89",
           "relator": "Larissa Zirbes Farias",
           "revisor": "",
           "resultado": "Julgado",
@@ -140,7 +140,7 @@
     },
     {
       "numeroanoata": "0001/2020",
-      "dataata": "2020-01-27 00:00:00",
+      "dataata": "27/01/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -154,19 +154,19 @@
     },
     {
       "numeroanoata": "0002/2020",
-      "dataata": "2020-01-30 00:00:00",
+      "dataata": "30/01/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "PAULO ROBERTO BARROS DA SILVA",
         "RONNEY ALENCAR MOREIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "15883/2025-66",
+          "numeroprocesso": "130238/2019-89",
           "relator": "Claudemir de Lima Silva",
           "revisor": "",
           "resultado": "Julgado",
@@ -174,7 +174,7 @@
           "textoata": "Relator votou pela incompetência da Câmara de Conciliação Fiscal para análise do caso de permuta requerido pelo contribuinte, devendo os autos serem encaminhados a Procuradoria de Assuntos Imobiliários/PGM a quem compete análise e parecer. Voto acompanhado pelos demais membros."
         },
         {
-          "numeroprocesso": "49162/2024-14",
+          "numeroprocesso": "46398/2017-15",
           "relator": "Ronney Alencar Moreira",
           "revisor": "",
           "resultado": "Julgado",
@@ -182,7 +182,7 @@
           "textoata": "Relator votou pelo indeferimento do requerimento pois a empresa requerente não é detentora de crédito com o município uma vez que quem tem a relação contratual de prestação de serviços é a agência de publicidade e não a requerente."
         },
         {
-          "numeroprocesso": "97216/2022-41",
+          "numeroprocesso": "96219/2018-17",
           "relator": "Cecília Saad Cruz Rizkallah",
           "revisor": "",
           "resultado": "Suspenso",
@@ -193,13 +193,13 @@
     },
     {
       "numeroanoata": "0003/2020",
-      "dataata": "2020-02-04 00:00:00",
+      "dataata": "04/02/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA"
       ],
@@ -207,19 +207,19 @@
     },
     {
       "numeroanoata": "0004/2020",
-      "dataata": "2020-02-20 00:00:00",
+      "dataata": "20/02/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "112931/2023-56",
+          "numeroprocesso": "111224/2019-57",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Suspenso",
@@ -227,7 +227,7 @@
           "textoata": "O relator solicitou a retirada do processo de pauta com suspensão pelo prazo de 30 (trinta) dias, sendo aprovado por todos os membros."
         },
         {
-          "numeroprocesso": "125675/2019-44",
+          "numeroprocesso": "121950/2019-13",
           "relator": "Ronney Alencar Moreira",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -235,7 +235,7 @@
           "textoata": "Relator solicitou diligência, devendo os autos serem instruídos pelo requerente de documentos necessários para efetivar a dação, sendo aprovado pelos por todos os membros."
         },
         {
-          "numeroprocesso": "126757/2021-67",
+          "numeroprocesso": "125675/2019-44",
           "relator": "Rosemeire Aparecida Cristaldo Palmeira",
           "revisor": "",
           "resultado": "Em Negociação",
@@ -246,7 +246,7 @@
     },
     {
       "numeroanoata": "0005/2020",
-      "dataata": "2020-04-30 00:00:00",
+      "dataata": "30/04/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -258,7 +258,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "125675/2019-44",
+          "numeroprocesso": "121950/2019-13",
           "relator": "Ronney Alencar Moreira",
           "revisor": "",
           "resultado": "Em Negociação",
@@ -269,19 +269,19 @@
     },
     {
       "numeroanoata": "0006/2020",
-      "dataata": "2020-05-21 00:00:00",
+      "dataata": "21/05/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "114829/2022-50",
+          "numeroprocesso": "111224/2019-57",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Suspenso",
@@ -289,7 +289,7 @@
           "textoata": "O relator se manifestou pelo arquivamento do processo até que seja dada a sentença sobre a interdição judicial do requerente, manifestação esta, acompanhada por todos os membros da CCF."
         },
         {
-          "numeroprocesso": "97304/2024-78",
+          "numeroprocesso": "96219/2018-17",
           "relator": "Cecília Saad Cruz Rizkallah",
           "revisor": "",
           "resultado": "Julgado",
@@ -300,13 +300,13 @@
     },
     {
       "numeroanoata": "0007/2020",
-      "dataata": "2020-05-29 00:00:00",
+      "dataata": "29/05/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
@@ -314,7 +314,7 @@
     },
     {
       "numeroanoata": "0008/2020",
-      "dataata": "2020-06-18 00:00:00",
+      "dataata": "18/06/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -326,7 +326,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "22435/2021-21",
+          "numeroprocesso": "2195/2020-86",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Suspenso",
@@ -345,19 +345,19 @@
     },
     {
       "numeroanoata": "0009/2020",
-      "dataata": "2020-06-29 00:00:00",
+      "dataata": "29/06/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "PAULO ROBERTO BARROS DA SILVA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "22484/2025-12",
+          "numeroprocesso": "2195/2020-86",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -368,7 +368,7 @@
     },
     {
       "numeroanoata": "0010/2020",
-      "dataata": "2020-07-23 00:00:00",
+      "dataata": "23/07/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -382,7 +382,7 @@
     },
     {
       "numeroanoata": "0011/2020",
-      "dataata": "2020-07-30 00:00:00",
+      "dataata": "30/07/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -396,13 +396,13 @@
     },
     {
       "numeroanoata": "0012/2020",
-      "dataata": "2020-08-20 00:00:00",
+      "dataata": "20/08/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
@@ -410,7 +410,7 @@
     },
     {
       "numeroanoata": "0013/2020",
-      "dataata": "2020-08-31 00:00:00",
+      "dataata": "31/08/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -422,7 +422,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "2293/2024-29",
+          "numeroprocesso": "2195/2020-86",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Julgado",
@@ -433,19 +433,19 @@
     },
     {
       "numeroanoata": "0014/2020",
-      "dataata": "2020-09-17 00:00:00",
+      "dataata": "17/09/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "126757/2021-67",
+          "numeroprocesso": "121950/2019-13",
           "relator": "Ronney Alencar Moreira",
           "revisor": "",
           "resultado": "Julgado",
@@ -456,13 +456,13 @@
     },
     {
       "numeroanoata": "0015/2020",
-      "dataata": "2020-09-30 00:00:00",
+      "dataata": "30/09/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
@@ -470,7 +470,7 @@
     },
     {
       "numeroanoata": "0016/2020",
-      "dataata": "2020-10-22 00:00:00",
+      "dataata": "22/10/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -482,7 +482,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "60058/2024-26",
+          "numeroprocesso": "59112/2020-49",
           "relator": "Claudemir de Lima Silva",
           "revisor": "",
           "resultado": "Julgado",
@@ -493,7 +493,7 @@
     },
     {
       "numeroanoata": "0017/2020",
-      "dataata": "2020-10-30 00:00:00",
+      "dataata": "30/10/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -505,7 +505,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "130238/2019-89",
+          "numeroprocesso": "125675/2019-44",
           "relator": "Rosemeire Aparecida Cristaldo Palmeira",
           "revisor": "",
           "resultado": "Julgado",
@@ -516,19 +516,19 @@
     },
     {
       "numeroanoata": "0018/2020",
-      "dataata": "2020-11-19 00:00:00",
+      "dataata": "19/11/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "SINOMAR TIAGO RODRIGUES"
       ],
       "processos": [
         {
-          "numeroprocesso": "74161/2023-72",
+          "numeroprocesso": "74155/2016-41",
           "relator": "Cecília Saad Cruz Rizkallah",
           "revisor": "",
           "resultado": "Suspenso",
@@ -539,19 +539,19 @@
     },
     {
       "numeroanoata": "0019/2020",
-      "dataata": "2020-11-24 00:00:00",
+      "dataata": "24/11/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "SINOMAR TIAGO RODRIGUES"
       ],
       "processos": [
         {
-          "numeroprocesso": "74169/2023-84",
+          "numeroprocesso": "74155/2016-41",
           "relator": "Cecília Saad Cruz Rizkallah",
           "revisor": "",
           "resultado": "Suspenso",
@@ -562,19 +562,19 @@
     },
     {
       "numeroanoata": "0020/2020",
-      "dataata": "2020-12-03 00:00:00",
+      "dataata": "03/12/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "74177/2023-11",
+          "numeroprocesso": "74155/2016-41",
           "relator": "Cecília Saad Cruz Rizkallah",
           "revisor": "",
           "resultado": "Julgado",
@@ -585,7 +585,7 @@
     },
     {
       "numeroanoata": "0021/2020",
-      "dataata": "2020-12-15 00:00:00",
+      "dataata": "15/12/2020",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -602,19 +602,19 @@
           "revisor": "",
           "resultado": "Pedido de Diligência",
           "decisao": "",
-          "textoata": "O relator fez a leitura do relatório do processo. Houve manifestação oral da representante do requerente pedindo pela média das avaliações e pela prescrição de alguns débitos na inscrição imobiliária. O relator solicitou da requerente, duas avaliações para que possa manifestar acerca da média aritmética das avaliações, bem como solicitar em processo apartado a possível prescrição de débitos. Ficou estabelecido o prazo de 15 (quinze) dias para a requerente atender a solicitação do relator, observado o prazo de recesso da CCF que é do dia 20 de dezembro de 2020 a 20 de janeiro de 2021."
+          "textoata": "O relator fez a leitura do relatório do processo. Houve manifestação oral da representante do requerente pedindo pela média das avaliações e pela prescrição de alguns débitos na inscrição imobiliária. O relator solicitou da requerente, duas avaliações para que possa manifestar acerca da média aritmética das avaliações, bem como solicitar em processo apartado a possível prescrição de débitos. Ficou estabelecido o prazo de 15 (quinze) dias para a requerente atender a solicitação do relator, observado o prazo de recesso da CCF que é do dia 20 de dezembro de 2020 a 20 de janeiro de 2021. A representante legal do requerente Drª Elisângela Oliveira compareceu."
         }
       ]
     },
     {
       "numeroanoata": "0001/2021",
-      "dataata": "2021-01-21 00:00:00",
+      "dataata": "21/01/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA"
       ],
@@ -622,19 +622,19 @@
     },
     {
       "numeroanoata": "0002/2021",
-      "dataata": "2021-01-29 00:00:00",
+      "dataata": "29/01/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "85429/2019-89",
+          "numeroprocesso": "83668/2020-92",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Suspenso",
@@ -645,13 +645,13 @@
     },
     {
       "numeroanoata": "0003/2021",
-      "dataata": "2021-02-18 00:00:00",
+      "dataata": "18/02/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA"
       ],
@@ -659,13 +659,13 @@
     },
     {
       "numeroanoata": "0004/2021",
-      "dataata": "2021-02-25 00:00:00",
+      "dataata": "25/02/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA"
       ],
@@ -673,13 +673,13 @@
     },
     {
       "numeroanoata": "0005/2021",
-      "dataata": "2021-03-04 00:00:00",
+      "dataata": "04/03/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA"
       ],
@@ -687,13 +687,13 @@
     },
     {
       "numeroanoata": "0006/2021",
-      "dataata": "2021-04-08 00:00:00",
+      "dataata": "08/04/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
-        "LARIZZA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LARISSA ZIRBES FARIA",
+        "LUÍS EDUARDO COSTA",
         "PAULO ROBERTO BARROS DA SILVA",
         "RONNEY ALENCAR MOREIRA"
       ],
@@ -701,13 +701,13 @@
     },
     {
       "numeroanoata": "0007/2021",
-      "dataata": "2021-04-22 00:00:00",
+      "dataata": "22/04/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "PAULO ROBERTO BARROS DA SILVA",
         "RONNEY ALENCAR MOREIRA"
       ],
@@ -715,7 +715,7 @@
     },
     {
       "numeroanoata": "0008/2021",
-      "dataata": "2021-05-13 00:00:00",
+      "dataata": "13/05/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -725,17 +725,26 @@
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA"
       ],
-      "processos": []
+      "processos": [
+        {
+          "numeroprocesso": "92810/2020-92",
+          "relator": "Ronney Alencar Moreira",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Indeferimento",
+          "textoata": "O relator fez a leitura do relatório do processo e votou pelo indeferimento do pedido de dação em pagamento, voto este, acompanhado por todos os membros da CCF."
+        }
+      ]
     },
     {
       "numeroanoata": "0009/2021",
-      "dataata": "2021-05-31 00:00:00",
+      "dataata": "31/05/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA"
       ],
@@ -743,19 +752,19 @@
     },
     {
       "numeroanoata": "0010/2021",
-      "dataata": "2021-06-28 00:00:00",
+      "dataata": "28/06/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "85867/2023-32",
+          "numeroprocesso": "83668/2020-92",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -766,19 +775,19 @@
     },
     {
       "numeroanoata": "0011/2021",
-      "dataata": "2021-06-30 00:00:00",
+      "dataata": "30/06/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "10559/2024-80",
+          "numeroprocesso": "10297/2021-92",
           "relator": "Claudemir de Lima Silva",
           "revisor": "",
           "resultado": "Julgado",
@@ -789,13 +798,13 @@
     },
     {
       "numeroanoata": "0012/2021",
-      "dataata": "2021-07-01 00:00:00",
+      "dataata": "01/07/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA"
       ],
@@ -803,20 +812,20 @@
     },
     {
       "numeroanoata": "0013/2021",
-      "dataata": "2021-07-15 00:00:00",
+      "dataata": "15/07/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "85867/2023-32",
+          "numeroprocesso": "83668/2020-92",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Julgado",
@@ -827,14 +836,14 @@
     },
     {
       "numeroanoata": "0014/2021",
-      "dataata": "2021-08-12 00:00:00",
+      "dataata": "12/08/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA",
         "SINOMAR TIAGO RODRIGUES"
@@ -843,7 +852,7 @@
     },
     {
       "numeroanoata": "0015/2021",
-      "dataata": "2021-08-30 00:00:00",
+      "dataata": "30/08/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -851,7 +860,7 @@
         "DENIR DE SOUZA NANTES",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA"
       ],
@@ -859,7 +868,7 @@
     },
     {
       "numeroanoata": "0016/2021",
-      "dataata": "2021-09-14 00:00:00",
+      "dataata": "14/09/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -867,7 +876,7 @@
         "DENIR DE SOUZA NANTES",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "RONNEY ALENCAR MOREIRA"
       ],
@@ -875,7 +884,7 @@
     },
     {
       "numeroanoata": "0017/2021",
-      "dataata": "2021-09-30 00:00:00",
+      "dataata": "30/09/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -883,15 +892,15 @@
         "DENIR DE SOUZA NANTES",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
-        "RONNEY ALENCAR MOREIRA]"
+        "RONNEY ALENCAR MOREIRA"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0019/2021",
-      "dataata": "2021-10-29 00:00:00",
+      "dataata": "29/10/2021",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -899,7 +908,7 @@
         "DENIR DE SOUZA NANTES",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
@@ -907,7 +916,7 @@
     },
     {
       "numeroanoata": "0021/2021",
-      "dataata": "2021-11-30 00:00:00",
+      "dataata": "30/11/2021",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -916,13 +925,13 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "22969/2024-19",
+          "numeroprocesso": "22435/2021-21",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -933,7 +942,7 @@
     },
     {
       "numeroanoata": "0022/2021",
-      "dataata": "2021-12-09 00:00:00",
+      "dataata": "09/12/2021",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -942,7 +951,7 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
@@ -950,7 +959,7 @@
     },
     {
       "numeroanoata": "0023/2021",
-      "dataata": "2021-12-15 00:00:00",
+      "dataata": "15/12/2021",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -959,14 +968,14 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0001/2022",
-      "dataata": "2022-01-13 00:00:00",
+      "dataata": "13/01/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "DENIR DE SOUZA NANTES",
@@ -981,7 +990,7 @@
     },
     {
       "numeroanoata": "0002/2022",
-      "dataata": "2022-01-20 00:00:00",
+      "dataata": "20/01/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CLAUDEMIR DE LIMA SILVA",
@@ -989,7 +998,7 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "PAULO ROBERTO BARROS DA SILVA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
@@ -998,7 +1007,7 @@
     },
     {
       "numeroanoata": "0003/2022",
-      "dataata": "2022-02-17 00:00:00",
+      "dataata": "17/02/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1007,7 +1016,7 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
@@ -1015,7 +1024,7 @@
     },
     {
       "numeroanoata": "0004/2022",
-      "dataata": "2022-02-28 00:00:00",
+      "dataata": "28/02/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1024,15 +1033,24 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
-      "processos": []
+      "processos": [
+        {
+          "numeroprocesso": "9223/2022-30",
+          "relator": "Denir de Souza Nantes",
+          "revisor": "",
+          "resultado": "Pedido de Diligência",
+          "decisao": "",
+          "textoata": "Em sessão, o membro relator fez a leitura do relatório, determinando a baixa dos autos em diligência para que fosse procedida a juntada da requisição de pagamento referente ao crédito oferecido na compensação."
+        }
+      ]
     },
     {
       "numeroanoata": "0005/2022",
-      "dataata": "2022-03-17 00:00:00",
+      "dataata": "17/03/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1041,7 +1059,7 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
@@ -1049,7 +1067,7 @@
     },
     {
       "numeroanoata": "0006/2022",
-      "dataata": "2022-03-24 00:00:00",
+      "dataata": "24/03/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1058,7 +1076,7 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
@@ -1066,7 +1084,7 @@
     },
     {
       "numeroanoata": "0007/2022",
-      "dataata": "2022-03-28 00:00:00",
+      "dataata": "28/03/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1075,13 +1093,13 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "21905/2025-81",
+          "numeroprocesso": "16941/2022-53",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -1092,7 +1110,7 @@
     },
     {
       "numeroanoata": "0008/2022",
-      "dataata": "2022-04-07 00:00:00",
+      "dataata": "07/04/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1100,7 +1118,7 @@
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "PAULO ROBERTO BARROS DA SILVA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
@@ -1109,7 +1127,7 @@
     },
     {
       "numeroanoata": "0009/2022",
-      "dataata": "2022-04-29 00:00:00",
+      "dataata": "29/04/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1117,14 +1135,14 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "SINOMAR TIAGO RODRIGUES"
       ],
       "processos": [
         {
-          "numeroprocesso": "24500/2022-43",
+          "numeroprocesso": "24155/2022-57",
           "relator": "Rosemeire Aparecida Cristaldo Palmeira",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -1132,7 +1150,7 @@
           "textoata": "Em sessão, a membra relatora fez a leitura do relatório, determinando a baixa dos autos em diligência."
         },
         {
-          "numeroprocesso": "26987/2023-61",
+          "numeroprocesso": "24500/2022-43",
           "relator": "Kátia Silene Sarturi Warde",
           "revisor": "",
           "resultado": "Julgado",
@@ -1143,7 +1161,7 @@
     },
     {
       "numeroanoata": "0010/2022",
-      "dataata": "2022-05-12 00:00:00",
+      "dataata": "12/05/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1151,14 +1169,14 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "SINOMAR TIAGO RODRIGUES"
       ],
       "processos": [
         {
-          "numeroprocesso": "25114/2025-29",
+          "numeroprocesso": "24155/2022-57",
           "relator": "Rosemeire Aparecida Cristaldo Palmeira",
           "revisor": "",
           "resultado": "Julgado",
@@ -1169,14 +1187,14 @@
     },
     {
       "numeroanoata": "0011/2022",
-      "dataata": "2022-05-18 00:00:00",
+      "dataata": "18/05/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CLAUDEMIR DE LIMA SILVA",
         "JORGE TAKESHI OTUBO",
-        "KÁTIA SILENE SARTURI",
+        "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "PAULO ROBERTO BARROS DA SILVA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
@@ -1184,7 +1202,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "1320/2025-45",
+          "numeroprocesso": "126757/2021-67",
           "relator": "Kátia Silene Sarturi Warde",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -1195,7 +1213,7 @@
     },
     {
       "numeroanoata": "0012/2022",
-      "dataata": "2022-05-31 00:00:00",
+      "dataata": "31/05/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CLAUDEMIR DE LIMA SILVA",
@@ -1203,7 +1221,7 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "SINOMAR TIAGO RODRIGUES"
@@ -1212,22 +1230,22 @@
     },
     {
       "numeroanoata": "0013/2022",
-      "dataata": "2022-06-07 00:00:00",
+      "dataata": "07/06/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
-        "KÁTIA SILENE SARTURI",
+        "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA",
         "SINOMAR TIAGO RODRIGUES"
       ],
       "processos": [
         {
-          "numeroprocesso": "1398/2025-32",
+          "numeroprocesso": "126757/2021-67",
           "relator": "Kátia Silene Sarturi Warde",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -1238,7 +1256,7 @@
     },
     {
       "numeroanoata": "0014/2022",
-      "dataata": "2022-06-23 00:00:00",
+      "dataata": "23/06/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1247,7 +1265,7 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
@@ -1255,7 +1273,7 @@
     },
     {
       "numeroanoata": "0015/2022",
-      "dataata": "2022-06-30 00:00:00",
+      "dataata": "30/06/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1264,7 +1282,7 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
@@ -1272,37 +1290,37 @@
     },
     {
       "numeroanoata": "0016/2022",
-      "dataata": "2022-07-07 00:00:00",
+      "dataata": "07/07/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
-        "PAULO ROBERTO BARROS DA SILVA (SUPLENTE)",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
+        "PAULO ROBERTO BARROS DA SILVA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0017/2022",
-      "dataata": "2022-07-14 00:00:00",
+      "dataata": "14/07/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLAUDEMIR DE LIMA SILVA",
         "DENIR DE SOUZA NANTES",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "PAULO ROBERTO BARROS DA SILVA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "42854/2024-50",
+          "numeroprocesso": "42645/2022-16",
           "relator": "Cecília Saad Cruz Rizkalla",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -1313,7 +1331,7 @@
     },
     {
       "numeroanoata": "0018/2022",
-      "dataata": "2022-08-04 00:00:00",
+      "dataata": "04/08/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1322,7 +1340,7 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
@@ -1339,7 +1357,7 @@
     },
     {
       "numeroanoata": "0019/2022",
-      "dataata": "2022-08-19 00:00:00",
+      "dataata": "19/08/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1348,7 +1366,7 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
@@ -1356,7 +1374,7 @@
     },
     {
       "numeroanoata": "0020/2022",
-      "dataata": "2022-08-29 00:00:00",
+      "dataata": "29/08/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1365,13 +1383,13 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "42854/2024-50",
+          "numeroprocesso": "42645/2022-16",
           "relator": "Cecília Saad Cruz Rizkalla",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -1382,7 +1400,7 @@
     },
     {
       "numeroanoata": "0021/2022",
-      "dataata": "2022-09-15 00:00:00",
+      "dataata": "15/09/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1399,7 +1417,7 @@
     },
     {
       "numeroanoata": "0022/2022",
-      "dataata": "2022-09-22 00:00:00",
+      "dataata": "22/09/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1416,7 +1434,7 @@
     },
     {
       "numeroanoata": "0023/2022",
-      "dataata": "2022-09-29 00:00:00",
+      "dataata": "29/09/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1433,7 +1451,7 @@
     },
     {
       "numeroanoata": "0024/2022",
-      "dataata": "2022-10-06 00:00:00",
+      "dataata": "06/10/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1448,7 +1466,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "75965/2023-25",
+          "numeroprocesso": "75647/2022-29",
           "relator": "Emerson Augusto Maeda Taira",
           "revisor": "",
           "resultado": "Suspenso",
@@ -1459,7 +1477,7 @@
     },
     {
       "numeroanoata": "0025/2022",
-      "dataata": "2022-10-20 00:00:00",
+      "dataata": "20/10/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1468,13 +1486,13 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "66199/2023-90",
+          "numeroprocesso": "65446/2022-41",
           "relator": "Larissa Zirbes Faria",
           "revisor": "",
           "resultado": "Suspenso",
@@ -1482,7 +1500,7 @@
           "textoata": "Em sessão esteve presente o Sr. Fernando Roberto da Rocha Figueira (representante), e seu patrono Dr. Victor Renato Sgarbi Marcussi OAB/SP 26594. A relatora fez a leitura do relatório do processo e votou pelo deferimento do pedido de compensação/amortização, voto este, acompanhado por todos os membros da CCF. Em sessão o contribuinte solicitou cópia do processo administrativo para apreciação da proposta e posterior manifestação, sendo marcada uma nova sessão de conciliação para o dia 27 de outubro de 2022."
         },
         {
-          "numeroprocesso": "97968/2024-28",
+          "numeroprocesso": "97211/2022-27",
           "relator": "Kátia Silene Sarturi Warde",
           "revisor": "",
           "resultado": "Julgado",
@@ -1493,7 +1511,7 @@
     },
     {
       "numeroanoata": "0026/2022",
-      "dataata": "2022-10-27 00:00:00",
+      "dataata": "27/10/2022",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1502,13 +1520,13 @@
         "EMERSON AUGUSTO MAEDA TAIRA",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "69219/2022-21",
+          "numeroprocesso": "65446/2022-41",
           "relator": "Larissa Zirbes Faria",
           "revisor": "",
           "resultado": "Suspenso",
@@ -1519,7 +1537,7 @@
     },
     {
       "numeroanoata": "0027/2022",
-      "dataata": "2022-11-04 00:00:00",
+      "dataata": "04/11/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1529,12 +1547,12 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "76366/2023-56",
+          "numeroprocesso": "75647/2022-29",
           "relator": "Emerson Augusto Maeda Taira",
           "revisor": "Denir de Souza Nantes",
           "resultado": "Pedido de Vista",
@@ -1545,7 +1563,7 @@
     },
     {
       "numeroanoata": "0028/2022",
-      "dataata": "2022-11-17 00:00:00",
+      "dataata": "17/11/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1559,26 +1577,26 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "70847/2023-11",
-          "relator": "Luís Eduardo Costa",
-          "revisor": "",
-          "resultado": "Em Negociação",
-          "decisao": "",
-          "textoata": "Por unanimidade de votos o pedido de dação em pagamento foi indeferido. A leitura do voto do relator foi realizada pelo seu suplente Paulo Roberto Barros da Silva."
-        },
-        {
-          "numeroprocesso": "76366/2023-56",
+          "numeroprocesso": "75647/2022-29",
           "relator": "Emerson Augusto Maeda Taira",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Deferimento",
           "textoata": "Em sessão, o membro relator votou pelo deferimento do pedido de reconsideração, voto esse seguindo pelos membros Cecília Saad Cruz Rizkallah, Claudemir de Lima Silva, Jorge Takeshi Otubo, Kátia Silene Sarturi Warde, Paulo Roberto Barros da Silva, Rosemeire Aparecida Cristaldo Palmeira. O membro revisor votou pelo indeferimento do pedido de reconsideração. Por maioria de votos vence o relator."
+        },
+        {
+          "numeroprocesso": "69219/2022-21",
+          "relator": "Luís Eduardo Costa",
+          "revisor": "",
+          "resultado": "Em Negociação",
+          "decisao": "",
+          "textoata": "Por unanimidade de votos o pedido de dação em pagamento foi indeferido. A leitura do voto do relator foi realizada pelo seu suplente Paulo Roberto Barros da Silva."
         }
       ]
     },
     {
       "numeroanoata": "0029/2022",
-      "dataata": "2022-11-24 00:00:00",
+      "dataata": "24/11/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1592,7 +1610,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "42854/2024-50",
+          "numeroprocesso": "42645/2022-16",
           "relator": "Cecília Saad Cruz Rizkalla",
           "revisor": "",
           "resultado": "Julgado",
@@ -1603,7 +1621,7 @@
     },
     {
       "numeroanoata": "0030/2022",
-      "dataata": "2022-12-01 00:00:00",
+      "dataata": "01/12/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1612,14 +1630,14 @@
         "EMERSON AUGUSTO MAEDA TAIRA",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0031/2022",
-      "dataata": "2022-12-12 00:00:00",
+      "dataata": "12/12/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1628,31 +1646,31 @@
         "EMERSON AUGUSTO MAEDA TAIRA",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
       "processos": [
         {
           "numeroprocesso": "69219/2022-21",
-          "relator": "Claudemir de Lima Silva",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, a contraproposta apresentada pelo contribuinte foi deferida."
-        },
-        {
-          "numeroprocesso": "71874/2023-20",
           "relator": "Luís Eduardo Costa",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Indeferimento",
           "textoata": "Em sessão esteve presente o representante do contribuinte Sr. Valter Cortez. Após, por unanimidade de votos, o pedido de dação foi indeferido."
+        },
+        {
+          "numeroprocesso": "65446/2022-41",
+          "relator": "Claudemir de Lima Silva",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, a contraproposta apresentada pelo contribuinte foi deferida."
         }
       ]
     },
     {
       "numeroanoata": "0032/2022",
-      "dataata": "2022-12-15 00:00:00",
+      "dataata": "15/12/2022",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1661,14 +1679,14 @@
         "EMERSON AUGUSTO MAEDA TAIRA",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0001/2023",
-      "dataata": "2023-01-20 00:00:00",
+      "dataata": "20/01/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1676,7 +1694,7 @@
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
@@ -1684,7 +1702,7 @@
     },
     {
       "numeroanoata": "0002/2023",
-      "dataata": "2023-01-27 00:00:00",
+      "dataata": "27/01/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1692,7 +1710,7 @@
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "RONNEY ALENCAR MOREIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
@@ -1700,7 +1718,7 @@
     },
     {
       "numeroanoata": "0003/2023",
-      "dataata": "2023-01-31 00:00:00",
+      "dataata": "31/01/2023",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1708,13 +1726,13 @@
         "DENIR DE SOUZA NANTES",
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "KÁTIA SILENE SARTURI WARDE",
-        "LUIS EDUARDO COSTA",
+        "LUÍS EDUARDO COSTA",
         "EMERSON AUGUSTO MAEDA TAIRA",
         "ROSEMEIRE APARECIDA CRISTALDO PALMEIRA"
       ],
       "processos": [
         {
-          "numeroprocesso": "29215/2025-79",
+          "numeroprocesso": "29144/2020-56",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Em Negociação",
@@ -1725,7 +1743,7 @@
     },
     {
       "numeroanoata": "0004/2023",
-      "dataata": "2023-02-09 00:00:00",
+      "dataata": "09/02/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1738,7 +1756,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "2956/2024-14",
+          "numeroprocesso": "29144/2020-56",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Julgado",
@@ -1749,7 +1767,7 @@
     },
     {
       "numeroanoata": "0005/2023",
-      "dataata": "2023-02-14 00:00:00",
+      "dataata": "14/02/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1763,7 +1781,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "117677/2022-10",
+          "numeroprocesso": "116533/2022-64",
           "relator": "Cecília Saad Cruz Rizkalla",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -1774,7 +1792,7 @@
     },
     {
       "numeroanoata": "0006/2023",
-      "dataata": "2023-02-27 00:00:00",
+      "dataata": "27/02/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1790,7 +1808,7 @@
     },
     {
       "numeroanoata": "0007/2023",
-      "dataata": "2023-03-10 00:00:00",
+      "dataata": "10/03/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1798,7 +1816,7 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO",
         "MANOEL CARROMEU NETO",
         "SINOMAR TIAGO RODRIGUES",
@@ -1812,21 +1830,21 @@
     },
     {
       "numeroanoata": "0008/2023",
-      "dataata": "2023-03-16 00:00:00",
+      "dataata": "16/03/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "117677/2022-10",
+          "numeroprocesso": "116533/2022-64",
           "relator": "Cecília Saad Cruz Rizkalla",
           "revisor": "",
           "resultado": "Julgado",
@@ -1837,20 +1855,20 @@
     },
     {
       "numeroanoata": "0009/2023",
-      "dataata": "2023-03-30 00:00:00",
+      "dataata": "30/03/2023",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "PAULO VICTOR MEDEIROS DAMASCENO"
       ],
       "processos": [
         {
-          "numeroprocesso": "116533/2022-64",
+          "numeroprocesso": "114935/2022-05",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Em Negociação",
@@ -1861,21 +1879,21 @@
     },
     {
       "numeroanoata": "0010/2023",
-      "dataata": "2023-04-13 00:00:00",
+      "dataata": "13/04/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO",
         "SINOMAR TIAGO RODRIGUES"
       ],
       "processos": [
         {
-          "numeroprocesso": "117677/2022-10",
+          "numeroprocesso": "114935/2022-05",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -1886,67 +1904,67 @@
     },
     {
       "numeroanoata": "0011/2023",
-      "dataata": "2023-04-17 00:00:00",
+      "dataata": "17/04/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "PAULO VICTOR MEDEIROS DAMASCENO"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0012/2023",
-      "dataata": "2023-04-27 00:00:00",
+      "dataata": "27/04/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
         "EMERSON AUGUSTO MAEDA TAIRA",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "10559/2024-80",
-          "relator": "Arthur Vieira de Oliveira Lavor",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Indeferimento",
-          "textoata": "Por unanimidade de votos, o pedido de compensação foi indeferido por perda de objeto."
-        },
-        {
-          "numeroprocesso": "21905/2025-81",
-          "relator": "Luís Alexandre Holak",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
-        },
-        {
-          "numeroprocesso": "49163/2024-87",
+          "numeroprocesso": "46992/2020-10",
           "relator": "Larissa Zirbes Faria",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Indeferimento",
           "textoata": "Por unanimidade de votos, o pedido de compensação foi indeferido por perda de objeto."
+        },
+        {
+          "numeroprocesso": "104539/2022-43",
+          "relator": "Arthur Vieira de Oliveira Lavôr",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Indeferimento",
+          "textoata": "Por unanimidade de votos, o pedido de compensação foi indeferido por perda de objeto."
+        },
+        {
+          "numeroprocesso": "18321/2023-21",
+          "relator": "Luís Alexandre Holak",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
         }
       ]
     },
     {
       "numeroanoata": "0013/2023",
-      "dataata": "2023-05-04 00:00:00",
+      "dataata": "04/05/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
@@ -1959,7 +1977,7 @@
     },
     {
       "numeroanoata": "0014/2023",
-      "dataata": "2023-05-18 00:00:00",
+      "dataata": "18/05/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1973,18 +1991,18 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "121950/2019-13",
+          "numeroprocesso": "117677/2022-10",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
-          "resultado": "Em Negociação",
-          "decisao": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
           "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido. O voto foi lido pelo membro Paulo Victor Medeiros Damasceno."
         }
       ]
     },
     {
       "numeroanoata": "0015/2023",
-      "dataata": "2023-05-25 00:00:00",
+      "dataata": "25/05/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -1998,7 +2016,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "36979/2023-60",
+          "numeroprocesso": "36624/2023-34",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -2006,21 +2024,21 @@
           "textoata": "Por unanimidade de votos, o pedido de compensação foi indeferido."
         },
         {
-          "numeroprocesso": "83246/2023-14",
+          "numeroprocesso": "7940/2023-81",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
-          "resultado": "Em Negociação",
-          "decisao": "",
+          "resultado": "Julgado",
+          "decisao": "Indeferimento",
           "textoata": "Por unanimidade de votos, o pedido de dação foi indeferido."
         }
       ]
     },
     {
       "numeroanoata": "0016/2023",
-      "dataata": "2023-06-02 00:00:00",
+      "dataata": "02/06/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "DANILO ISAIAS BOA VENTURA",
@@ -2031,25 +2049,25 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "37436/2025-11",
-          "relator": "Arthur Vieira de Oliveira Lavor",
+          "numeroprocesso": "36979/2023-60",
+          "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
-          "resultado": "Em Negociação",
-          "decisao": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
           "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
         }
       ]
     },
     {
       "numeroanoata": "0017/2023",
-      "dataata": "2023-06-16 00:00:00",
+      "dataata": "16/06/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DANILO ISAIAS BOA VENTURA",
         "DENIR DE SOUZA NANTES",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "KÁTIA SILENE SARTURI WARDE",
         "JORGE TAKESHI OTUBO",
         "VICTOR PEREIRA AFONSO"
@@ -2058,14 +2076,14 @@
     },
     {
       "numeroanoata": "0018/2023",
-      "dataata": "2023-06-23 00:00:00",
+      "dataata": "23/06/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "VICTOR PEREIRA AFONSO"
@@ -2074,47 +2092,47 @@
     },
     {
       "numeroanoata": "0019/2023",
-      "dataata": "2023-07-06 00:00:00",
+      "dataata": "06/07/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "37507/2025-85",
-          "relator": "Arthur Vieira de Oliveira Lavor",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
-        },
-        {
-          "numeroprocesso": "97968/2024-28",
+          "numeroprocesso": "97216/2022-41",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Indeferimento",
           "textoata": "Por unanimidade de votos, o pedido de compensação foi indeferido."
+        },
+        {
+          "numeroprocesso": "36979/2023-60",
+          "relator": "Arthur Vieira de Oliveira Lavôr",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
         }
       ]
     },
     {
       "numeroanoata": "0020/2023",
-      "dataata": "2023-07-13 00:00:00",
+      "dataata": "13/07/2023",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "DANILO ISAIAS BOA VENTURA",
         "KÁTIA SILENE SARTURI WARDE",
         "VICTOR PEREIRA AFONSO"
@@ -2123,13 +2141,13 @@
     },
     {
       "numeroanoata": "0021/2023",
-      "dataata": "2023-07-20 00:00:00",
+      "dataata": "20/07/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "PAULO VICTOR MEDEIROS DAMASCENO",
@@ -2137,7 +2155,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "29000/2025-58",
+          "numeroprocesso": "26987/2023-61",
           "relator": "Cecília Saad Cruz Rizkalla",
           "revisor": "",
           "resultado": "Julgado",
@@ -2148,39 +2166,39 @@
     },
     {
       "numeroanoata": "0022/2023",
-      "dataata": "2023-08-01 00:00:00",
+      "dataata": "01/08/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLÁUDIA DE ARAÚJO MELO",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "70299/2024-29",
+          "numeroprocesso": "66199/2023-90",
           "relator": "Ricardo Vieira Dias",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Deferimento",
-          "textoata": "Ppor unanimidade de votos, o pedido de transação foi deferido. O membro Jorge Takeshi Otubo presidiu a sessão durante o julgamento."
+          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido. O membro Jorge Takeshi Otubo presidiu a sessão durante o julgamento."
         }
       ]
     },
     {
       "numeroanoata": "0023/2023",
-      "dataata": "2023-08-10 00:00:00",
+      "dataata": "10/08/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLÁUDIA DE ARAÚJO MELO",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "VICTOR PEREIRA AFONSO"
@@ -2189,21 +2207,29 @@
     },
     {
       "numeroanoata": "0024/2023",
-      "dataata": "2023-08-17 00:00:00",
+      "dataata": "17/08/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "121950/2019-13",
+          "numeroprocesso": "63930/2023-43",
+          "relator": "Arthur Vieira de Oliveira Lavôr",
+          "revisor": "",
+          "resultado": "Pedido de Diligência",
+          "decisao": "",
+          "textoata": "O relator solicitou à baixa dos autos em diligência para levantamentos dos débitos atualizados."
+        },
+        {
+          "numeroprocesso": "117677/2022-10",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -2211,15 +2237,7 @@
           "textoata": "O relator solicitou diligência aos autos."
         },
         {
-          "numeroprocesso": "63930/2023-43",
-          "relator": "Arthur Vieira de Oliveira Lavor",
-          "revisor": "",
-          "resultado": "Pedido de Diligência",
-          "decisao": "",
-          "textoata": "O relator solicitou à baixa dos autos em diligência para levantamentos dos débitos atualizados."
-        },
-        {
-          "numeroprocesso": "72248/2023-88",
+          "numeroprocesso": "70847/2023-11",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -2230,14 +2248,14 @@
     },
     {
       "numeroanoata": "0025/2023",
-      "dataata": "2023-08-24 00:00:00",
+      "dataata": "24/08/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "VICTOR PEREIRA AFONSO"
@@ -2246,29 +2264,21 @@
     },
     {
       "numeroanoata": "0026/2023",
-      "dataata": "2023-09-01 00:00:00",
+      "dataata": "01/09/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "65446/2022-41",
-          "relator": "Arthur Vieira de Oliveira Lavor",
-          "revisor": "",
-          "resultado": "Suspenso",
-          "decisao": "",
-          "textoata": "Processo retirado de pauta a pedido do relator."
-        },
-        {
-          "numeroprocesso": "73835/2023-49",
+          "numeroprocesso": "76432/2023-89",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -2276,31 +2286,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação excepcional foi deferido."
         },
         {
-          "numeroprocesso": "74155/2016-41",
-          "relator": "Jorge Takeshi Otubo",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, o pedido de transação excepcional foi deferido."
-        },
-        {
-          "numeroprocesso": "74435/2023-04",
-          "relator": "Cecília Saad Cruz Rizkalla",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento Parcial",
-          "textoata": "Por unanimidade de votos, o pedido de transação excepcional foi parcialmente deferido."
-        },
-        {
-          "numeroprocesso": "74435/2023-04",
-          "relator": "Cecília Saad Cruz Rizkalla",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento Parcial",
-          "textoata": "Por unanimidade de votos, o pedido de transação excepcional foi parcialmente deferido."
-        },
-        {
-          "numeroprocesso": "75028/2023-98",
+          "numeroprocesso": "75965/2023-25",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -2308,7 +2294,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação excepcional foi deferido."
         },
         {
-          "numeroprocesso": "75028/2023-98",
+          "numeroprocesso": "74435/2023-04",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Em Negociação",
@@ -2316,15 +2302,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação excepcional foi deferido."
         },
         {
-          "numeroprocesso": "75647/2022-29",
-          "relator": "Arthur Vieira de Oliveira Lavor",
-          "revisor": "",
-          "resultado": "Pedido de Diligência",
-          "decisao": "",
-          "textoata": "O relator baixou os autos em diligência para levantamento atualizados dos débitos."
-        },
-        {
-          "numeroprocesso": "76424/2023-51",
+          "numeroprocesso": "71874/2023-20",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -2332,8 +2310,24 @@
           "textoata": "Por unanimidade de votos, o pedido de transação excepcional foi deferido."
         },
         {
-          "numeroprocesso": "76527/2023-93",
+          "numeroprocesso": "74409/2023-96",
           "relator": "Luís Alexandre Holak",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de transação excepcional foi deferido."
+        },
+        {
+          "numeroprocesso": "73835/2023-49",
+          "relator": "Jorge Takeshi Otubo",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de transação excepcional foi deferido."
+        },
+        {
+          "numeroprocesso": "76439/2023-28",
+          "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Deferimento",
@@ -2348,32 +2342,64 @@
           "textoata": "Por unanimidade de votos, o pedido de transação excepcional foi deferido."
         },
         {
-          "numeroprocesso": "7940/2023-81",
-          "relator": "Jorge Takeshi Otubo",
+          "numeroprocesso": "75028/2023-98",
+          "relator": "Arthur Vieira de Oliveira Lavôr",
+          "revisor": "",
+          "resultado": "Pedido de Diligência",
+          "decisao": "",
+          "textoata": "O relator baixou os autos em diligência para levantamento atualizados dos débitos."
+        },
+        {
+          "numeroprocesso": "63930/2023-43",
+          "relator": "Arthur Vieira de Oliveira Lavôr",
+          "revisor": "",
+          "resultado": "Suspenso",
+          "decisao": "",
+          "textoata": "Processo retirado de pauta a pedido do relator."
+        },
+        {
+          "numeroprocesso": "74177/2023-11",
+          "relator": "Cecília Saad Cruz Rizkalla",
           "revisor": "",
           "resultado": "Julgado",
-          "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, o pedido de transação excepcional foi deferido."
+          "decisao": "Deferimento Parcial",
+          "textoata": "Por unanimidade de votos, o pedido de transação excepcional foi parcialmente deferido."
+        },
+        {
+          "numeroprocesso": "74169/2023-84",
+          "relator": "Cecília Saad Cruz Rizkalla",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento Parcial",
+          "textoata": "Por unanimidade de votos, o pedido de transação excepcional foi parcialmente deferido."
         }
       ]
     },
     {
       "numeroanoata": "0027/2023",
-      "dataata": "2023-09-04 00:00:00",
+      "dataata": "04/09/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "121950/2019-13",
+          "numeroprocesso": "63930/2023-43",
+          "relator": "Arthur Vieira de Oliveira Lavôr",
+          "revisor": "",
+          "resultado": "Pedido de Diligência",
+          "decisao": "",
+          "textoata": "O relator baixou os autos em diligência para enviá-lo a contabilidade."
+        },
+        {
+          "numeroprocesso": "117677/2022-10",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Julgado",
@@ -2381,15 +2407,7 @@
           "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
         },
         {
-          "numeroprocesso": "65446/2022-41",
-          "relator": "Arthur Vieira de Oliveira Lavor",
-          "revisor": "",
-          "resultado": "Pedido de Diligência",
-          "decisao": "",
-          "textoata": "O relator baixou os autos em diligência para enviá-lo a contabilidade."
-        },
-        {
-          "numeroprocesso": "74409/2023-96",
+          "numeroprocesso": "74161/2023-72",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -2400,21 +2418,21 @@
     },
     {
       "numeroanoata": "0028/2023",
-      "dataata": "2023-09-14 00:00:00",
+      "dataata": "14/09/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "EMERSON AUGUSTO MAEDA TAIRA",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "74155/2016-41",
+          "numeroprocesso": "76366/2023-56",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Em Negociação",
@@ -2422,15 +2440,15 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido parcialmente."
         },
         {
-          "numeroprocesso": "75647/2022-29",
-          "relator": "Arthur Vieira de Oliveira Lavor",
+          "numeroprocesso": "72248/2023-88",
+          "relator": "Victor Pereira Afonso",
           "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento Parcial",
+          "resultado": "Em Negociação",
+          "decisao": "",
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido parcialmente."
         },
         {
-          "numeroprocesso": "75647/2022-29",
+          "numeroprocesso": "75201/2023-21",
           "relator": "Larissa Zirbes Faria",
           "revisor": "",
           "resultado": "Julgado",
@@ -2438,16 +2456,16 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi indeferido."
         },
         {
-          "numeroprocesso": "76432/2023-89",
-          "relator": "Victor Pereira Afonso",
+          "numeroprocesso": "76446/2023-93",
+          "relator": "Larissa Zirbes Faria",
           "revisor": "",
-          "resultado": "Em Negociação",
-          "decisao": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento Parcial",
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido parcialmente."
         },
         {
-          "numeroprocesso": "76530/2023-06",
-          "relator": "Larissa Zirbes Faria",
+          "numeroprocesso": "75028/2023-98",
+          "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Deferimento Parcial",
@@ -2457,61 +2475,61 @@
     },
     {
       "numeroanoata": "0029/2023",
-      "dataata": "2023-09-21 00:00:00",
+      "dataata": "21/09/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "PAULO VICTOR MEDEIROS DAMASCENO",
         "SINOMAR TIAGO RODRIGUES",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "116533/2022-64",
-          "relator": "Denir de Souza Nantes",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Indeferimento",
-          "textoata": "Por unanimidade de votos, o pedido foi indeferido."
-        },
-        {
-          "numeroprocesso": "76439/2023-28",
+          "numeroprocesso": "76366/2023-56",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Indeferimento",
           "textoata": "Por unanimidade de votos, negar deferimento ao pedido de contraproposta apresentado pelo requerente."
+        },
+        {
+          "numeroprocesso": "114830/2022-39",
+          "relator": "Denir de Souza Nantes",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Indeferimento",
+          "textoata": "Por unanimidade de votos, o pedido foi indeferido."
         }
       ]
     },
     {
       "numeroanoata": "0030/2023",
-      "dataata": "2023-10-05 00:00:00",
+      "dataata": "05/10/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "65446/2022-41",
-          "relator": "Arthur Vieira de Oliveira Lavor",
+          "numeroprocesso": "63930/2023-43",
+          "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Deferimento",
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido."
         },
         {
-          "numeroprocesso": "75201/2023-21",
+          "numeroprocesso": "74435/2023-04",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -2519,7 +2537,7 @@
           "textoata": "Por unanimidade de votos, a contraproposta de transação foi indeferida;"
         },
         {
-          "numeroprocesso": "76530/2023-06",
+          "numeroprocesso": "76527/2023-93",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -2530,46 +2548,46 @@
     },
     {
       "numeroanoata": "0031/2023",
-      "dataata": "2023-10-19 00:00:00",
+      "dataata": "19/10/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLÁUDIA DE ARAÚJO MELO",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "EMERSON AUGUSTO MAEDA TAIRA",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "74155/2016-41",
-          "relator": "Victor Pereira Afonso",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Indeferimento",
-          "textoata": "Por unanimidade de votos, a contraproposta foi indeferida."
-        },
-        {
-          "numeroprocesso": "7940/2023-81",
+          "numeroprocesso": "76530/2023-06",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Em Negociação",
           "decisao": "",
           "textoata": "Por unanimidade de votos, o pedido de transação foi parcialmente deferido."
+        },
+        {
+          "numeroprocesso": "72248/2023-88",
+          "relator": "Victor Pereira Afonso",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Indeferimento",
+          "textoata": "Por unanimidade de votos, a contraproposta foi indeferida."
         }
       ]
     },
     {
       "numeroanoata": "0032/2023",
-      "dataata": "2023-10-26 00:00:00",
+      "dataata": "26/10/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "CLÁUDIA DE ARAÚJO MELO",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "PAULO VICTOR MEDEIROS DAMASCENO",
@@ -2577,7 +2595,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "76446/2023-93",
+          "numeroprocesso": "76424/2023-51",
           "relator": "Larissa Zirbes Faria",
           "revisor": "",
           "resultado": "Julgado",
@@ -2588,7 +2606,7 @@
     },
     {
       "numeroanoata": "0033/2023",
-      "dataata": "2023-10-30 00:00:00",
+      "dataata": "30/10/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -2596,7 +2614,7 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "PAULO VICTOR MEDEIROS DAMASCENO",
         "VICTOR PEREIRA AFONSO"
       ],
@@ -2604,7 +2622,7 @@
     },
     {
       "numeroanoata": "0034/2023",
-      "dataata": "2023-11-01 00:00:00",
+      "dataata": "01/11/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -2614,7 +2632,7 @@
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "JORGE TAKESHI OTUBO",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "PAULO VICTOR MEDEIROS DAMASCENO",
         "SINOMAR TIAGO RODRIGUES",
         "THALES EMANOEL AZEVEDO",
@@ -2624,7 +2642,7 @@
     },
     {
       "numeroanoata": "0035/2023",
-      "dataata": "2023-11-09 00:00:00",
+      "dataata": "09/11/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -2636,7 +2654,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "2635/2024-19",
+          "numeroprocesso": "24419/2023-16",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -2644,7 +2662,7 @@
           "textoata": "Por unanimidade de votos, o pedido de dação foi indeferido."
         },
         {
-          "numeroprocesso": "8344/2024-81",
+          "numeroprocesso": "7940/2023-81",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Julgado",
@@ -2655,21 +2673,21 @@
     },
     {
       "numeroanoata": "0036/2023",
-      "dataata": "2023-11-23 00:00:00",
+      "dataata": "23/11/2023",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVOR",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "KÁTIA SILENE SARTURI WARDE",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "114935/2022-05",
+          "numeroprocesso": "114829/2022-50",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -2680,54 +2698,54 @@
     },
     {
       "numeroanoata": "0037/2023",
-      "dataata": "2023-11-30 00:00:00",
+      "dataata": "30/11/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "817/2025-28",
+          "numeroprocesso": "85867/2023-32",
+          "relator": "Arthur Vieira de Oliveira Lavôr",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos a compensação foi deferida, entretanto o processo ficará arquivado provisoriamente, até decisão judicial definitiva."
+        },
+        {
+          "numeroprocesso": "76530/2023-06",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, a contraproposta foi deferida."
-        },
-        {
-          "numeroprocesso": "85867/2023-32",
-          "relator": "Arthur Vieira de Oliveira Lavor",
-          "revisor": "",
-          "resultado": "Em Negociação",
-          "decisao": "",
-          "textoata": "Por unanimidade de votos a compensação foi deferida, entretanto o processo ficará arquivado provisoriamente, até decisão judicial definitiva."
+          "textoata": "Por unanimidade de votos a contraproposta foi deferida."
         }
       ]
     },
     {
       "numeroanoata": "0038/2023",
-      "dataata": "2023-12-04 00:00:00",
+      "dataata": "04/12/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "109706/2023-41",
+          "numeroprocesso": "106698/2023-17",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -2738,21 +2756,21 @@
     },
     {
       "numeroanoata": "0039/2023",
-      "dataata": "2023-12-07 00:00:00",
+      "dataata": "07/12/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "EMERSON AUGUSTO MAEDA TAIRA",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "107376/2023-78",
+          "numeroprocesso": "106698/2023-17",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -2760,7 +2778,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido."
         },
         {
-          "numeroprocesso": "111224/2019-57",
+          "numeroprocesso": "107376/2023-78",
           "relator": "Cecília Saad Cruz Rizkalla",
           "revisor": "",
           "resultado": "Julgado",
@@ -2771,7 +2789,7 @@
     },
     {
       "numeroanoata": "0040/2023",
-      "dataata": "2023-12-11 00:00:00",
+      "dataata": "11/12/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -2779,14 +2797,14 @@
         "DENIR DE SOUZA NANTES",
         "EMERSON AUGUSTO MAEDA TAIRA",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "105607/2024-07",
-          "relator": "Arthur Vieira de Oliveira Lavor",
+          "numeroprocesso": "104601/2023-04",
+          "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Indeferimento",
@@ -2796,7 +2814,7 @@
     },
     {
       "numeroanoata": "0041/2023",
-      "dataata": "2023-12-13 00:00:00",
+      "dataata": "13/12/2023",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -2804,13 +2822,13 @@
         "CLÁUDIA DE ARAÚJO MELO",
         "EMERSON AUGUSTO MAEDA TAIRA",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "JORGE TAKESHI OTUBO",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "111224/2019-57",
+          "numeroprocesso": "109706/2023-41",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -2818,7 +2836,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido."
         },
         {
-          "numeroprocesso": "111802/2023-78",
+          "numeroprocesso": "111057/2023-01",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -2829,7 +2847,7 @@
     },
     {
       "numeroanoata": "0001/2024",
-      "dataata": "2024-01-22 00:00:00",
+      "dataata": "22/01/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -2838,14 +2856,14 @@
         "EMERSON AUGUSTO MAEDA TAIRA",
         "JORGE TAKESHI OTUBO",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0002/2024",
-      "dataata": "2024-01-26 00:00:00",
+      "dataata": "26/01/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -2854,23 +2872,23 @@
         "KÁTIA SILENE SARTURI WARDE",
         "JORGE TAKESHI OTUBO",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "89126/2022-02",
+          "numeroprocesso": "85867/2023-32",
           "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Suspenso",
           "decisao": "",
-          "textoata": "Não houve. O processo ficará  arquivado provisoriamente, até a conclusão do processo judicial."
+          "textoata": "Não houve. O processo ficará arquivado provisoriamente, até a conclusão do processo judicial."
         }
       ]
     },
     {
       "numeroanoata": "0003/2024",
-      "dataata": "2024-01-29 00:00:00",
+      "dataata": "29/01/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -2878,12 +2896,12 @@
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "114830/2022-39",
+          "numeroprocesso": "111802/2023-78",
           "relator": "Cecília Saad Cruz Rizkallah",
           "revisor": "",
           "resultado": "Julgado",
@@ -2894,20 +2912,20 @@
     },
     {
       "numeroanoata": "0004/2024",
-      "dataata": "2024-01-31 00:00:00",
+      "dataata": "31/01/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
-        "CLAÚDIA DE ARAÚJO MELO",
+        "CLÁUDIA DE ARAÚJO MELO",
         "JORGE TAKESHI OTUBO",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "30615/2025-27",
+          "numeroprocesso": "2956/2024-14",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -2918,21 +2936,21 @@
     },
     {
       "numeroanoata": "0005/2024",
-      "dataata": "2024-02-08 00:00:00",
+      "dataata": "08/02/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
-        "CLAÚDIA DE ARAÚJO MELO",
+        "CLÁUDIA DE ARAÚJO MELO",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "23147/2025-36",
+          "numeroprocesso": "2293/2024-29",
           "relator": "Kátia Silene Sarturi Warde",
           "revisor": "",
           "resultado": "Julgado",
@@ -2943,7 +2961,7 @@
     },
     {
       "numeroanoata": "0006/2024",
-      "dataata": "2024-02-19 00:00:00",
+      "dataata": "19/02/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -2951,12 +2969,12 @@
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "30615/2025-27",
+          "numeroprocesso": "2956/2024-14",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -2967,7 +2985,7 @@
     },
     {
       "numeroanoata": "0007/2024",
-      "dataata": "2024-02-22 00:00:00",
+      "dataata": "22/02/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -2976,42 +2994,42 @@
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0008/2024",
-      "dataata": "2024-02-29 00:00:00",
+      "dataata": "29/02/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0009/2024",
-      "dataata": "2024-03-07 00:00:00",
+      "dataata": "07/03/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0010/2024",
-      "dataata": "2024-03-14 00:00:00",
+      "dataata": "14/03/2024",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -3020,12 +3038,12 @@
         "DENIR DE SOUZA NANTES",
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "29000/2025-58",
+          "numeroprocesso": "2635/2024-19",
           "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Julgado",
@@ -3036,7 +3054,7 @@
     },
     {
       "numeroanoata": "0011/2024",
-      "dataata": "2024-03-21 00:00:00",
+      "dataata": "21/03/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -3045,12 +3063,12 @@
         "EMERSON AUGUSTO MAEDA TAIRA",
         "JORGE TAKESHI OTUBO",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "114935/2022-05",
+          "numeroprocesso": "112931/2023-56",
           "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Julgado",
@@ -3061,7 +3079,7 @@
     },
     {
       "numeroanoata": "0012/2024",
-      "dataata": "2024-03-27 00:00:00",
+      "dataata": "27/03/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -3070,14 +3088,14 @@
         "EMERSON AUGUSTO MAEDA TAIRA",
         "JORGE TAKESHI OTUBO",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0013/2024",
-      "dataata": "2024-04-04 00:00:00",
+      "dataata": "04/04/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
@@ -3086,14 +3104,14 @@
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "JORGE TAKESHI OTUBO",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0014/2024",
-      "dataata": "2024-04-11 00:00:00",
+      "dataata": "11/04/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -3102,21 +3120,21 @@
         "EMERSON AUGUSTO MAEDA TAIRA",
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "LARISSA ZIRBES FARIA",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0015/2024",
-      "dataata": "2024-04-18 00:00:00",
+      "dataata": "18/04/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "THALES EMANOEL AZEVEDO",
         "VICTOR PEREIRA AFONSO"
       ],
@@ -3124,7 +3142,7 @@
     },
     {
       "numeroanoata": "0016/2024",
-      "dataata": "2024-04-25 00:00:00",
+      "dataata": "25/04/2024",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -3136,7 +3154,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "23149/2025-61",
+          "numeroprocesso": "22969/2024-19",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -3147,7 +3165,7 @@
     },
     {
       "numeroanoata": "0017/2024",
-      "dataata": "2024-05-10 00:00:00",
+      "dataata": "10/05/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -3163,7 +3181,7 @@
     },
     {
       "numeroanoata": "0018/2024",
-      "dataata": "2024-05-16 00:00:00",
+      "dataata": "16/05/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -3178,7 +3196,7 @@
     },
     {
       "numeroanoata": "0019/2024",
-      "dataata": "2024-05-23 00:00:00",
+      "dataata": "23/05/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -3194,7 +3212,7 @@
     },
     {
       "numeroanoata": "0020/2024",
-      "dataata": "2024-05-29 00:00:00",
+      "dataata": "29/05/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -3208,7 +3226,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "32039/2025-52",
+          "numeroprocesso": "31867/2024-30",
           "relator": "Kátia Silene Sarturi Warde",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -3219,7 +3237,7 @@
     },
     {
       "numeroanoata": "0021/2024",
-      "dataata": "2024-06-10 00:00:00",
+      "dataata": "10/06/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -3233,7 +3251,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "32053/2025-56",
+          "numeroprocesso": "31867/2024-30",
           "relator": "Kátia Silene Sarturi Warde",
           "revisor": "",
           "resultado": "Julgado",
@@ -3244,12 +3262,12 @@
     },
     {
       "numeroanoata": "0022/2024",
-      "dataata": "2024-06-12 00:00:00",
+      "dataata": "12/06/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
-        "CLAÚDIA DE ARAÚJO MELO",
+        "CLÁUDIA DE ARAÚJO MELO",
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "EMERSON AUGUSTO MAEDA TAIRA",
         "LUÍS ALEXANDRE HOLAK",
@@ -3258,7 +3276,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "46992/2020-10",
+          "numeroprocesso": "43784/2024-10",
           "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Julgado",
@@ -3269,7 +3287,7 @@
     },
     {
       "numeroanoata": "0023/2024",
-      "dataata": "2024-06-20 00:00:00",
+      "dataata": "20/06/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -3283,7 +3301,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "43784/2024-10",
+          "numeroprocesso": "42854/2024-50",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -3294,7 +3312,7 @@
     },
     {
       "numeroanoata": "0024/2024",
-      "dataata": "2024-06-27 00:00:00",
+      "dataata": "27/06/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -3310,7 +3328,7 @@
     },
     {
       "numeroanoata": "0025/2024",
-      "dataata": "2024-07-04 00:00:00",
+      "dataata": "04/07/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -3324,7 +3342,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "52828/2024-76",
+          "numeroprocesso": "49162/2024-14",
           "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -3332,7 +3350,7 @@
           "textoata": "Não houve. O relator baixou os autos em diligência."
         },
         {
-          "numeroprocesso": "53638/2024-76",
+          "numeroprocesso": "49163/2024-87",
           "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Julgado",
@@ -3340,7 +3358,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi indeferido."
         },
         {
-          "numeroprocesso": "53638/2024-76",
+          "numeroprocesso": "49853/2024-45",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -3351,7 +3369,7 @@
     },
     {
       "numeroanoata": "0026/2024",
-      "dataata": "2024-07-08 00:00:00",
+      "dataata": "08/07/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -3363,7 +3381,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "49853/2024-45",
+          "numeroprocesso": "48875/2024-42",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -3371,7 +3389,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi indeferido."
         },
         {
-          "numeroprocesso": "53638/2024-76",
+          "numeroprocesso": "52828/2024-76",
           "relator": "Isabela Batista Machado Soares Scamaral",
           "revisor": "",
           "resultado": "Julgado",
@@ -3379,7 +3397,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferida."
         },
         {
-          "numeroprocesso": "56258/2024-10",
+          "numeroprocesso": "55379/2024-91",
           "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Julgado",
@@ -3390,7 +3408,7 @@
     },
     {
       "numeroanoata": "0027/2024",
-      "dataata": "2024-07-11 00:00:00",
+      "dataata": "11/07/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -3404,7 +3422,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "53641/2024-81",
+          "numeroprocesso": "53638/2024-76",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Em Negociação",
@@ -3412,7 +3430,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido."
         },
         {
-          "numeroprocesso": "55531/2024-53",
+          "numeroprocesso": "53641/2024-81",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -3420,7 +3438,7 @@
           "textoata": "Não houve, em sessão o relator baixou os autos em diligência."
         },
         {
-          "numeroprocesso": "56258/2024-10",
+          "numeroprocesso": "55531/2024-53",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -3428,7 +3446,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido."
         },
         {
-          "numeroprocesso": "58107/2024-05",
+          "numeroprocesso": "57471/2024-02",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -3439,7 +3457,7 @@
     },
     {
       "numeroanoata": "0028/2024",
-      "dataata": "2024-07-15 00:00:00",
+      "dataata": "15/07/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -3453,7 +3471,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "59914/2024-64",
+          "numeroprocesso": "58987/2024-01",
           "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Julgado",
@@ -3464,7 +3482,7 @@
     },
     {
       "numeroanoata": "0029/2024",
-      "dataata": "2024-07-25 00:00:00",
+      "dataata": "25/07/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -3477,7 +3495,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "46398/2017-15",
+          "numeroprocesso": "42854/2024-50",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Em Negociação",
@@ -3485,7 +3503,7 @@
           "textoata": "O processo retornou de diligência para pauta de julgamento. Assim, durante a sessão, esteve presente a representante do requerente, Sra. Kátia Regina de Oliveira Moina. Após análise e discussão, por unanimidade de votos, o pedido de compensação foi indeferido."
         },
         {
-          "numeroprocesso": "53641/2024-81",
+          "numeroprocesso": "53638/2024-76",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Em Negociação",
@@ -3493,7 +3511,7 @@
           "textoata": "O processo retornou para pauta de julgamento, considerando a apresentação de contraproposta do requerente. Após análise e discussão, por unanimidade de votos, a contraproposta foi deferida."
         },
         {
-          "numeroprocesso": "55690/2024-67",
+          "numeroprocesso": "53641/2024-81",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -3509,7 +3527,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido parcialmente."
         },
         {
-          "numeroprocesso": "60421/2024-02",
+          "numeroprocesso": "60339/2024-15",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Em Negociação",
@@ -3520,7 +3538,7 @@
     },
     {
       "numeroanoata": "0030/2024",
-      "dataata": "2024-08-01 00:00:00",
+      "dataata": "01/08/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -3529,13 +3547,13 @@
         "EMERSON AUGUSTO MAEDA TAIRA",
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
+        "LETÍCIA SOUSA DE MOURA",
         "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "58107/2024-05",
+          "numeroprocesso": "56805/2024-12",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -3543,7 +3561,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido parcialmente."
         },
         {
-          "numeroprocesso": "58987/2024-01",
+          "numeroprocesso": "58107/2024-05",
           "relator": "Vitor Pereira Afonso",
           "revisor": "",
           "resultado": "Em Negociação",
@@ -3551,7 +3569,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido."
         },
         {
-          "numeroprocesso": "60198/2024-95",
+          "numeroprocesso": "59913/2024-00",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Julgado",
@@ -3559,7 +3577,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido."
         },
         {
-          "numeroprocesso": "60339/2024-15",
+          "numeroprocesso": "59914/2024-64",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Julgado",
@@ -3567,7 +3585,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido parcialmente."
         },
         {
-          "numeroprocesso": "60375/2024-89",
+          "numeroprocesso": "60198/2024-95",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -3578,7 +3596,7 @@
     },
     {
       "numeroanoata": "0031/2024",
-      "dataata": "2024-08-08 00:00:00",
+      "dataata": "08/08/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -3586,13 +3604,13 @@
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "EMERSON AUGUSTO MAEDA TAIRA",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
+        "LETÍCIA SOUSA DE MOURA",
         "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "60339/2024-15",
+          "numeroprocesso": "60058/2024-26",
           "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Julgado",
@@ -3600,7 +3618,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido parcialmente."
         },
         {
-          "numeroprocesso": "60421/2024-02",
+          "numeroprocesso": "60339/2024-15",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -3608,7 +3626,7 @@
           "textoata": "O processo retornou para a pauta de julgamento considerando a contraproposta apresentada pela requerente. Por unanimidade de votos, a contraproposta foi indeferida."
         },
         {
-          "numeroprocesso": "60541/2024-56",
+          "numeroprocesso": "60421/2024-02",
           "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -3616,7 +3634,7 @@
           "textoata": "Não houve. O relator baixou os autos em diligência, para comprovação da capacidade contributiva da requerente."
         },
         {
-          "numeroprocesso": "63930/2023-43",
+          "numeroprocesso": "60541/2024-56",
           "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -3627,7 +3645,7 @@
     },
     {
       "numeroanoata": "0032/2024",
-      "dataata": "2024-08-15 00:00:00",
+      "dataata": "15/08/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -3635,13 +3653,13 @@
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
+        "LETÍCIA SOUSA DE MOURA",
         "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "55379/2024-91",
+          "numeroprocesso": "53638/2024-76",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -3649,7 +3667,7 @@
           "textoata": "O processo retornou para a pauta de julgamento considerando a contraproposta apresentada pela requerente. Por unanimidade de votos, a contraproposta foi deferida."
         },
         {
-          "numeroprocesso": "56805/2024-12",
+          "numeroprocesso": "56258/2024-10",
           "relator": "Cecília Saad Cruz Rizkallah",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -3657,7 +3675,7 @@
           "textoata": "Não houve. A relatora baixou os autos em diligência para levantamento dos débitos prescritos."
         },
         {
-          "numeroprocesso": "60541/2024-56",
+          "numeroprocesso": "60375/2024-89",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -3665,7 +3683,7 @@
           "textoata": "O processo retornou para a pauta de julgamento considerando a contraproposta apresentada pela requerente. Por unanimidade de votos, a contraproposta foi indeferida."
         },
         {
-          "numeroprocesso": "63930/2023-43",
+          "numeroprocesso": "60421/2024-02",
           "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Julgado",
@@ -3673,7 +3691,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido."
         },
         {
-          "numeroprocesso": "90286/2024-30",
+          "numeroprocesso": "85867/2023-32",
           "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -3684,28 +3702,28 @@
     },
     {
       "numeroanoata": "0033/2024",
-      "dataata": "2024-08-22 00:00:00",
+      "dataata": "22/08/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
+        "LETÍCIA SOUSA DE MOURA",
         "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "46398/2017-15",
+          "numeroprocesso": "42854/2024-50",
           "relator": "Denir de Souza Nantes",
           "revisor": "Adrianne Cristia Coelho Lobo",
           "resultado": "Julgado",
           "decisao": "Deferimento",
-          "textoata": "Em sessão, após o requerente apresentar pedido de reconsideração, o membro relator votou no sentido de não conceder os benefícios do Programa Concilia Campo Grande, voto esse seguido pelos membros Luís Alexandre Holak e Victor Pereira Afonso. De forma contrária, a membra revisora votou no sentido de conceder os benefícios do Programa Concilia Campo Grande, acompanhado pelos membros Cecília Saad Cruz Rizkallah, Jorge Takeshi Otubo e Letícia Souza de Moura. Por maioria de votos, vence o voto da membra revisora."
+          "textoata": "Em sessão, após o requerente apresentar pedido de reconsideração, o membro relator votou no sentido de não conceder os benefícios do Programa Concilia Campo Grande, voto esse seguido pelos membros Luís Alexandre Holak e Victor Pereira Afonso. De forma contrária, a membra revisora votou no sentido de conceder os benefícios do Programa Concilia Campo Grande, acompanhado pelos membros Cecília Saad Cruz Rizkallah, Jorge Takeshi Otubo e Letícia Sousa de Moura. Por maioria de votos, vence o voto da membra revisora."
         },
         {
-          "numeroprocesso": "59112/2020-49",
+          "numeroprocesso": "58107/2024-05",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -3713,7 +3731,7 @@
           "textoata": "Não houve. O processo foi baixado em diligência para verificar quanto a possibilidade de lançamento no sistema considerando as condições da transação."
         },
         {
-          "numeroprocesso": "90806/2019-19",
+          "numeroprocesso": "89126/2022-02",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -3724,7 +3742,7 @@
     },
     {
       "numeroanoata": "0034/2024",
-      "dataata": "2024-09-05 00:00:00",
+      "dataata": "05/09/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -3739,7 +3757,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "57471/2024-02",
+          "numeroprocesso": "56258/2024-10",
           "relator": "Cecília Saad Cruz Rizkallah",
           "revisor": "",
           "resultado": "Julgado",
@@ -3747,7 +3765,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido."
         },
         {
-          "numeroprocesso": "83668/2020-92",
+          "numeroprocesso": "8344/2024-81",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -3758,7 +3776,7 @@
     },
     {
       "numeroanoata": "0035/2024",
-      "dataata": "2024-09-13 00:00:00",
+      "dataata": "13/09/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -3772,7 +3790,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "90288/2024-65",
+          "numeroprocesso": "85867/2023-32",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -3783,11 +3801,11 @@
     },
     {
       "numeroanoata": "0036/2024",
-      "dataata": "2024-09-19 00:00:00",
+      "dataata": "19/09/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
-        "CLAÚDIA DE ARAÚJO MELO",
+        "CLÁUDIA DE ARAÚJO MELO",
         "EMERSON AUGUSTO MAEDA TAIRA",
         "JORGE TAKESHI OTUBO",
         "LARISSA CARDOSO",
@@ -3797,7 +3815,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "83668/2020-92",
+          "numeroprocesso": "8344/2024-81",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Julgado",
@@ -3808,12 +3826,12 @@
     },
     {
       "numeroanoata": "0037/2024",
-      "dataata": "2024-09-30 00:00:00",
+      "dataata": "30/09/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
-        "CLAÚDIA DE ARAÚJO MELO",
+        "CLÁUDIA DE ARAÚJO MELO",
         "EMERSON AUGUSTO MAEDA TAIRA",
         "JORGE TAKESHI OTUBO",
         "LARISSA CARDOSO",
@@ -3823,7 +3841,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "59913/2024-00",
+          "numeroprocesso": "58107/2024-05",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Julgado",
@@ -3834,14 +3852,14 @@
     },
     {
       "numeroanoata": "0038/2024",
-      "dataata": "2024-10-03 00:00:00",
+      "dataata": "03/10/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "EMERSON AUGUSTO MAEDA TAIRA",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
+        "LETÍCIA SOUSA DE MOURA",
         "LUÍS ALEXANDRE HOLAK",
         "PAULO VICTOR MEDEIROS DAMASCENO",
         "VICTOR PEREIRA AFONSO"
@@ -3850,13 +3868,13 @@
     },
     {
       "numeroanoata": "0039/2024",
-      "dataata": "2024-10-17 00:00:00",
+      "dataata": "17/10/2024",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "EMERSON AUGUSTO MAEDA TAIRA",
-        "LETÍCIA SOUZA DE MOURA",
+        "LETÍCIA SOUSA DE MOURA",
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "VICTOR PEREIRA AFONSO"
       ],
@@ -3864,21 +3882,21 @@
     },
     {
       "numeroanoata": "0040/2024",
-      "dataata": "2024-10-24 00:00:00",
+      "dataata": "24/10/2024",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "DENIR DE SOUZA NANTES",
         "EMERSON AUGUSTO MAEDA TAIRA",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0041/2024",
-      "dataata": "2024-10-31 00:00:00",
+      "dataata": "31/10/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -3887,21 +3905,21 @@
         "DENIR DE SOUZA NANTES",
         "EMERSON AUGUSTO MAEDA TAIRA",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "56495/2024-27",
-          "relator": "Letícia Souza Moura",
+          "numeroprocesso": "55690/2024-67",
+          "relator": "Letícia Sousa de Moura",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Indeferimento",
           "textoata": "Por unanimidade de votos, o pedido de dação foi indeferido."
         },
         {
-          "numeroprocesso": "63930/2023-43",
+          "numeroprocesso": "60541/2024-56",
           "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Julgado",
@@ -3912,7 +3930,7 @@
     },
     {
       "numeroanoata": "0042/2024",
-      "dataata": "2024-11-07 00:00:00",
+      "dataata": "07/11/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -3921,7 +3939,7 @@
         "EMERSON AUGUSTO MAEDA TAIRA",
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "LARISSA CARDOSO",
-        "LUIS ALEXANDRE HOLAK",
+        "LUÍS ALEXANDRE HOLAK",
         "PAULO VICTOR MEDEIROS DAMASCENO",
         "VICTOR PEREIRA AFONSO"
       ],
@@ -3929,7 +3947,7 @@
     },
     {
       "numeroanoata": "0043/2024",
-      "dataata": "2024-11-14 00:00:00",
+      "dataata": "14/11/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -3938,11 +3956,12 @@
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "KÁTIA SILENE SARTURI WARDE",
         "LARISSA CARDOSO",
-        "LUIS ALEXANDRE HOLAK E PAULO VICTOR MEDEIROS DAMASCENO"
+        "LUÍS ALEXANDRE HOLAK",
+        "PAULO VICTOR MEDEIROS DAMASCENO"
       ],
       "processos": [
         {
-          "numeroprocesso": "72248/2023-88",
+          "numeroprocesso": "70299/2024-29",
           "relator": "Cecília Saad Cruz Rizkallah",
           "revisor": "",
           "resultado": "Julgado",
@@ -3953,7 +3972,7 @@
     },
     {
       "numeroanoata": "0044/2024",
-      "dataata": "2024-11-21 00:00:00",
+      "dataata": "21/11/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -3961,11 +3980,12 @@
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
         "EMERSON AUGUSTO MAEDA TAIRA",
-        "LARISSA CARDOSO E LUIS ALEXANDRE HOLAK"
+        "LARISSA CARDOSO",
+        "LUÍS ALEXANDRE HOLAK"
       ],
       "processos": [
         {
-          "numeroprocesso": "96219/2018-17",
+          "numeroprocesso": "94834/2024-55",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -3976,7 +3996,7 @@
     },
     {
       "numeroanoata": "0045/2024",
-      "dataata": "2024-11-28 00:00:00",
+      "dataata": "28/11/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
@@ -3984,13 +4004,13 @@
         "DENIR DE SOUZA NANTES",
         "KÁTIA SILENE SARTURI WARDE",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "83668/2020-92",
+          "numeroprocesso": "83246/2023-14",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Julgado",
@@ -4001,20 +4021,20 @@
     },
     {
       "numeroanoata": "0046/2024",
-      "dataata": "2024-12-02 00:00:00",
+      "dataata": "02/12/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
-        "KÁTIA SILENE SARTURI WARDE",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "KÁTIA SIRLENE SARTURI WARDE",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "98532/2024-38",
+          "numeroprocesso": "97968/2024-28",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -4025,21 +4045,21 @@
     },
     {
       "numeroanoata": "0047/2024",
-      "dataata": "2024-12-05 00:00:00",
+      "dataata": "05/12/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
-        "KÁTIA SILENE SARTURI WARDE",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "KÁTIA SIRLENE SARTURI WARDE",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "99082/2024-19",
+          "numeroprocesso": "97968/2024-28",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -4047,7 +4067,7 @@
           "textoata": "Por unanimidade de votos o pedido de Transação Excepcional foi deferido nos termos do voto."
         },
         {
-          "numeroprocesso": "99462/2024-90",
+          "numeroprocesso": "98532/2024-38",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -4055,7 +4075,7 @@
           "textoata": "Não houve. O relator solicitou a baixa dos autos em diligência para apresentação de documentos."
         },
         {
-          "numeroprocesso": "99558/2024-67",
+          "numeroprocesso": "99082/2024-19",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -4066,20 +4086,21 @@
     },
     {
       "numeroanoata": "0048/2024",
-      "dataata": "2024-12-12 00:00:00",
+      "dataata": "12/12/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
-        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR CECÍLIA SAAD CRUZ RIZKALLAH",
+        "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
+        "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
         "EMERSON AUGUSTO MAEDA TAIRA",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "100978/2024-01",
+          "numeroprocesso": "100739/2024-52",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Suspenso",
@@ -4087,7 +4108,7 @@
           "textoata": "Não houve. O relator solicitou a retirada do processo da pauta."
         },
         {
-          "numeroprocesso": "96219/2018-17",
+          "numeroprocesso": "95817/2024-71",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -4095,7 +4116,7 @@
           "textoata": "Por unanimidade de votos o pedido de transação excepcional foi indeferido nos termos do voto."
         },
         {
-          "numeroprocesso": "99558/2024-67",
+          "numeroprocesso": "99462/2024-90",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -4106,21 +4127,21 @@
     },
     {
       "numeroanoata": "0049/2024",
-      "dataata": "2024-12-16 00:00:00",
+      "dataata": "16/12/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "THALES EMANOEL AZEVEDO",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "101206/2024-14",
+          "numeroprocesso": "100742/2024-67",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -4128,7 +4149,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi indeferido."
         },
         {
-          "numeroprocesso": "99721/2024-46",
+          "numeroprocesso": "99558/2024-67",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Em Negociação",
@@ -4139,21 +4160,21 @@
     },
     {
       "numeroanoata": "0050/2024",
-      "dataata": "2024-12-19 00:00:00",
+      "dataata": "19/12/2024",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "CECÍLIA SAAD CRUZ RIZKALLAH",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
         "KÁTIA SILENE SARTURI WARDE",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "THALES EMANOEL AZEVEDO",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "100742/2024-67",
+          "numeroprocesso": "100731/2024-41",
           "relator": "Denir de Souza Nantes",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -4161,7 +4182,7 @@
           "textoata": "Não houve. Relator solicitou diligência."
         },
         {
-          "numeroprocesso": "101192/2024-01",
+          "numeroprocesso": "101222/2024-62",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -4169,7 +4190,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido, nos termos do voto."
         },
         {
-          "numeroprocesso": "101222/2024-62",
+          "numeroprocesso": "99462/2024-90",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -4177,7 +4198,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido, nos termos do voto."
         },
         {
-          "numeroprocesso": "101222/2024-62",
+          "numeroprocesso": "101218/2024-95",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Em Negociação",
@@ -4185,15 +4206,15 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido, nos termos do voto. O patrono Dr. Eduardo Marques de Souza Costa Júnior OAB/MS 25.207 esteve presente na sessão e se manifestou durante o julgamento."
         },
         {
-          "numeroprocesso": "101410/2024-72",
+          "numeroprocesso": "97304/2024-78",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
-          "resultado": "Em Negociação",
-          "decisao": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido, nos termos do voto."
         },
         {
-          "numeroprocesso": "104601/2023-04",
+          "numeroprocesso": "101206/2024-14",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -4201,7 +4222,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido, nos termos do voto."
         },
         {
-          "numeroprocesso": "98532/2024-38",
+          "numeroprocesso": "100739/2024-52",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -4209,7 +4230,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido, nos termos do voto."
         },
         {
-          "numeroprocesso": "99721/2024-46",
+          "numeroprocesso": "101411/2024-35",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -4228,79 +4249,79 @@
     },
     {
       "numeroanoata": "0001/2025",
-      "dataata": "2025-01-24 00:00:00",
+      "dataata": "24/01/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "DENIR DE SOUZA NANTES",
         "EMERSON AUGUSTO MAEDA TAIRA",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0002/2025",
-      "dataata": "2025-01-27 00:00:00",
+      "dataata": "27/01/2025",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "DENIR DE SOUZA NANTES",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0003/2025",
-      "dataata": "2025-01-30 00:00:00",
+      "dataata": "30/01/2025",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "DENIR DE SOUZA NANTES",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
-        {
-          "numeroprocesso": "99462/2024-90",
-          "relator": "Denir de Souza Nantes",
-          "revisor": "",
-          "resultado": "Pedido de Diligência",
-          "decisao": "",
-          "textoata": "O relator solicitou nova diligência."
-        },
         {
           "numeroprocesso": "99558/2024-67",
           "relator": "Victor Pereira Afonso",
           "revisor": "Adrianne Cristina Coelho Lobo",
           "resultado": "Julgado",
           "decisao": "Deferimento",
-          "textoata": "Em sessão o membro relator votou no sentido de indeferir a contraproposta de transação apresentada, voto esse acompanhado pelo membro Arthur Vieira de Oliveira Lavôr. De forma contrária, a membra revisora Adrianne Cristina Coelho Lobo votou no sentido de aceitar a contraproposta apresentada, voto esse seguido pelos membros Letícia Souza de Moura, Luís Alexandre Holak e Denir de Souza Nantes. Por maioria de voto, vence o voto da revisora."
+          "textoata": "Em sessão o membro relator votou no sentido de indeferir a contraproposta de transação apresentada, voto esse acompanhado pelo membro Arthur Vieira de Oliveira Lavôr. De forma contrária, a membra revisora Adrianne Cristina Coelho Lobo votou no sentido de aceitar a contraproposta apresentada, voto esse seguido pelos membros Letícia Sousa de Moura, Luís Alexandre Holak e Denir de Souza Nantes. Por maioria de voto, vence o voto da revisora."
+        },
+        {
+          "numeroprocesso": "98532/2024-38",
+          "relator": "Denir de Souza Nantes",
+          "revisor": "",
+          "resultado": "Pedido de Diligência",
+          "decisao": "",
+          "textoata": "O relator solicitou nova diligência."
         }
       ]
     },
     {
       "numeroanoata": "0004/2025",
-      "dataata": "2025-01-31 00:00:00",
+      "dataata": "31/01/2025",
       "presidente": "Jorge Takeshi Otubo",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "DENIR DE SOUZA NANTES",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "24419/2023-16",
+          "numeroprocesso": "2338/2025-46",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Julgado",
@@ -4308,39 +4329,39 @@
           "textoata": "Por unanimidade de votos, o pedido de compensação de crédito foi deferido."
         },
         {
-          "numeroprocesso": "9223/2022-30",
-          "relator": "Arthur Vieira de Oliveira Lavor",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
-        },
-        {
-          "numeroprocesso": "92810/2020-92",
-          "relator": "Arthur Vieira de Oliveira Lavor",
+          "numeroprocesso": "90288/2024-65",
+          "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Deferimento",
           "textoata": "Por unanimidade de votos, o pedido de compensação de crédito foi deferido."
+        },
+        {
+          "numeroprocesso": "90286/2024-30",
+          "relator": "Arthur Vieira de Oliveira Lavôr",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
         }
       ]
     },
     {
       "numeroanoata": "0005/2025",
-      "dataata": "2025-02-06 00:00:00",
+      "dataata": "06/02/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "101218/2024-95",
+          "numeroprocesso": "100978/2024-01",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -4348,7 +4369,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto."
         },
         {
-          "numeroprocesso": "106698/2023-17",
+          "numeroprocesso": "106020/2024-25",
           "relator": "Letícia Sousa de Moura",
           "revisor": "",
           "resultado": "Julgado",
@@ -4359,20 +4380,20 @@
     },
     {
       "numeroanoata": "0006/2025",
-      "dataata": "2025-02-13 00:00:00",
+      "dataata": "13/02/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "10297/2021-92",
+          "numeroprocesso": "101410/2024-72",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -4391,20 +4412,28 @@
     },
     {
       "numeroanoata": "0007/2025",
-      "dataata": "2025-02-20 00:00:00",
+      "dataata": "20/02/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
         "ARTHUR VIEIRA DE OLIVEIRA LAVÔR",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "104539/2022-43",
+          "numeroprocesso": "817/2025-28",
+          "relator": "Arthur Vieira de Oliveira Lavôr",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
+        },
+        {
+          "numeroprocesso": "101410/2024-72",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -4412,16 +4441,8 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido, nos termos do relatório."
         },
         {
-          "numeroprocesso": "58107/2024-05",
+          "numeroprocesso": "56495/2024-27",
           "relator": "Luís Alexandre Holak",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
-        },
-        {
-          "numeroprocesso": "8344/2024-81",
-          "relator": "Arthur Vieira de Oliveira Lavor",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Deferimento",
@@ -4431,43 +4452,35 @@
     },
     {
       "numeroanoata": "0008/2025",
-      "dataata": "2025-02-27 00:00:00",
+      "dataata": "27/02/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
         "DENIR DE SOUZA NANTES",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "101410/2024-72",
-          "relator": "Jorge Takeshi Otubo",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Indeferimento",
-          "textoata": "Por unanimidade de votos, a contraproposta foi indeferida"
-        },
-        {
-          "numeroprocesso": "101411/2024-35",
-          "relator": "Jorge Takeshi Otubo",
+          "numeroprocesso": "107198/2024-01",
+          "relator": "Adrianne Cristina Coelho Lobo",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, a contraproposta foi deferida."
+          "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
         },
         {
-          "numeroprocesso": "105607/2024-07",
-          "relator": "Arthur Vieira de Oliveira Lavor",
+          "numeroprocesso": "10559/2024-80",
+          "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Suspenso",
           "decisao": "",
           "textoata": "O processo foi retirado de pauta."
         },
         {
-          "numeroprocesso": "107198/2024-01",
+          "numeroprocesso": "106142/2024-11",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Julgado",
@@ -4475,18 +4488,26 @@
           "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido, nos termos do relatórios."
         },
         {
-          "numeroprocesso": "111057/2023-01",
-          "relator": "Adrianne Cristina Coelho Lobo",
+          "numeroprocesso": "101222/2024-62",
+          "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
+          "textoata": "Por unanimidade de votos, a contraproposta foi deferida."
+        },
+        {
+          "numeroprocesso": "101218/2024-95",
+          "relator": "Jorge Takeshi Otubo",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Indeferimento",
+          "textoata": "Por unanimidade de votos, a contraproposta foi indeferida"
         }
       ]
     },
     {
       "numeroanoata": "0009/2025",
-      "dataata": "2025-03-14 00:00:00",
+      "dataata": "14/03/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -4494,15 +4515,15 @@
         "DENIR DE SOUZA NANTES",
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0010/2025",
-      "dataata": "2025-03-20 00:00:00",
+      "dataata": "20/03/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -4510,21 +4531,21 @@
         "DENIR DE SOUZA NANTES",
         "FRANCIMAR MESSIAS ASSIS JÚNIOR",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
-        "LUIS ALEXANDRE HOLAK",
+        "LETÍCIA SOUSA DE MOURA",
+        "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "105607/2024-07",
-          "relator": "Arthur Vieira de Oliveira Lavor",
+          "numeroprocesso": "10559/2024-80",
+          "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Deferimento",
           "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
         },
         {
-          "numeroprocesso": "16941/2022-53",
+          "numeroprocesso": "1398/2025-32",
           "relator": "Adrianne Cristina Coelho Lobo",
           "revisor": "",
           "resultado": "Julgado",
@@ -4532,7 +4553,7 @@
           "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
         },
         {
-          "numeroprocesso": "18321/2023-21",
+          "numeroprocesso": "1320/2025-45",
           "relator": "Adrianne Cristina Coelho Lobo",
           "revisor": "",
           "resultado": "Julgado",
@@ -4543,7 +4564,7 @@
     },
     {
       "numeroanoata": "0011/2025",
-      "dataata": "2025-03-27 00:00:00",
+      "dataata": "27/03/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -4551,14 +4572,14 @@
         "DENIR DE SOUZA NANTES",
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
+        "LETÍCIA SOUSA DE MOURA",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": []
     },
     {
       "numeroanoata": "0012/2025",
-      "dataata": "2025-03-31 00:00:00",
+      "dataata": "31/03/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -4566,13 +4587,13 @@
         "DENIR DE SOUZA NANTES",
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
+        "LETÍCIA SOUSA DE MOURA",
         "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
       "processos": [
         {
-          "numeroprocesso": "101218/2024-95",
+          "numeroprocesso": "101192/2024-01",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -4583,7 +4604,7 @@
     },
     {
       "numeroanoata": "0013/2025",
-      "dataata": "2025-04-03 00:00:00",
+      "dataata": "03/04/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -4591,7 +4612,7 @@
         "DENIR DE SOUZA NANTES",
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "JORGE TAKESHI OTUBO",
-        "LETÍCIA SOUZA DE MOURA",
+        "LETÍCIA SOUSA DE MOURA",
         "LUÍS ALEXANDRE HOLAK",
         "VICTOR PEREIRA AFONSO"
       ],
@@ -4599,7 +4620,7 @@
     },
     {
       "numeroanoata": "0014/2025",
-      "dataata": "2025-04-10 00:00:00",
+      "dataata": "10/04/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -4615,7 +4636,7 @@
     },
     {
       "numeroanoata": "0015/2025",
-      "dataata": "2025-04-24 00:00:00",
+      "dataata": "24/04/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -4640,7 +4661,7 @@
     },
     {
       "numeroanoata": "0016/2025",
-      "dataata": "2025-04-30 00:00:00",
+      "dataata": "30/04/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -4654,22 +4675,22 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "2195/2020-86",
+          "numeroprocesso": "21905/2025-81",
           "relator": "Pedro Sol Milhomem Santos Ferreira",
           "revisor": "",
-          "resultado": "Em Negociação",
-          "decisao": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
           "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
         }
       ]
     },
     {
       "numeroanoata": "0017/2025",
-      "dataata": "2025-05-07 00:00:00",
+      "dataata": "07/05/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
-        "CLAÚDIA DE ARAÚJO MELO",
+        "CLÁUDIA DE ARAÚJO MELO",
         "ISABELA BATISTA MACHADO SOARES SCARAMAL",
         "JORGE TAKESHI OTUBO",
         "MARIANA RODRIGUES MOREIRA",
@@ -4678,7 +4699,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "24155/2022-57",
+          "numeroprocesso": "23149/2025-61",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Julgado",
@@ -4689,7 +4710,7 @@
     },
     {
       "numeroanoata": "0018/2025",
-      "dataata": "2025-05-15 00:00:00",
+      "dataata": "15/05/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "DENIR DE SOUZA NANTES",
@@ -4702,7 +4723,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "2338/2025-46",
+          "numeroprocesso": "23147/2025-36",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -4713,7 +4734,7 @@
     },
     {
       "numeroanoata": "0019/2025",
-      "dataata": "2025-05-22 00:00:00",
+      "dataata": "22/05/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "DENIR DE SOUZA NANTES",
@@ -4726,7 +4747,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "2195/2020-86",
+          "numeroprocesso": "21905/2025-81",
           "relator": "Pedro Sol Milhomem Santos Ferreira",
           "revisor": "",
           "resultado": "Suspenso",
@@ -4737,7 +4758,7 @@
     },
     {
       "numeroanoata": "0020/2025",
-      "dataata": "2025-05-29 00:00:00",
+      "dataata": "29/05/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -4751,7 +4772,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "2195/2020-86",
+          "numeroprocesso": "21905/2025-81",
           "relator": "Pedro Sol Milhomem Santos Ferreira",
           "revisor": "",
           "resultado": "Suspenso",
@@ -4762,7 +4783,7 @@
     },
     {
       "numeroanoata": "0021/2025",
-      "dataata": "2025-06-05 00:00:00",
+      "dataata": "05/06/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -4776,7 +4797,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "105683/2024-87",
+          "numeroprocesso": "105607/2024-07",
           "relator": "Adrianne Cristina Coelho Lobo",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -4787,7 +4808,7 @@
     },
     {
       "numeroanoata": "0022/2025",
-      "dataata": "2025-06-17 00:00:00",
+      "dataata": "17/06/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -4801,7 +4822,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "24155/2022-57",
+          "numeroprocesso": "23147/2025-36",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Julgado",
@@ -4812,7 +4833,7 @@
     },
     {
       "numeroanoata": "0023/2025",
-      "dataata": "2025-06-26 00:00:00",
+      "dataata": "26/06/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -4825,7 +4846,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "21905/2025-81",
+          "numeroprocesso": "15883/2025-66",
           "relator": "Isabela Batista Machado Soares Scaramal",
           "revisor": "",
           "resultado": "Julgado",
@@ -4836,7 +4857,7 @@
     },
     {
       "numeroanoata": "0024/2025",
-      "dataata": "2025-06-30 00:00:00",
+      "dataata": "30/06/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -4850,26 +4871,67 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "106698/2023-17",
-          "relator": "Kátia Silene Sarturi Warde",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido."
-        },
-        {
-          "numeroprocesso": "29144/2020-56",
+          "numeroprocesso": "29000/2025-58",
           "relator": "Adrianne Cristina Coelho Lobo",
           "revisor": "",
           "resultado": "Pedido de Diligência",
           "decisao": "",
           "textoata": "O processo foi baixado em diligência para análise das propostas sugeridas pelo colegiado."
+        },
+        {
+          "numeroprocesso": "105683/2024-87",
+          "relator": "Kátia Silene Sarturi Warde",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido."
         }
       ]
     },
     {
       "numeroanoata": "0025/2025",
-      "dataata": "2025-07-03 00:00:00",
+      "dataata": "03/07/2025",
+      "presidente": "Ricardo Vieira Dias",
+      "conselheirosparticipantes": [
+        "ADRIANNE CRISTINA COELHO LOBO",
+        "DENIR DE SOUZA NANTES",
+        "ISABELA BATISTA MACHADO SOARES SCARAMAL",
+        "JORGE TAKESHI OTUBO",
+        "KÁTIA SILENE SARTURI WARDE",
+        "LUÍS ALEXANDRE HOLAK",
+        "PEDRO SOL MILHOMEM SANTOS FERREIRA",
+        "VICTOR PEREIRA AFONSO"
+      ],
+      "processos": [
+        {
+          "numeroprocesso": "29000/2025-58",
+          "relator": "Adrianne Cristina Coelho Lobo",
+          "revisor": "",
+          "resultado": "Pedido de Diligência",
+          "decisao": "",
+          "textoata": "O processo foi baixado novamente em diligência para análise das propostas sugeridas pelo colegiado ao requerente."
+        },
+        {
+          "numeroprocesso": "29751/2025-74",
+          "relator": "Pedro Sol Milhomem Santos Ferreira",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Indeferimento",
+          "textoata": "Por unanimidade de votos, o pedido de transação foi indeferido."
+        },
+        {
+          "numeroprocesso": "31056/2025-72",
+          "relator": "Luís Alexandre Holak",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido."
+        }
+      ]
+    },
+    {
+      "numeroanoata": "0026/2025",
+      "dataata": "10/07/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -4888,51 +4950,10 @@
           "revisor": "",
           "resultado": "Pedido de Diligência",
           "decisao": "",
-          "textoata": "O processo foi baixado novamente em diligência para análise das propostas sugeridas pelo colegiado ao requerente."
-        },
-        {
-          "numeroprocesso": "31056/2025-72",
-          "relator": "Pedro Sol Milhomem Santos Ferreira",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Indeferimento",
-          "textoata": "Por unanimidade de votos, o pedido de transação foi indeferido."
-        },
-        {
-          "numeroprocesso": "31330/2025-11",
-          "relator": "Luís Alexandre Holak",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido."
-        }
-      ]
-    },
-    {
-      "numeroanoata": "0026/2025",
-      "dataata": "2025-07-10 00:00:00",
-      "presidente": "Ricardo Vieira Dias",
-      "conselheirosparticipantes": [
-        "ADRIANNE CRISTINA COELHO LOBO",
-        "DENIR DE SOUZA NANTES",
-        "ISABELA BATISTA MACHADO SOARES SCARAMAL",
-        "JORGE TAKESHI OTUBO",
-        "KÁTIA SILENE SARTURI WARDE",
-        "LUÍS ALEXANDRE HOLAK",
-        "PEDRO SOL MILHOMEM SANTOS FERREIRA",
-        "VICTOR PEREIRA AFONSO"
-      ],
-      "processos": [
-        {
-          "numeroprocesso": "2956/2024-14",
-          "relator": "Adrianne Cristina Coelho Lobo",
-          "revisor": "",
-          "resultado": "Pedido de Diligência",
-          "decisao": "",
           "textoata": "O processo foi baixado em diligência, considerando a necessidade da consulta do processo administrativo n. 95925/2010-49 (Benefício do Prodes)."
         },
         {
-          "numeroprocesso": "31348/2025-13",
+          "numeroprocesso": "31299/2025-19",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -4943,7 +4964,7 @@
     },
     {
       "numeroanoata": "0027/2025",
-      "dataata": "2025-07-24 00:00:00",
+      "dataata": "24/07/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -4957,7 +4978,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "29144/2020-56",
+          "numeroprocesso": "29000/2025-58",
           "relator": "Adrianne Cristina Coelho Lobo",
           "revisor": "Victor Pereira Afonso",
           "resultado": "Julgado",
@@ -4968,7 +4989,7 @@
     },
     {
       "numeroanoata": "0028/2025",
-      "dataata": "2025-07-31 00:00:00",
+      "dataata": "31/07/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -4982,7 +5003,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "23147/2025-36",
+          "numeroprocesso": "22484/2025-12",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -4990,7 +5011,7 @@
           "textoata": "Por unanimidade de votos, o pedido foi indeferido."
         },
         {
-          "numeroprocesso": "35815/2025-76",
+          "numeroprocesso": "35253/2025-61",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
@@ -5001,7 +5022,7 @@
     },
     {
       "numeroanoata": "0029/2025",
-      "dataata": "2025-08-07 00:00:00",
+      "dataata": "07/08/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -5015,7 +5036,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "31348/2025-13",
+          "numeroprocesso": "31330/2025-11",
           "relator": "Isabela Batista Machado Soares Scaramal",
           "revisor": "",
           "resultado": "Em Negociação",
@@ -5023,7 +5044,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto."
         },
         {
-          "numeroprocesso": "31867/2024-30",
+          "numeroprocesso": "31348/2025-13",
           "relator": "Isabela Batista Machado Soares Scaramal",
           "revisor": "",
           "resultado": "Em Negociação",
@@ -5031,7 +5052,7 @@
           "textoata": "Por unanimidade de votos, o pedido de transação excepcional foi indeferido."
         },
         {
-          "numeroprocesso": "34405/2025-16",
+          "numeroprocesso": "33772/2025-94",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -5042,7 +5063,7 @@
     },
     {
       "numeroanoata": "0030/2025",
-      "dataata": "2025-08-14 00:00:00",
+      "dataata": "14/08/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -5056,15 +5077,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "106142/2024-11",
-          "relator": "Adrianne Cristina Coelho Lobo",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Indeferimento",
-          "textoata": "Por unanimidade de votos, o pedido de transação excepcional foi indeferido."
-        },
-        {
-          "numeroprocesso": "29751/2025-74",
+          "numeroprocesso": "29215/2025-79",
           "relator": "Adrianne Cristina Coelho Lobo",
           "revisor": "",
           "resultado": "Julgado",
@@ -5072,42 +5085,50 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto."
         },
         {
-          "numeroprocesso": "31299/2025-19",
+          "numeroprocesso": "105607/2024-07",
+          "relator": "Adrianne Cristina Coelho Lobo",
+          "revisor": "",
+          "resultado": "Em Negociação",
+          "decisao": "",
+          "textoata": "Por unanimidade de votos, o pedido de transação excepcional foi indeferido."
+        },
+        {
+          "numeroprocesso": "32065/2025-81",
+          "relator": "Luís Alexandre Holak",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto."
+        },
+        {
+          "numeroprocesso": "32053/2025-56",
+          "relator": "Luís Alexandre Holak",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto."
+        },
+        {
+          "numeroprocesso": "32039/2025-52",
+          "relator": "Luís Alexandre Holak",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto."
+        },
+        {
+          "numeroprocesso": "30615/2025-27",
           "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Pedido de Diligência",
           "decisao": "",
           "textoata": "O processo foi baixado em diligência."
-        },
-        {
-          "numeroprocesso": "32969/2025-14",
-          "relator": "Luís Alexandre Holak",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto."
-        },
-        {
-          "numeroprocesso": "33772/2025-94",
-          "relator": "Luís Alexandre Holak",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto."
-        },
-        {
-          "numeroprocesso": "33772/2025-94",
-          "relator": "Luís Alexandre Holak",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto."
         }
       ]
     },
     {
       "numeroanoata": "0031/2025",
-      "dataata": "2025-08-21 00:00:00",
+      "dataata": "21/08/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "DENIR DE SOUZA NANTES",
@@ -5120,15 +5141,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "35115/2025-81",
-          "relator": "Pedro Sol Milhomem Santos Ferreira",
-          "revisor": "",
-          "resultado": "Pedido de Diligência",
-          "decisao": "",
-          "textoata": "O processo foi baixado em diligência para levantamento dos débitos ajuizados."
-        },
-        {
-          "numeroprocesso": "35209/2025-51",
+          "numeroprocesso": "34405/2025-16",
           "relator": "Kátia Silene Sarturi Warde",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -5136,7 +5149,7 @@
           "textoata": "O processo foi baixado em diligência para análise dos débitos ajuizados."
         },
         {
-          "numeroprocesso": "36624/2023-34",
+          "numeroprocesso": "35815/2025-76",
           "relator": "Kátia Silene Sarturi Warde",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -5144,7 +5157,7 @@
           "textoata": "O processo foi baixado em diligência para análise dos débitos ajuizados."
         },
         {
-          "numeroprocesso": "42645/2022-16",
+          "numeroprocesso": "37436/2025-11",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -5152,18 +5165,26 @@
           "textoata": "O processo foi baixado em diligência."
         },
         {
-          "numeroprocesso": "42645/2022-16",
+          "numeroprocesso": "37507/2025-85",
           "relator": "Pedro Sol Milhomem Santos Ferreira",
           "revisor": "",
           "resultado": "Pedido de Diligência",
           "decisao": "",
           "textoata": "O processo foi baixado em diligência."
+        },
+        {
+          "numeroprocesso": "33959/2025-98",
+          "relator": "Pedro Sol Milhomem Santos Ferreira",
+          "revisor": "",
+          "resultado": "Pedido de Diligência",
+          "decisao": "",
+          "textoata": "O processo foi baixado em diligência para levantamento dos débitos ajuizados."
         }
       ]
     },
     {
       "numeroanoata": "0032/2025",
-      "dataata": "2025-08-28 00:00:00",
+      "dataata": "28/08/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -5178,14 +5199,6 @@
       "processos": [
         {
           "numeroprocesso": "34680/2025-21",
-          "relator": "Victor Pereira Afonso",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
-        },
-        {
-          "numeroprocesso": "35253/2025-61",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -5193,7 +5206,7 @@
           "textoata": "Por unanimidade de votos, o pedido foi indeferido nos termos do voto."
         },
         {
-          "numeroprocesso": "35265/2025-95",
+          "numeroprocesso": "35115/2025-81",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -5201,7 +5214,7 @@
           "textoata": "Por unanimidade de votos, o pedido foi indeferido nos termos do voto."
         },
         {
-          "numeroprocesso": "35815/2025-76",
+          "numeroprocesso": "35209/2025-51",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -5209,18 +5222,26 @@
           "textoata": "Por unanimidade de votos, o pedido foi indeferido nos termos do voto."
         },
         {
-          "numeroprocesso": "42645/2022-16",
+          "numeroprocesso": "37436/2025-11",
           "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Deferimento",
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto."
+        },
+        {
+          "numeroprocesso": "33772/2025-94",
+          "relator": "Victor Pereira Afonso",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
         }
       ]
     },
     {
       "numeroanoata": "0033/2025",
-      "dataata": "2025-09-04 00:00:00",
+      "dataata": "04/09/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -5234,23 +5255,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "31867/2024-30",
-          "relator": "Isabela Batista Machado Soares Scaramal",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento",
-          "textoata": "O processo retornou para pauta de julgamento haja vista a contraproposta apresentada. Por unanimidade de votos, o pedido foi deferido."
-        },
-        {
           "numeroprocesso": "32035/2025-74",
-          "relator": "Isabela Batista Machado Soares Scaramal",
-          "revisor": "Adrianne Cristina Coelho Lobo",
-          "resultado": "Pedido de Vista",
-          "decisao": "",
-          "textoata": "O processo retornou para pauta de julgamento haja vista a contraproposta apresentada. A membra Adrianne Cristina Coelho Lobo pediu vistas ao processo."
-        },
-        {
-          "numeroprocesso": "32065/2025-81",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -5258,18 +5263,34 @@
           "textoata": "O processo foi baixado em diligência para apresentação da proposta de transação ao requerente e a verificação quanto ao débito referente ao exercício de 2021 que não consta com a marcação de ajuizado no sistema."
         },
         {
-          "numeroprocesso": "36838/2025-06",
+          "numeroprocesso": "35815/2025-76",
           "relator": "Kátia Silene Sarturi Warde",
           "revisor": "",
           "resultado": "Pedido de Diligência",
           "decisao": "",
           "textoata": "O processo foi baixado em diligência para levantamento quanto aos débitos protestados."
+        },
+        {
+          "numeroprocesso": "31330/2025-11",
+          "relator": "Isabela Batista Machado Soares Scaramal",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "O processo retornou para pauta de julgamento haja vista a contraproposta apresentada. Por unanimidade de votos, o pedido foi deferido."
+        },
+        {
+          "numeroprocesso": "31348/2025-13",
+          "relator": "Isabela Batista Machado Soares Scaramal",
+          "revisor": "Adrianne Cristina Coelho Lobo",
+          "resultado": "Pedido de Vista",
+          "decisao": "",
+          "textoata": "O processo retornou para pauta de julgamento haja vista a contraproposta apresentada. A membra Adrianne Cristina Coelho Lobo pediu vistas ao processo."
         }
       ]
     },
     {
       "numeroanoata": "0034/2025",
-      "dataata": "2025-09-11 00:00:00",
+      "dataata": "11/09/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -5283,23 +5304,7 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "106020/2024-25",
-          "relator": "Adrianne Cristina Coelho Lobo",
-          "revisor": "Denir de Souza Nantes",
-          "resultado": "Pedido de Vista",
-          "decisao": "",
-          "textoata": "O membro Denir de Souza Nantes solicitou vistas dos autos."
-        },
-        {
-          "numeroprocesso": "31330/2025-11",
-          "relator": "Victor Pereira Afonso",
-          "revisor": "",
-          "resultado": "Pedido de Diligência",
-          "decisao": "",
-          "textoata": "O relator baixou os autos em diligência para que o requerente apresente os cálculos detalhados referente ao pedido proposto."
-        },
-        {
-          "numeroprocesso": "36979/2023-60",
+          "numeroprocesso": "36838/2025-06",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Pedido de Diligência",
@@ -5307,18 +5312,34 @@
           "textoata": "O processo foi baixado em diligência para verificação quanto aos débitos ajuizados no sistema."
         },
         {
-          "numeroprocesso": "37436/2025-11",
+          "numeroprocesso": "36919/2025-06",
           "relator": "Isabela Batista Machado Soares Scaramal",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Deferimento",
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto."
+        },
+        {
+          "numeroprocesso": "30615/2025-27",
+          "relator": "Victor Pereira Afonso",
+          "revisor": "",
+          "resultado": "Pedido de Diligência",
+          "decisao": "",
+          "textoata": "O relator baixou os autos em diligência para que o requerente apresente os cálculos detalhados referente ao pedido proposto."
+        },
+        {
+          "numeroprocesso": "105607/2024-07",
+          "relator": "Adrianne Cristina Coelho Lobo",
+          "revisor": "Denir de Souza Nantes",
+          "resultado": "Pedido de Vista",
+          "decisao": "",
+          "textoata": "O membro Denir de Souza Nantes solicitou vistas dos autos."
         }
       ]
     },
     {
       "numeroanoata": "0035/2025",
-      "dataata": "2025-09-18 00:00:00",
+      "dataata": "18/09/2025",
       "presidente": "Ricardo Vieira Dias",
       "conselheirosparticipantes": [
         "ADRIANNE CRISTINA COELHO LOBO",
@@ -5332,23 +5353,15 @@
       ],
       "processos": [
         {
-          "numeroprocesso": "29000/2025-58",
-          "relator": "Victor Pereira Afonso",
-          "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Indeferimento",
-          "textoata": "Por unanimidade de votos, o pedido de compensação foi indeferido nos termos do voto."
-        },
-        {
-          "numeroprocesso": "33959/2025-98",
-          "relator": "Jorge Takeshi Otubo",
+          "numeroprocesso": "36074/2025-41",
+          "relator": "Kátia Silene Sarturi Warde",
           "revisor": "",
           "resultado": "Suspenso",
           "decisao": "",
           "textoata": "O processo foi retirado de pauta."
         },
         {
-          "numeroprocesso": "36074/2025-41",
+          "numeroprocesso": "35265/2025-95",
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
@@ -5356,8 +5369,16 @@
           "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto"
         },
         {
-          "numeroprocesso": "36919/2025-06",
-          "relator": "Kátia Silene Sarturi Warde",
+          "numeroprocesso": "25114/2025-29",
+          "relator": "Victor Pereira Afonso",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Indeferimento",
+          "textoata": "Por unanimidade de votos, o pedido de compensação foi indeferido nos termos do voto."
+        },
+        {
+          "numeroprocesso": "32969/2025-14",
+          "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Suspenso",
           "decisao": "",

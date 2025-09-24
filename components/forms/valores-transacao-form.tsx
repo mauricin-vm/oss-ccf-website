@@ -38,10 +38,18 @@ const inscricaoSchema = z.object({
 })
 
 const propostaFormSchema = z.object({
-  valorTotalProposto: z.string(),
+  valorTotalProposto: z.string().min(1, 'Valor total proposto é obrigatório'),
   metodoPagamento: z.enum(['parcelado', 'a_vista']),
   valorEntrada: z.string(),
   quantidadeParcelas: z.string()
+}).refine((data) => {
+  if (data.metodoPagamento === 'parcelado') {
+    return data.quantidadeParcelas && data.quantidadeParcelas.trim().length > 0
+  }
+  return true
+}, {
+  message: 'Quantidade de parcelas é obrigatória quando método é parcelado',
+  path: ['quantidadeParcelas']
 })
 
 const valoresTransacaoFormSchema = z.object({
@@ -76,7 +84,6 @@ interface ValoresTransacaoFormProps {
 export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresTransacaoFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingData, setIsLoadingData] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [showInscricaoModal, setShowInscricaoModal] = useState(false)
   const [editingInscricao, setEditingInscricao] = useState<{ index: number, inscricao: Record<string, unknown> } | null>(null)
 
@@ -104,7 +111,8 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
         valorEntrada: '',
         quantidadeParcelas: '1'
       }
-    }
+    },
+    shouldFocusError: false // Desabilitar foco automático para controlarmos manualmente
   })
 
   const { fields: inscricoesFields, append: appendInscricao, remove: removeInscricao } = useFieldArray({
@@ -172,9 +180,46 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
     loadValoresExistentes()
   }, [processoId, appendInscricao, setValue])
 
+  // Função para lidar com erros de validação do formulário principal
+  const onInvalid = (errors: any) => {
+    // Ordem lógica dos campos no formulário
+    const fieldOrder = [
+      'proposta.valorTotalProposto',
+      'proposta.metodoPagamento',
+      'proposta.valorEntrada',
+      'proposta.quantidadeParcelas'
+    ]
+
+    // Procurar pelo primeiro erro na ordem dos campos
+    for (const field of fieldOrder) {
+      const fieldParts = field.split('.')
+      let fieldError = errors
+
+      // Navegar pela estrutura aninhada do erro
+      for (const part of fieldParts) {
+        fieldError = fieldError?.[part]
+      }
+
+      if (fieldError?.message) {
+        toast.warning(fieldError.message)
+
+        // Focar no campo com erro após um pequeno delay
+        setTimeout(() => {
+          const element = document.getElementById(field.replace('.', '-'))
+          if (element) {
+            element.focus()
+            element.style.borderColor = '#ef4444'
+            element.style.boxShadow = '0 0 0 1px #ef4444'
+            element.setAttribute('data-error', 'true')
+          }
+        }, 100)
+        break
+      }
+    }
+  }
+
   const onSubmit = async (data: ValoresTransacaoFormInput) => {
     setIsLoading(true)
-    setError(null)
 
     try {
       // Converter valores formatados para números antes de enviar
@@ -221,8 +266,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
         onSuccess()
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Erro inesperado')
-      toast.error('Erro ao salvar valores de transação')
+      toast.error(error instanceof Error ? error.message : 'Erro inesperado')
     } finally {
       setIsLoading(false)
     }
@@ -281,7 +325,76 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
     setShowInscricaoModal(true)
   }
 
+  const clearFieldError = (fieldId: string) => {
+    const element = document.getElementById(fieldId)
+    if (element) {
+      element.style.borderColor = ''
+      element.style.boxShadow = ''
+      element.removeAttribute('data-error')
+    }
+  }
+
+  const validateAndFocusInscricao = () => {
+    const errors: string[] = []
+    let firstErrorField = ''
+
+    // Validar número da inscrição
+    if (!inscricaoForm.numeroInscricao.trim()) {
+      errors.push('Número da inscrição é obrigatório')
+      if (!firstErrorField) firstErrorField = 'numeroInscricao'
+    }
+
+    // Validar cada débito
+    let hasValidDebito = false
+    for (let i = 0; i < inscricaoForm.debitos.length; i++) {
+      const debito = inscricaoForm.debitos[i]
+      const isFilledPartially = debito.descricao.trim() || debito.valor.trim() || debito.dataVencimento.trim()
+
+      if (isFilledPartially) {
+        // Se começou a preencher, deve completar todos os campos
+        if (!debito.descricao.trim()) {
+          errors.push(`Descrição do débito ${i + 1} é obrigatória`)
+          if (!firstErrorField) firstErrorField = `debito-descricao-${i}`
+        } else if (!debito.valor.trim() || parseCurrencyToNumber(debito.valor) <= 0) {
+          errors.push(`Valor do débito ${i + 1} é obrigatório e deve ser maior que zero`)
+          if (!firstErrorField) firstErrorField = `debito-valor-${i}`
+        } else if (!debito.dataVencimento.trim()) {
+          errors.push(`Data de vencimento do débito ${i + 1} é obrigatória`)
+          if (!firstErrorField) firstErrorField = `debito-vencimento-${i}`
+        } else {
+          hasValidDebito = true
+        }
+      }
+    }
+
+    if (!hasValidDebito) {
+      errors.push('Pelo menos um débito completo deve ser informado')
+      if (!firstErrorField) firstErrorField = 'debito-descricao-0'
+    }
+
+    // Se houver erros, mostrar toast e focar no primeiro campo com erro
+    if (errors.length > 0) {
+      toast.warning(errors[0])
+
+      setTimeout(() => {
+        const element = document.getElementById(firstErrorField)
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+          element.setAttribute('data-error', 'true')
+        }
+      }, 100)
+      return false
+    }
+    return true
+  }
+
   const handleSaveInscricao = () => {
+    if (!validateAndFocusInscricao()) {
+      return
+    }
+
     const inscricaoData = {
       numeroInscricao: inscricaoForm.numeroInscricao,
       tipoInscricao: inscricaoForm.tipoInscricao,
@@ -455,13 +568,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
 
   return (
     <>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6" noValidate>
 
         {/* Resumo da Negociação */}
         <Card>
@@ -634,64 +741,70 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="valorTotalProposto">Valor Total Proposto <span className="text-red-500">*</span></Label>
+                <Label htmlFor="proposta-valorTotalProposto">Valor Total Proposto <span className="text-red-500">*</span></Label>
                 <Input
-                  id="valorTotalProposto"
+                  id="proposta-valorTotalProposto"
                   type="text"
                   value={watch('proposta.valorTotalProposto') || ''}
-                  onChange={(e) => handlePropostaValueChange('valorTotalProposto', e.target.value)}
+                  onChange={(e) => {
+                    handlePropostaValueChange('valorTotalProposto', e.target.value)
+                    clearFieldError('proposta-valorTotalProposto')
+                  }}
+                  onFocus={() => clearFieldError('proposta-valorTotalProposto')}
                   placeholder="Ex: 120.000,00"
                 />
-                {errors.proposta?.valorTotalProposto && (
-                  <p className="text-sm text-red-600">{errors.proposta.valorTotalProposto.message}</p>
-                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="metodoPagamento">Método de Pagamento <span className="text-red-500">*</span></Label>
+                <Label htmlFor="proposta-metodoPagamento">Método de Pagamento <span className="text-red-500">*</span></Label>
                 <select
-                  id="metodoPagamento"
+                  id="proposta-metodoPagamento"
                   {...register('proposta.metodoPagamento')}
                   defaultValue="parcelado"
+                  onChange={(e) => {
+                    setValue('proposta.metodoPagamento', e.target.value as 'parcelado' | 'a_vista')
+                    clearFieldError('proposta-metodoPagamento')
+                  }}
+                  onFocus={() => clearFieldError('proposta-metodoPagamento')}
                   className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
                   <option value="parcelado">Parcelado</option>
                   <option value="a_vista">À Vista</option>
                 </select>
-                {errors.proposta?.metodoPagamento && (
-                  <p className="text-sm text-red-600">{errors.proposta.metodoPagamento.message}</p>
-                )}
               </div>
             </div>
 
             <div className={`grid grid-cols-1 ${metodoPagamento === 'a_vista' ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-4`}>
               <div className={`space-y-2 ${metodoPagamento === 'a_vista' ? 'md:col-span-1' : ''}`}>
-                <Label htmlFor="valorEntrada">Valor de Entrada</Label>
+                <Label htmlFor="proposta-valorEntrada">Valor de Entrada</Label>
                 <Input
-                  id="valorEntrada"
+                  id="proposta-valorEntrada"
                   type="text"
                   value={watch('proposta.valorEntrada') || ''}
-                  onChange={(e) => handlePropostaValueChange('valorEntrada', e.target.value)}
+                  onChange={(e) => {
+                    handlePropostaValueChange('valorEntrada', e.target.value)
+                    clearFieldError('proposta-valorEntrada')
+                  }}
+                  onFocus={() => clearFieldError('proposta-valorEntrada')}
                   placeholder="Ex: 20.000,00"
                 />
-                {errors.proposta?.valorEntrada && (
-                  <p className="text-sm text-red-600">{errors.proposta.valorEntrada.message}</p>
-                )}
               </div>
 
               {metodoPagamento === 'parcelado' && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="quantidadeParcelas">Quantidade de Parcelas (máx. 120)</Label>
+                    <Label htmlFor="proposta-quantidadeParcelas">Quantidade de Parcelas (máx. 120) <span className="text-red-500">*</span></Label>
                     <Input
-                      id="quantidadeParcelas"
+                      id="proposta-quantidadeParcelas"
                       type="text"
                       {...register('proposta.quantidadeParcelas')}
+                      onChange={(e) => {
+                        setValue('proposta.quantidadeParcelas', e.target.value)
+                        clearFieldError('proposta-quantidadeParcelas')
+                      }}
+                      onFocus={() => clearFieldError('proposta-quantidadeParcelas')}
                       placeholder="Ex: 12"
                     />
-                    {errors.proposta?.quantidadeParcelas && (
-                      <p className="text-sm text-red-600">{errors.proposta.quantidadeParcelas.message}</p>
-                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -783,11 +896,15 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
           <div className="space-y-4 overflow-y-auto max-h-[calc(90vh-120px)]">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="modal-inscricao-numero">Número da Inscrição <span className="text-red-500">*</span></Label>
+                <Label htmlFor="numeroInscricao">Número da Inscrição <span className="text-red-500">*</span></Label>
                 <Input
-                  id="modal-inscricao-numero"
+                  id="numeroInscricao"
                   value={inscricaoForm.numeroInscricao}
-                  onChange={(e) => setInscricaoForm({ ...inscricaoForm, numeroInscricao: e.target.value })}
+                  onChange={(e) => {
+                    setInscricaoForm({ ...inscricaoForm, numeroInscricao: e.target.value })
+                    clearFieldError('numeroInscricao')
+                  }}
+                  onFocus={() => clearFieldError('numeroInscricao')}
                   placeholder="Ex: 123.456.789"
                 />
               </div>
@@ -841,11 +958,15 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
 
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-2">
-                        <Label htmlFor={`debito-desc-${index}`}>Descrição <span className="text-red-500">*</span></Label>
+                        <Label htmlFor={`debito-descricao-${index}`}>Descrição <span className="text-red-500">*</span></Label>
                         <Input
-                          id={`debito-desc-${index}`}
+                          id={`debito-descricao-${index}`}
                           value={debito.descricao}
-                          onChange={(e) => updateDebito(index, 'descricao', e.target.value)}
+                          onChange={(e) => {
+                            updateDebito(index, 'descricao', e.target.value)
+                            clearFieldError(`debito-descricao-${index}`)
+                          }}
+                          onFocus={() => clearFieldError(`debito-descricao-${index}`)}
                           placeholder="Ex: IPTU 2024"
                         />
                       </div>
@@ -856,7 +977,11 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
                           id={`debito-valor-${index}`}
                           type="text"
                           value={debito.valor}
-                          onChange={(e) => updateDebito(index, 'valor', e.target.value)}
+                          onChange={(e) => {
+                            updateDebito(index, 'valor', e.target.value)
+                            clearFieldError(`debito-valor-${index}`)
+                          }}
+                          onFocus={() => clearFieldError(`debito-valor-${index}`)}
                           placeholder="Ex: 1.500,00"
                         />
                       </div>
@@ -867,7 +992,11 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
                           id={`debito-vencimento-${index}`}
                           type="date"
                           value={debito.dataVencimento}
-                          onChange={(e) => updateDebito(index, 'dataVencimento', e.target.value)}
+                          onChange={(e) => {
+                            updateDebito(index, 'dataVencimento', e.target.value)
+                            clearFieldError(`debito-vencimento-${index}`)
+                          }}
+                          onFocus={() => clearFieldError(`debito-vencimento-${index}`)}
                         />
                       </div>
                     </div>
@@ -897,7 +1026,6 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
               <Button
                 type="button"
                 onClick={handleSaveInscricao}
-                disabled={!inscricaoForm.numeroInscricao || inscricaoForm.debitos.some(d => !d.descricao || !d.valor || !d.dataVencimento)}
                 className="cursor-pointer"
               >
                 {editingInscricao ? 'Atualizar' : 'Adicionar'}

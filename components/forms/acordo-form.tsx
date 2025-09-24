@@ -15,6 +15,7 @@ import { Loader2, AlertCircle, HandCoins, Search, Building, Settings, CreditCard
 import TransacaoExcepcionalAcordoSection from '@/components/acordo/transacao-excepcional-acordo-section'
 import CompensacaoSection from '@/components/acordo/compensacao-section'
 import DacaoSection from '@/components/acordo/dacao-section'
+import { toast } from 'sonner'
 
 // Importar tipos dos componentes específicos
 type ValoresTransacao = {
@@ -286,20 +287,23 @@ interface Processo {
 export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [error, setError] = useState<string | null>(null)
+  // Removido state de error - usando toasts agora
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingProcessos, setIsLoadingProcessos] = useState(true)
-  const [processos, setProcessos] = useState<Processo[]>([])
+  const [allProcessos, setAllProcessos] = useState<Processo[]>([]) // Todos os processos carregados
   const [selectedProcesso, setSelectedProcesso] = useState<Processo | null>(null)
   const [searchProcesso, setSearchProcesso] = useState('')
   const [dadosEspecificos, setDadosEspecificos] = useState<DadosEspecificos | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(20)
 
   const {
     register,
     handleSubmit,
     setValue,
     watch,
-    formState: { errors }
+    formState: { errors },
+    setFocus
   } = useForm<AcordoInput>({
     resolver: zodResolver(acordoSchema),
     defaultValues: {
@@ -371,54 +375,62 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
     }
   }, [])
 
-  // Buscar processos elegíveis para acordo
+  // Carregamento inicial - buscar todos os processos
   useEffect(() => {
-    const fetchProcessos = async () => {
-      setIsLoadingProcessos(true)
-      try {
-        const response = await fetch('/api/processos?status=JULGADO&limit=1000')
-        if (response.ok) {
-          const data = await response.json()
-
-          // Filtrar processos elegíveis
-          const processosElegiveis = await Promise.all(
-            (data.processos || []).map(async (processo: ProcessoElegivel) => {
-              // Verificar se já tem acordo
-              // Verificar se já tem acordo ativo
-              if (processo.acordos && processo.acordos.some((acordo: AcordoExistente) => acordo.status === 'ativo')) {
-                return null
-              }
-
-              // Só processos julgados são elegíveis, verificar se teve decisão deferida
-              if (processo.status === 'JULGADO') {
-                const tipoDecisao = await fetchDecisoesDeferidas(processo.id)
-                if (tipoDecisao) {
-                  const processoComDecisao = { ...processo, tipoDecisao }
-
-                  // Buscar valores específicos para cada processo elegível
-                  await fetchValoresEspecificos(processoComDecisao)
-
-                  return processoComDecisao
-                }
-              }
-
-              return null
-            })
-          )
-
-          setProcessos(processosElegiveis.filter(p => p !== null))
-        }
-      } catch (error) {
-        console.error('Erro ao buscar processos:', error)
-        setError('Erro ao carregar processos elegíveis')
-      } finally {
-        setIsLoadingProcessos(false)
-      }
-    }
-
-    fetchProcessos()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadAllProcessos()
   }, [])
+
+  const loadAllProcessos = async () => {
+    try {
+      setIsLoadingProcessos(true)
+
+      // Buscar todos os processos sem filtros (igual à página de processos)
+      const response = await fetch('/api/processos/aptos-acordo?limit=1000', {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao carregar processos')
+      }
+
+      const data = await response.json()
+      setAllProcessos(data.processos || [])
+      // Não precisa mais definir setError(null)
+    } catch (error) {
+      console.error('Erro ao carregar processos:', error)
+      toast.error('Erro ao carregar processos elegíveis')
+      setAllProcessos([])
+    } finally {
+      setIsLoadingProcessos(false)
+    }
+  }
+
+  // Filtragem local (client-side) - igual à página de processos
+  const filteredProcessos = allProcessos.filter((processo) => {
+    if (!searchProcesso) return true
+
+    const searchLower = searchProcesso.toLowerCase()
+    const searchNumbers = searchProcesso.replace(/\D/g, '')
+
+    return processo.numero.toLowerCase().includes(searchLower) ||
+      processo.contribuinte.nome.toLowerCase().includes(searchLower) ||
+      (searchNumbers && processo.contribuinte.cpfCnpj?.includes(searchNumbers))
+  })
+
+  // Paginação local
+  const totalFilteredProcessos = filteredProcessos.length
+  const totalPages = Math.ceil(totalFilteredProcessos / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedProcessos = filteredProcessos.slice(startIndex, endIndex)
+
+  // Reset para primeira página quando busca mudar
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchProcesso])
 
   // Se processoId for fornecido via prop ou URL, buscar o processo específico
   useEffect(() => {
@@ -513,27 +525,33 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
   calcularValores()
 
   const onSubmit = async (data: AcordoInput) => {
+    console.log('onSubmit chamado com dados:', data)
     setIsLoading(true)
-    setError(null)
-
 
     try {
+      // Validação básica primeiro
+      if (!selectedProcesso) {
+        console.log('Tentando mostrar toast de erro...')
+        toast.warning('Por favor, selecione um processo para criar o acordo.')
+        setIsLoading(false)
+        return
+      }
       // Validação específica para compensação
       if (selectedProcesso?.tipo === 'COMPENSACAO') {
         if (!dadosEspecificos || !dadosEspecificos.valorTotal || !dadosEspecificos.valorFinal) {
-          setError('Para acordos de compensação, é necessário configurar créditos e inscrições antes de criar o acordo.')
+          toast.warning('Para acordos de compensação, é necessário configurar créditos e inscrições antes de criar o acordo.')
           setIsLoading(false)
           return
         }
 
         if (!dadosEspecificos.creditosAdicionados || dadosEspecificos.creditosAdicionados.length === 0) {
-          setError('É necessário adicionar pelo menos um crédito para compensação.')
+          toast.warning('É necessário adicionar pelo menos um crédito para compensação.')
           setIsLoading(false)
           return
         }
 
         if (!dadosEspecificos.inscricoesAdicionadas || dadosEspecificos.inscricoesAdicionadas.length === 0) {
-          setError('É necessário adicionar pelo menos uma inscrição para compensação.')
+          toast.warning('É necessário adicionar pelo menos uma inscrição para compensação.')
           setIsLoading(false)
           return
         }
@@ -542,19 +560,19 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
       // Validação específica para dação em pagamento
       if (selectedProcesso?.tipo === 'DACAO_PAGAMENTO') {
         if (!dadosEspecificos || !dadosEspecificos.valorTotal || !dadosEspecificos.valorFinal) {
-          setError('Para acordos de dação em pagamento, é necessário configurar inscrições oferecidas e a compensar antes de criar o acordo.')
+          toast.warning('Para acordos de dação em pagamento, é necessário configurar inscrições oferecidas e a compensar antes de criar o acordo.')
           setIsLoading(false)
           return
         }
 
         if (!dadosEspecificos.inscricoesOferecidasAdicionadas || dadosEspecificos.inscricoesOferecidasAdicionadas.length === 0) {
-          setError('É necessário adicionar pelo menos uma inscrição oferecida para dação em pagamento.')
+          toast.warning('É necessário adicionar pelo menos uma inscrição oferecida para dação em pagamento.')
           setIsLoading(false)
           return
         }
 
         if (!dadosEspecificos.inscricoesCompensarAdicionadas || dadosEspecificos.inscricoesCompensarAdicionadas.length === 0) {
-          setError('É necessário adicionar pelo menos uma inscrição a compensar para dação em pagamento.')
+          toast.warning('É necessário adicionar pelo menos uma inscrição a compensar para dação em pagamento.')
           setIsLoading(false)
           return
         }
@@ -643,23 +661,36 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
 
       const resultado = await response.json()
 
+      toast.success('Acordo criado com sucesso!')
+
       if (onSuccess) {
         onSuccess()
       } else {
         router.push(`/acordos/${resultado.id}`)
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Erro inesperado')
+      toast.error(error instanceof Error ? error.message : 'Erro inesperado')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleSelectProcesso = (processo: Processo) => {
-    setSelectedProcesso(processo)
-    setValue('processoId', processo.id)
-    setValue('valorTotal', processo.valor || 0)
-    setSearchProcesso('')
+  const handleSelectProcesso = async (processo: Processo) => {
+    setIsLoading(true)
+    try {
+      // Buscar valores específicos detalhados apenas para o processo selecionado
+      await fetchValoresEspecificos(processo)
+
+      setSelectedProcesso(processo)
+      setValue('processoId', processo.id)
+      setValue('valorTotal', 0) // Será definido após carregar valores específicos
+      setSearchProcesso('')
+    } catch (error) {
+      console.error('Erro ao carregar valores do processo:', error)
+      toast.error('Erro ao carregar dados do processo')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const getTipoProcessoLabel = (tipo: string) => {
@@ -689,20 +720,31 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
     }
   }
 
-  const processosFiltrados = processos.filter(processo =>
-    processo.numero.toLowerCase().includes(searchProcesso.toLowerCase()) ||
-    processo.contribuinte.nome.toLowerCase().includes(searchProcesso.toLowerCase())
-  )
+  // Os processos são filtrados localmente
+  const processosFiltrados = paginatedProcessos
 
+
+  // Função para lidar com erros de validação do formulário
+  const onInvalid = (errors: any) => {
+    // Pegar o primeiro campo com erro e focar nele
+    const firstErrorField = Object.keys(errors)[0]
+    if (firstErrorField) {
+      setFocus(firstErrorField as any)
+    }
+
+    // Pegar a primeira mensagem de erro e exibir como toast
+    const firstError = Object.values(errors)[0] as any
+    if (firstError?.message) {
+      // Usar toast.warning para erros de validação (são avisos, não erros críticos)
+      toast.warning(firstError.message)
+    } else {
+      toast.warning('Por favor, corrija os erros no formulário')
+    }
+  }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
+      {/* Alertas de erro removidos - usando toasts agora */}
 
       {/* Seleção de Processo */}
       <Card>
@@ -768,7 +810,52 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                 </div>
               ) : null}
 
-              {!isLoadingProcessos && processos.length === 0 && (
+              {/* Paginação */}
+              {!isLoadingProcessos && totalPages > 1 && (
+                <div className="flex items-center justify-between px-2">
+                  <div className="text-sm text-gray-500">
+                    Mostrando {startIndex + 1} a {Math.min(endIndex, totalFilteredProcessos)} de {totalFilteredProcessos} processos
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage <= 1}
+                    >
+                      Anterior
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        const page = i + 1
+                        return (
+                          <Button
+                            key={page}
+                            type="button"
+                            variant={page === currentPage ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(page)}
+                          >
+                            {page}
+                          </Button>
+                        )
+                      })}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage >= totalPages}
+                    >
+                      Próxima
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {!isLoadingProcessos && totalFilteredProcessos === 0 && (
                 <div className="text-center py-8">
                   <HandCoins className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -810,9 +897,6 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
 
 
             </div>
-          )}
-          {errors.processoId && (
-            <p className="text-sm text-red-500">{errors.processoId.message}</p>
           )}
         </CardContent>
       </Card>
@@ -966,10 +1050,8 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                     })}
                     disabled={isLoading}
                     defaultValue={new Date().toISOString().slice(0, 10)}
+                    className={errors.dataAssinatura ? 'border-red-500 focus:border-red-500' : ''}
                   />
-                  {errors.dataAssinatura && (
-                    <p className="text-sm text-red-500">{errors.dataAssinatura.message}</p>
-                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -981,10 +1063,8 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                       setValueAs: (value) => value ? new Date(value) : undefined
                     })}
                     disabled={isLoading}
+                    className={errors.dataVencimento ? 'border-red-500 focus:border-red-500' : ''}
                   />
-                  {errors.dataVencimento && (
-                    <p className="text-sm text-red-500">{errors.dataVencimento.message}</p>
-                  )}
                 </div>
               </div>
             </CardContent>

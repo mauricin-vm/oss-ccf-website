@@ -1,0 +1,220 @@
+{
+  "acordos": [
+    {
+      // TIPO: TRANSACAO_EXCEPCIONAL (padrão completo)
+      "processoNumero": "37436/2025-11",
+      "dataAssinatura": "2024-08-15",
+      "dataVencimento": "2025-08-15",
+      "modalidadePagamento": "parcelado",
+      "numeroParcelas": 24,
+      "valorTotal": 150000.00,
+      "valorDesconto": 30000.00,
+      "percentualDesconto": 20.0,
+      "valorFinal": 120000.00,
+      "valorEntrada": 12000.00,
+      "status": "ativo",
+      "observacoes": "Acordo de transação excepcional com entrada de 10% e desconto de 20%",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "IMO-37436-2024",
+            "tipoInscricao": "imobiliaria",
+            "debitos": [
+              {
+                "descricao": "IPTU 2023",
+                "valor": 75000.00,
+                "dataVencimento": "2023-12-31"
+              },
+              {
+                "descricao": "IPTU 2024",
+                "valor": 75000.00,
+                "dataVencimento": "2024-12-31"
+              }
+            ]
+          }
+        ],
+        "valorInscricoes": 150000.00
+      }
+    },
+    {
+      // TIPO: TRANSACAO_EXCEPCIONAL (padrão completo - à vista)
+      "processoNumero": "35115/2025-81",
+      "dataAssinatura": "2024-08-05",
+      "dataVencimento": "2024-08-20",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 85000.00,
+      "valorDesconto": 17000.00,
+      "percentualDesconto": 20.0,
+      "valorFinal": 68000.00,
+      "valorEntrada": 0.00,
+      "status": "cumprido",
+      "observacoes": "Acordo à vista com desconto de 20% para quitação imediata",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "ECO-35115-2023",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "ISS 2022",
+                "valor": 45000.00,
+                "dataVencimento": "2022-12-31"
+              },
+              {
+                "descricao": "ISS 2023",
+                "valor": 40000.00,
+                "dataVencimento": "2023-12-31"
+              }
+            ]
+          }
+        ],
+        "valorInscricoes": 85000.00
+      }
+    },
+    {
+      // TIPO: TRANSACAO_EXCEPCIONAL (padrão completo - parcelado)
+      "processoNumero": "35265/2025-95",
+      "dataAssinatura": "2024-09-01",
+      "dataVencimento": "2025-03-01",
+      "modalidadePagamento": "parcelado",
+      "numeroParcelas": 6,
+      "valorTotal": 120000.00,
+      "valorDesconto": 12000.00,
+      "percentualDesconto": 10.0,
+      "valorFinal": 108000.00,
+      "valorEntrada": 18000.00,
+      "status": "ativo",
+      "observacoes": "Acordo parcelado em 6 vezes com entrada de R$ 18.000,00",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "ECO-35265-2023",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "ICMS 2023",
+                "valor": 120000.00,
+                "dataVencimento": "2023-12-31"
+              }
+            ]
+          }
+        ],
+        "valorInscricoes": 120000.00
+      }
+    },
+    {
+      // TIPO: COMPENSACAO (padrão para compensação)
+      "processoNumero": "31056/2025-72",
+      "dataAssinatura": "2024-07-20",
+      "dataVencimento": "2024-07-20",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 250000.00,
+      "valorDesconto": 0.00,
+      "percentualDesconto": 0.0,
+      "valorFinal": 200000.00,
+      "valorEntrada": 0.00,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Restituição ICMS",
+            "numero": "REST-ICMS-2023-001",
+            "valor": 180000.00,
+            "dataVencimento": "2023-06-30",
+            "descricao": ""
+          },
+          {
+            "tipo": "Saldo Credor",
+            "numero": "SALDO-ICMS-2024-001",
+            "valor": 70000.00,
+            "dataVencimento": "2024-03-31",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "ECO-31056-2022",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "ICMS 2021",
+                "valor": 120000.00,
+                "dataVencimento": "2021-12-31"
+              },
+              {
+                "descricao": "ICMS 2022",
+                "valor": 80000.00,
+                "dataVencimento": "2022-12-31"
+              }
+            ]
+          }
+        ],
+        "valorCreditos": 250000.00,
+        "valorDebitos": 200000.00
+      }
+    },
+    {
+      // TIPO: DACAO_PAGAMENTO (padrão para dação em pagamento)
+      "processoNumero": "35815/2025-76",
+      "dataAssinatura": "2024-09-10",
+      "dataVencimento": "2024-09-10",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 800000.00,
+      "valorDesconto": 0.00,
+      "percentualDesconto": 0.0,
+      "valorFinal": 650000.00,
+      "valorEntrada": 0.00,
+      "status": "cumprido",
+      "observacoes": "Dação de imóvel para quitação de débitos de IPTU",
+      "dadosEspecificos": {
+        "inscricoesOferecidas": [
+          {
+            "numeroInscricao": "IMOVEL-FILODRENDO-90",
+            "tipoInscricao": "imobiliaria",
+            "valor": 800000.00,
+            "dataVencimento": "2024-09-10",
+            "descricao": "Imóvel na Rua Filodrendo, n. 90, Damha I - Campo Grande/MS"
+          }
+        ],
+        "inscricoesCompensar": [
+          {
+            "numeroInscricao": "IMO-35815-2020",
+            "tipoInscricao": "imobiliaria",
+            "debitos": [
+              {
+                "descricao": "IPTU 2020",
+                "valor": 150000.00,
+                "dataVencimento": "2020-12-31"
+              },
+              {
+                "descricao": "IPTU 2021",
+                "valor": 160000.00,
+                "dataVencimento": "2021-12-31"
+              },
+              {
+                "descricao": "IPTU 2022",
+                "valor": 170000.00,
+                "dataVencimento": "2022-12-31"
+              },
+              {
+                "descricao": "IPTU 2023",
+                "valor": 170000.00,
+                "dataVencimento": "2023-12-31"
+              }
+            ]
+          }
+        ],
+        "valorOferecido": 800000.00,
+        "valorCompensar": 650000.00
+      }
+    }
+  ],
+  "configuracao": {
+    "usuarioMigracao": "migracao_ccf@gov.br",
+    "observacaoGeral": "Acordos migrados do sistema anterior - CCF Sistema Legado"
+  }
+}

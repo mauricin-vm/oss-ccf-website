@@ -107,6 +107,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
       }
     } catch (error) {
       console.error('Erro ao carregar processo:', error)
+      toast.error('Erro ao carregar os detalhes do processo')
     } finally {
       setLoading(false)
     }
@@ -179,6 +180,17 @@ export default function ProcessoDetalhesPage({ params }: Props) {
   const getCardBackground = (decisao: ProcessoDecisao) => {
     if (!decisao) return 'bg-gray-50'
     return getCardBackgroundFromConstants(decisao.tipoResultado)
+  }
+
+  const getEditButtonColor = (tipoResultado: string) => {
+    const colorMap: Record<string, string> = {
+      'JULGADO': 'border-green-500 text-green-700 hover:bg-green-100',
+      'SUSPENSO': 'border-yellow-500 text-yellow-700 hover:bg-yellow-100',
+      'PEDIDO_VISTA': 'border-blue-500 text-blue-700 hover:bg-blue-100',
+      'PEDIDO_DILIGENCIA': 'border-purple-500 text-purple-700 hover:bg-purple-100',
+      'EM_NEGOCIACAO': 'border-orange-500 text-orange-700 hover:bg-orange-100'
+    }
+    return colorMap[tipoResultado] || 'border-gray-500 text-gray-700 hover:bg-gray-100'
   }
 
   const formatarListaNomes = (nomes: string[]): string => {
@@ -752,8 +764,26 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                               </div>
                             </div>
                             <div className="text-right space-y-2">
-                              <div className="space-y-2">
-                                {getResultadoBadge(decisao)}
+                              <div className="flex items-center gap-2">
+                                {/* Botão de edição - apenas para admins e processos julgados */}
+                                {session?.user?.role === 'ADMIN' &&
+                                 processo?.status === 'JULGADO' &&
+                                 decisao.tipoResultado === 'JULGADO' &&
+                                 decisao.sessao?.id && (
+                                  <Link href={`/sessoes/${decisao.sessao.id}/decisoes/${decisao.id}/editar?from=process`}>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className={`cursor-pointer h-8 w-8 p-0 ${getEditButtonColor(decisao.tipoResultado)}`}
+                                      title="Editar resultado do julgamento (somente administradores)"
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                  </Link>
+                                )}
+                                <div className="space-y-2">
+                                  {getResultadoBadge(decisao)}
+                                </div>
                               </div>
                             </div>
                           </div>

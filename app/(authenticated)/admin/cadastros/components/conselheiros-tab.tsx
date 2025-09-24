@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Pagination } from '@/components/ui/pagination'
 import {
   Plus,
   Search,
@@ -42,6 +43,8 @@ export default function ConselheirosTab() {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [selectedConselheiro, setSelectedConselheiro] = useState<Conselheiro | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(15)
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
@@ -55,7 +58,7 @@ export default function ConselheirosTab() {
   const loadConselheiros = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/conselheiros')
+      const response = await fetch('/api/conselheiros?limit=1000')
       if (!response.ok) {
         throw new Error('Erro ao carregar conselheiros')
       }
@@ -180,6 +183,18 @@ export default function ConselheirosTab() {
     (conselheiro.cargo && conselheiro.cargo.toLowerCase().includes(search.toLowerCase())) ||
     (conselheiro.origem && conselheiro.origem.toLowerCase().includes(search.toLowerCase()))
   )
+
+  // Paginação local
+  const totalFilteredConselheiros = filteredConselheiros.length
+  const totalPages = Math.ceil(totalFilteredConselheiros / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedConselheiros = filteredConselheiros.slice(startIndex, endIndex)
+
+  // Reset para primeira página quando filtros mudarem
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search])
 
   if (loading) {
     return <div>Carregando conselheiros...</div>
@@ -352,7 +367,13 @@ export default function ConselheirosTab() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredConselheiros.map((conselheiro) => (
+            {totalFilteredConselheiros === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                Nenhum conselheiro encontrado
+              </div>
+            ) : (
+              <>
+                {paginatedConselheiros.map((conselheiro) => (
               <div key={conselheiro.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -412,14 +433,19 @@ export default function ConselheirosTab() {
                   </Button>
                 </div>
               </div>
-            ))}
-          </div>
+                ))}
 
-          {filteredConselheiros.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              Nenhum conselheiro encontrado
-            </div>
-          )}
+                {/* Paginação */}
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalFilteredConselheiros}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                />
+              </>
+            )}
+          </div>
         </CardContent>
       </Card>
 

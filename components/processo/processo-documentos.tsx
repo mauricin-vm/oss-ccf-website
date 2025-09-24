@@ -72,6 +72,7 @@ export default function ProcessoDocumentos({ processo, canEdit }: ProcessoDocume
       }
     } catch (error) {
       console.error('Erro ao atualizar lista de documentos:', error)
+      toast.error('Erro ao atualizar lista de documentos')
     }
   }
 

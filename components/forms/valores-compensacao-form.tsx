@@ -9,9 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Loader2, AlertCircle, Plus, Trash2, FileText, Calculator, Edit, DollarSign } from 'lucide-react'
+import { Loader2, Plus, Trash2, FileText, Calculator, Edit, DollarSign } from 'lucide-react'
 import { toast } from 'sonner'
 
 // Tipos para dados carregados da API
@@ -120,7 +119,6 @@ interface ValoresCompensacaoFormProps {
 export default function ValoresCompensacaoForm({ processoId, onSuccess }: ValoresCompensacaoFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingData, setIsLoadingData] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [showCreditoModal, setShowCreditoModal] = useState(false)
   const [showInscricaoModal, setShowInscricaoModal] = useState(false)
   const [editingCredito, setEditingCredito] = useState<{ index: number, credito: z.infer<typeof creditoSchema> } | null>(null)
@@ -151,7 +149,8 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
     defaultValues: {
       creditos: [],
       inscricoes: []
-    }
+    },
+    shouldFocusError: false // Desabilitar foco automático para controlarmos manualmente
   })
 
   // Funções de formatação de moeda (igual ao dacao-form)
@@ -252,9 +251,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
   }, [processoId, appendCredito, appendInscricao, setValue])
 
   const onSubmit = async (data: ValoresCompensacaoInput) => {
-
     setIsLoading(true)
-    setError(null)
 
     try {
       const response = await fetch(`/api/processos/${processoId}/valores-compensacao`, {
@@ -275,8 +272,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
         onSuccess()
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Erro inesperado')
-      toast.error('Erro ao salvar valores de compensação')
+      toast.error(error instanceof Error ? error.message : 'Erro ao salvar valores de compensação')
     } finally {
       setIsLoading(false)
     }
@@ -332,29 +328,68 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
     setShowInscricaoModal(true)
   }
 
-  const handleSaveCredito = () => {
+  const validateAndFocusCredito = () => {
+    const errors: string[] = []
+    let firstErrorField = ''
+
     const valor = parseCurrencyToNumber(creditoForm.valor)
-    if (!creditoForm.numero || valor <= 0) {
-      toast.error('Preencha todos os campos obrigatórios')
+
+    // Ordem dos campos para validação e foco
+    if (!creditoForm.numero.trim()) {
+      errors.push('Número do crédito é obrigatório')
+      if (!firstErrorField) firstErrorField = 'modal-numero'
+    }
+    if (valor <= 0) {
+      errors.push('Valor deve ser maior que zero')
+      if (!firstErrorField) firstErrorField = 'modal-valor'
+    }
+
+    if (errors.length > 0) {
+      toast.warning(errors[0])
+
+      // Aplicar bordas vermelhas e focar no primeiro campo com erro
+      setTimeout(() => {
+        const element = document.getElementById(firstErrorField)
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+
+      return false
+    }
+    return true
+  }
+
+  const clearFieldError = (fieldId: string) => {
+    const element = document.getElementById(fieldId)
+    if (element) {
+      element.style.borderColor = ''
+      element.style.boxShadow = ''
+    }
+  }
+
+  const handleSaveCredito = () => {
+    if (!validateAndFocusCredito()) {
       return
     }
 
+    const valor = parseCurrencyToNumber(creditoForm.valor)
     const creditoData = {
       tipo: creditoForm.tipo as 'precatorio' | 'credito_tributario' | 'alvara_judicial' | 'outro',
       numero: creditoForm.numero,
-      valor: valor, // Usar o valor numérico convertido
+      valor: valor,
       dataVencimento: creditoForm.dataVencimento,
       descricao: creditoForm.descricao
     }
 
     if (editingCredito) {
-      // Editar crédito existente
       const currentCreditos = watch('creditos')
       const updatedCreditos = [...currentCreditos]
       updatedCreditos[editingCredito.index] = creditoData
       setValue('creditos', updatedCreditos)
     } else {
-      // Adicionar novo crédito
       appendCredito(creditoData)
     }
 
@@ -362,10 +397,14 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
     toast.success(editingCredito ? 'Crédito atualizado' : 'Crédito adicionado')
   }
 
-  const handleSaveInscricao = () => {
-    if (!inscricaoForm.numeroInscricao) {
-      toast.error('Número da inscrição é obrigatório')
-      return
+  const validateAndFocusInscricao = () => {
+    const errors: string[] = []
+    let firstErrorField = ''
+
+    // Validação da inscrição
+    if (!inscricaoForm.numeroInscricao.trim()) {
+      errors.push('Número da inscrição é obrigatório')
+      if (!firstErrorField) firstErrorField = 'modal-inscricao-numero'
     }
 
     // Validar débitos
@@ -374,28 +413,68 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
     )
 
     if (debitosValidos.length === 0) {
-      toast.error('Pelo menos um débito deve ser informado')
+      errors.push('Pelo menos um débito deve ser informado')
+      // Encontrar o primeiro débito inválido
+      if (!firstErrorField) {
+        for (let i = 0; i < inscricaoForm.debitos.length; i++) {
+          const debito = inscricaoForm.debitos[i]
+          if (!debito.descricao) {
+            firstErrorField = `debito-desc-${i}`
+            break
+          } else if (!debito.valor) {
+            firstErrorField = `debito-valor-${i}`
+            break
+          } else if (!debito.dataVencimento) {
+            firstErrorField = `debito-vencimento-${i}`
+            break
+          }
+        }
+      }
+    }
+
+    if (errors.length > 0) {
+      toast.warning(errors[0])
+
+      // Aplicar bordas vermelhas e focar no primeiro campo com erro
+      setTimeout(() => {
+        const element = document.getElementById(firstErrorField)
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+
+      return false
+    }
+    return true
+  }
+
+  const handleSaveInscricao = () => {
+    if (!validateAndFocusInscricao()) {
       return
     }
+
+    const debitosValidos = inscricaoForm.debitos.filter(d =>
+      d.descricao && d.valor && d.dataVencimento
+    )
 
     const inscricaoData = {
       numeroInscricao: inscricaoForm.numeroInscricao,
       tipoInscricao: inscricaoForm.tipoInscricao as 'imobiliaria' | 'economica',
       debitos: debitosValidos.map(d => ({
         descricao: d.descricao,
-        valor: parseCurrencyToNumber(d.valor), // Converter para número
+        valor: parseCurrencyToNumber(d.valor),
         dataVencimento: d.dataVencimento
       }))
     }
 
     if (editingInscricao) {
-      // Editar inscrição existente
       const currentInscricoes = watch('inscricoes')
       const updatedInscricoes = [...currentInscricoes]
       updatedInscricoes[editingInscricao.index] = inscricaoData
       setValue('inscricoes', updatedInscricoes)
     } else {
-      // Adicionar nova inscrição
       appendInscricao(inscricaoData)
     }
 
@@ -486,13 +565,7 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
 
       {/* Resumo */}
       <Card>
@@ -804,7 +877,11 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
               <Input
                 id="modal-numero"
                 value={creditoForm.numero}
-                onChange={(e) => setCreditoForm({ ...creditoForm, numero: e.target.value })}
+                onChange={(e) => {
+                  setCreditoForm({ ...creditoForm, numero: e.target.value })
+                  clearFieldError('modal-numero')
+                }}
+                onFocus={() => clearFieldError('modal-numero')}
                 placeholder="Ex: PRE-2024-001"
               />
             </div>
@@ -818,7 +895,9 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
                 onChange={(e) => {
                   const formatted = formatCurrency(e.target.value)
                   setCreditoForm({ ...creditoForm, valor: formatted })
+                  clearFieldError('modal-valor')
                 }}
+                onFocus={() => clearFieldError('modal-valor')}
                 placeholder="Ex: 50.000,00"
               />
             </div>
@@ -856,7 +935,6 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
               <Button
                 type="button"
                 onClick={handleSaveCredito}
-                disabled={!creditoForm.numero || !creditoForm.valor}
                 className="cursor-pointer"
               >
                 {editingCredito ? 'Atualizar' : 'Adicionar'}
@@ -886,7 +964,11 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
                 <Input
                   id="modal-inscricao-numero"
                   value={inscricaoForm.numeroInscricao}
-                  onChange={(e) => setInscricaoForm({ ...inscricaoForm, numeroInscricao: e.target.value })}
+                  onChange={(e) => {
+                    setInscricaoForm({ ...inscricaoForm, numeroInscricao: e.target.value })
+                    clearFieldError('modal-inscricao-numero')
+                  }}
+                  onFocus={() => clearFieldError('modal-inscricao-numero')}
                   placeholder="Ex: 123.456.789"
                 />
               </div>
@@ -944,7 +1026,11 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
                         <Input
                           id={`debito-desc-${index}`}
                           value={debito.descricao}
-                          onChange={(e) => updateDebito(index, 'descricao', e.target.value)}
+                          onChange={(e) => {
+                            updateDebito(index, 'descricao', e.target.value)
+                            clearFieldError(`debito-desc-${index}`)
+                          }}
+                          onFocus={() => clearFieldError(`debito-desc-${index}`)}
                           placeholder="Ex: IPTU 2024"
                         />
                       </div>
@@ -958,7 +1044,9 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
                           onChange={(e) => {
                             const formatted = formatCurrency(e.target.value)
                             updateDebito(index, 'valor', formatted)
+                            clearFieldError(`debito-valor-${index}`)
                           }}
+                          onFocus={() => clearFieldError(`debito-valor-${index}`)}
                           placeholder="Ex: 1.500,00"
                         />
                       </div>
@@ -969,7 +1057,11 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
                           id={`debito-vencimento-${index}`}
                           type="date"
                           value={debito.dataVencimento}
-                          onChange={(e) => updateDebito(index, 'dataVencimento', e.target.value)}
+                          onChange={(e) => {
+                            updateDebito(index, 'dataVencimento', e.target.value)
+                            clearFieldError(`debito-vencimento-${index}`)
+                          }}
+                          onFocus={() => clearFieldError(`debito-vencimento-${index}`)}
                         />
                       </div>
                     </div>
@@ -999,7 +1091,6 @@ export default function ValoresCompensacaoForm({ processoId, onSuccess }: Valore
               <Button
                 type="button"
                 onClick={handleSaveInscricao}
-                disabled={!inscricaoForm.numeroInscricao || inscricaoForm.debitos.some(d => !d.descricao || !d.valor || !d.dataVencimento)}
                 className="cursor-pointer"
               >
                 {editingInscricao ? 'Atualizar' : 'Adicionar'}

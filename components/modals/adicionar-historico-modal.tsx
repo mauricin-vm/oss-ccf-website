@@ -53,13 +53,57 @@ export default function AdicionarHistoricoModal({
       [field]: value
     }))
     setError(null)
+    // Limpar erro visual do campo quando o usuário começar a digitar
+    if (field === 'titulo') clearFieldError('titulo')
+    if (field === 'descricao') clearFieldError('descricao')
+  }
+
+  const validateAndFocus = () => {
+    const errors: string[] = []
+    let firstErrorField = ''
+
+    // Ordem dos campos para validação e foco
+    if (!formData.titulo.trim()) {
+      errors.push('Título é obrigatório')
+      if (!firstErrorField) firstErrorField = 'titulo'
+    }
+    if (!formData.descricao.trim()) {
+      errors.push('Descrição é obrigatória')
+      if (!firstErrorField) firstErrorField = 'descricao'
+    }
+
+    if (errors.length > 0) {
+      toast.warning(errors[0])
+
+      // Aplicar bordas vermelhas e focar no primeiro campo com erro
+      setTimeout(() => {
+        const element = document.getElementById(firstErrorField)
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+          element.setAttribute('data-error', 'true')
+        }
+      }, 100)
+
+      return false
+    }
+    return true
+  }
+
+  const clearFieldError = (fieldId: string) => {
+    const element = document.getElementById(fieldId)
+    if (element) {
+      element.style.borderColor = ''
+      element.style.boxShadow = ''
+      element.removeAttribute('data-error')
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.titulo.trim() || !formData.descricao.trim()) {
-      setError('Todos os campos são obrigatórios')
+    if (!validateAndFocus()) {
       return
     }
 
@@ -85,7 +129,7 @@ export default function AdicionarHistoricoModal({
       handleClose()
     } catch (error) {
       console.error('Erro ao adicionar histórico:', error)
-      setError(error instanceof Error ? error.message : 'Erro ao adicionar histórico')
+      toast.error(error instanceof Error ? error.message : 'Erro ao adicionar histórico')
     } finally {
       setIsSubmitting(false)
     }
@@ -98,6 +142,9 @@ export default function AdicionarHistoricoModal({
       tipo: 'EVENTO'
     })
     setError(null)
+    // Limpar erros visuais
+    clearFieldError('titulo')
+    clearFieldError('descricao')
     onOpenChange(false)
   }
 
@@ -114,13 +161,7 @@ export default function AdicionarHistoricoModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
 
           <div className="space-y-2">
             <Label htmlFor="tipo">Tipo <span className="text-red-500">*</span></Label>
@@ -147,6 +188,7 @@ export default function AdicionarHistoricoModal({
               id="titulo"
               value={formData.titulo}
               onChange={(e) => handleInputChange('titulo', e.target.value)}
+              onFocus={() => clearFieldError('titulo')}
               placeholder="Digite o título do histórico"
               disabled={isSubmitting}
               required
@@ -159,6 +201,7 @@ export default function AdicionarHistoricoModal({
               id="descricao"
               value={formData.descricao}
               onChange={(e) => handleInputChange('descricao', e.target.value)}
+              onFocus={() => clearFieldError('descricao')}
               placeholder="Descreva detalhadamente o evento ou observação"
               disabled={isSubmitting}
               rows={4}

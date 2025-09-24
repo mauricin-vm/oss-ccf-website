@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, AlertCircle, Gavel, Clock, Pause, Search, CheckCircle, Users, DollarSign } from 'lucide-react'
 import VotacaoModal from '@/components/modals/votacao-modal'
+import { toast } from 'sonner'
 
 // Importar tipos do modal de votação para compatibilidade
 type ResultadoVotacaoModal = {
@@ -184,8 +185,53 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
       tipoResultado: 'JULGADO',
       tipoDecisao: 'DEFERIDO',
       definirAcordo: false
-    }
+    },
+    shouldFocusError: false
   })
+
+  // Função para lidar com erros de validação do formulário
+  const onInvalid = (errors: any) => {
+    // Ordem lógica dos campos no formulário
+    const fieldOrder = [
+      'processoId',
+      'tipoResultado',
+      'tipoDecisao',
+      'motivoSuspensao',
+      'conselheiroPedidoVista',
+      'prazoVista',
+      'especificacaoDiligencia',
+      'prazoDiligencia',
+      'tipoAcordo',
+      'ataTexto',
+      'observacoes'
+    ]
+
+    // Procurar pelo primeiro erro na ordem dos campos
+    for (const field of fieldOrder) {
+      if (errors[field]?.message) {
+        toast.warning(errors[field].message)
+
+        // Focar no campo com erro após um pequeno delay
+        setTimeout(() => {
+          const element = document.getElementById(field)
+          if (element) {
+            element.focus()
+            element.style.borderColor = '#ef4444'
+            element.style.boxShadow = '0 0 0 1px #ef4444'
+          }
+        }, 100)
+        break
+      }
+    }
+  }
+
+  const clearFieldError = (fieldId: string) => {
+    const element = document.getElementById(fieldId)
+    if (element) {
+      element.style.borderColor = ''
+      element.style.boxShadow = ''
+    }
+  }
 
   const tipoResultado = watch('tipoResultado')
 
@@ -221,6 +267,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
         }
       } catch (error) {
         console.error('Erro ao buscar dados da sessão:', error)
+        toast.error('Erro ao carregar dados da sessão')
       } finally {
         setIsLoadingData(false)
       }
@@ -235,7 +282,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
 
     // Validações específicas antes do envio
     if (data.tipoResultado === 'JULGADO' && !votacaoResultado) {
-      setError('Para processos julgados, é necessário ter a votação concluída.')
+      toast.warning('Para processos julgados, é necessário ter a votação concluída.')
       setIsLoading(false)
       return
     }
@@ -261,13 +308,17 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
         throw new Error(errorData.error || 'Erro ao registrar decisão')
       }
 
+      toast.success('Decisão registrada com sucesso!')
+
       if (onSuccess) {
         onSuccess()
       } else {
         router.push(`/sessoes/${sessaoId}`)
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Erro inesperado')
+      const errorMessage = error instanceof Error ? error.message : 'Erro inesperado'
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -374,13 +425,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6" noValidate>
 
       {/* Seleção de Processo */}
       <Card>
@@ -491,9 +536,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
               </div>
             </div>
           )}
-          {errors.processoId && (
-            <p className="text-sm text-red-500">{errors.processoId.message}</p>
-          )}
         </CardContent>
       </Card>
 
@@ -584,9 +626,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                   </div>
                 </div>
               </div>
-              {errors.tipoResultado && (
-                <p className="text-sm text-red-500 mt-2">{errors.tipoResultado.message}</p>
-              )}
             </CardContent>
           </Card>
 
@@ -607,9 +646,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                     rows={4}
                     {...register('motivoSuspensao')}
                   />
-                  {errors.motivoSuspensao && (
-                    <p className="text-sm text-red-500">{errors.motivoSuspensao.message}</p>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -631,9 +667,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                     rows={4}
                     {...register('detalhesNegociacao')}
                   />
-                  {errors.detalhesNegociacao && (
-                    <p className="text-sm text-red-500">{errors.detalhesNegociacao.message}</p>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -678,9 +711,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                           ))}
                       </SelectContent>
                     </Select>
-                    {errors.conselheiroPedidoVista && (
-                      <p className="text-sm text-red-500">{errors.conselheiroPedidoVista.message}</p>
-                    )}
                     {selectedProcesso?.relator && (
                       <p className="text-xs text-gray-500">
                         Nota: Relatores e revisores não podem pedir vista do próprio processo.
@@ -697,9 +727,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                     {...register('observacoes')}
                     disabled={isLoading}
                   />
-                  {errors.observacoes && (
-                    <p className="text-sm text-red-500">{errors.observacoes.message}</p>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -722,9 +749,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                     rows={4}
                     {...register('especificacaoDiligencia')}
                   />
-                  {errors.especificacaoDiligencia && (
-                    <p className="text-sm text-red-500">{errors.especificacaoDiligencia.message}</p>
-                  )}
                 </div>
                 <div className="space-y-2 w-1/2">
                   <Label htmlFor="prazoDiligencia">Prazo para cumprimento <span className="text-red-500">*</span></Label>
@@ -738,9 +762,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                     />
                     <span className="text-sm text-gray-600">dias</span>
                   </div>
-                  {errors.prazoDiligencia && (
-                    <p className="text-sm text-red-500">{errors.prazoDiligencia.message}</p>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -933,9 +954,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                       {...register('observacoes')}
                       disabled={isLoading}
                     />
-                    {errors.observacoes && (
-                      <p className="text-sm text-red-500">{errors.observacoes.message}</p>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -960,9 +978,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
                   {...register('ataTexto')}
                   disabled={isLoading}
                 />
-                {errors.ataTexto && (
-                  <p className="text-sm text-red-500">{errors.ataTexto.message}</p>
-                )}
               </div>
             </CardContent>
           </Card>

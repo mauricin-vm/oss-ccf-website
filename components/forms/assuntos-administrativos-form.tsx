@@ -44,6 +44,7 @@ export default function AssuntosAdministrativosForm({
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
     reset,
     watch
@@ -51,8 +52,34 @@ export default function AssuntosAdministrativosForm({
     resolver: zodResolver(assuntosAdministrativosSchema),
     defaultValues: {
       assuntosAdministrativos: currentText
-    }
+    },
+    shouldFocusError: false
   })
+
+  // Função para lidar com erros de validação do formulário
+  const onInvalid = (errors: any) => {
+    if (errors.assuntosAdministrativos?.message) {
+      toast.warning(errors.assuntosAdministrativos.message)
+
+      // Focar no campo com erro após um pequeno delay
+      setTimeout(() => {
+        const element = document.getElementById('assuntosAdministrativos')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+    }
+  }
+
+  const clearFieldError = (fieldId: string) => {
+    const element = document.getElementById(fieldId)
+    if (element) {
+      element.style.borderColor = ''
+      element.style.boxShadow = ''
+    }
+  }
 
   const watchedText = watch('assuntosAdministrativos')
 
@@ -80,7 +107,9 @@ export default function AssuntosAdministrativosForm({
       setOpen(false)
       router.refresh()
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Erro inesperado')
+      const errorMessage = error instanceof Error ? error.message : 'Erro inesperado'
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -110,13 +139,7 @@ export default function AssuntosAdministrativosForm({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+        <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-4" noValidate>
 
           <div className="space-y-2">
             <Label htmlFor="assuntosAdministrativos">
@@ -129,16 +152,16 @@ export default function AssuntosAdministrativosForm({
               id="assuntosAdministrativos"
               placeholder="Descreva os assuntos administrativos discutidos na sessão..."
               rows={8}
-              className="resize-none"
+              className={`resize-none ${errors.assuntosAdministrativos ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
               {...register('assuntosAdministrativos')}
+              onChange={(e) => {
+                setValue('assuntosAdministrativos', e.target.value)
+                clearFieldError('assuntosAdministrativos')
+              }}
+              onFocus={() => clearFieldError('assuntosAdministrativos')}
               disabled={isLoading}
             />
-            <div className="flex justify-between">
-              {errors.assuntosAdministrativos ? (
-                <p className="text-sm text-red-500">{errors.assuntosAdministrativos.message}</p>
-              ) : (
-                <div />
-              )}
+            <div className="flex justify-end">
               <p className="text-sm text-gray-500">
                 {watchedText?.length || 0} caracteres
               </p>

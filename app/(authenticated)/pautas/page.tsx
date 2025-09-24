@@ -24,6 +24,7 @@ import {
 import Link from 'next/link'
 import { SessionUser, PautaWithRelations } from '@/types'
 import { formatLocalDate } from '@/lib/utils/date'
+import { toast } from 'sonner'
 
 export default function PautasPage() {
   const { data: session } = useSession()
@@ -42,14 +43,18 @@ export default function PautasPage() {
   useEffect(() => {
     const fetchPautas = async () => {
       try {
-        const response = await fetch('/api/pautas')
+        const response = await fetch('/api/pautas?limit=1000')
         if (response.ok) {
           const data = await response.json()
           setPautas(data.pautas || [])
           setFilteredPautas(data.pautas || [])
+        } else {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Erro ao carregar pautas')
         }
       } catch (error) {
         console.error('Erro ao carregar pautas:', error)
+        toast.error(error instanceof Error ? error.message : 'Erro inesperado ao carregar pautas')
       } finally {
         setLoading(false)
       }
@@ -109,6 +114,7 @@ export default function PautasPage() {
     setSearchTerm('')
     setStatusFilter('all')
     setAnoFilter('all')
+    toast.info('Filtros limpos')
   }
 
   const canCreate = user?.role === 'ADMIN' || user?.role === 'FUNCIONARIO'

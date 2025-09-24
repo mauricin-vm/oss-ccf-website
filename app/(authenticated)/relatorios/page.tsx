@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db'
 import { ReportsClient } from '@/components/reports/reports-client'
 
 async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date }) {
-  // Criar filtro de período baseado nas datas
+  // Criar filtro de período baseado nas datas - para entidades gerais (processos, pautas, sessões, parcelas)
   const dateFilter: { createdAt?: { gte?: Date; lte?: Date } } = {}
   if (filters?.dataInicio && filters?.dataFim) {
     dateFilter.createdAt = {
@@ -15,6 +15,23 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
     }
   } else if (filters?.dataFim) {
     dateFilter.createdAt = {
+      lte: filters.dataFim
+    }
+  }
+
+  // Criar filtro específico para acordos usando dataAssinatura
+  const acordoDateFilter: { dataAssinatura?: { gte?: Date; lte?: Date } } = {}
+  if (filters?.dataInicio && filters?.dataFim) {
+    acordoDateFilter.dataAssinatura = {
+      gte: filters.dataInicio,
+      lte: filters.dataFim
+    }
+  } else if (filters?.dataInicio) {
+    acordoDateFilter.dataAssinatura = {
+      gte: filters.dataInicio
+    }
+  } else if (filters?.dataFim) {
+    acordoDateFilter.dataAssinatura = {
       lte: filters.dataFim
     }
   }
@@ -58,7 +75,7 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
 
     // Total de acordos
     prisma.acordo.count({
-      where: dateFilter
+      where: acordoDateFilter
     }),
 
     // Total de parcelas
@@ -117,7 +134,7 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
     prisma.acordo.count({
       where: {
         dataVencimento: { lt: new Date() },
-        ...dateFilter
+        ...acordoDateFilter
       }
     }),
 
@@ -127,7 +144,7 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
         processo: {
           tipo: { in: ['COMPENSACAO', 'DACAO_PAGAMENTO'] }
         },
-        ...dateFilter
+        ...acordoDateFilter
       },
       _sum: { valorTotal: true }
     }),
@@ -138,7 +155,7 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
         processo: {
           tipo: 'TRANSACAO_EXCEPCIONAL'
         },
-        ...dateFilter
+        ...acordoDateFilter
       },
       _sum: { valorFinal: true }
     }),
@@ -159,7 +176,7 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
         processo: {
           tipo: { in: ['COMPENSACAO', 'DACAO_PAGAMENTO'] }
         },
-        ...dateFilter
+        ...acordoDateFilter
       },
       _sum: { valorTotal: true }
     }),
@@ -213,35 +230,78 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
       const resultados = []
       for (const grupo of grupos) {
         if (grupo.tipoDecisao) {
-          // Valores para compensação e dação (usa valorTotal)
-          const valorCompDacao = await prisma.acordo.aggregate({
-            where: {
-              processo: {
-                tipo: { in: ['COMPENSACAO', 'DACAO_PAGAMENTO'] },
-                decisoes: {
-                  some: { tipoDecisao: grupo.tipoDecisao }
-                }
-              },
-              ...dateFilter
-            },
-            _sum: { valorTotal: true }
-          })
+          let valorTotalCorreto = 0
 
-          // Valores para transação excepcional (usa valorFinal)
-          const valorTransacao = await prisma.acordo.aggregate({
-            where: {
-              processo: {
-                tipo: 'TRANSACAO_EXCEPCIONAL',
+          // Para indeferimento, usar valores específicos do processo
+          if (grupo.tipoDecisao === 'INDEFERIDO') {
+            const processosIndeferidos = await prisma.processo.findMany({
+              where: {
                 decisoes: {
-                  some: { tipoDecisao: grupo.tipoDecisao }
-                }
+                  some: { tipoDecisao: 'INDEFERIDO' }
+                },
+                ...dateFilter
               },
-              ...dateFilter
-            },
-            _sum: { valorFinal: true }
-          })
+              select: {
+                id: true,
+                tipo: true,
+                valoresEspecificos: true
+              }
+            })
 
-          const valorTotalCorreto = Number(valorCompDacao._sum.valorTotal || 0) + Number(valorTransacao._sum.valorFinal || 0)
+            for (const processo of processosIndeferidos) {
+              if (processo.valoresEspecificos && typeof processo.valoresEspecificos === 'object') {
+                const valores = processo.valoresEspecificos as Record<string, any>
+
+                if (processo.tipo === 'COMPENSACAO' && valores.creditos) {
+                  // Somar valores dos créditos
+                  const totalCreditos = valores.creditos.reduce((total: number, credito: any) => {
+                    return total + Number(credito.valor || 0)
+                  }, 0)
+                  valorTotalCorreto += totalCreditos
+                } else if (processo.tipo === 'DACAO_PAGAMENTO' && valores.imoveis) {
+                  // Somar valores avaliados dos imóveis
+                  const totalImoveis = valores.imoveis.reduce((total: number, imovel: any) => {
+                    const valor = Number(imovel.imovel?.valorAvaliado || imovel.valorAvaliacao || 0)
+                    return total + valor
+                  }, 0)
+                  valorTotalCorreto += totalImoveis
+                } else if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && valores.transacao) {
+                  // Usar valorTotalInscricoes
+                  const valorTotal = Number(valores.transacao.valorTotalInscricoes || 0)
+                  valorTotalCorreto += valorTotal
+                }
+              }
+            }
+          } else {
+            // Para deferimento e parcial, usar valores dos acordos como antes
+            const valorCompDacao = await prisma.acordo.aggregate({
+              where: {
+                processo: {
+                  tipo: { in: ['COMPENSACAO', 'DACAO_PAGAMENTO'] },
+                  decisoes: {
+                    some: { tipoDecisao: grupo.tipoDecisao }
+                  }
+                },
+                ...acordoDateFilter
+              },
+              _sum: { valorTotal: true }
+            })
+
+            const valorTransacao = await prisma.acordo.aggregate({
+              where: {
+                processo: {
+                  tipo: 'TRANSACAO_EXCEPCIONAL',
+                  decisoes: {
+                    some: { tipoDecisao: grupo.tipoDecisao }
+                  }
+                },
+                ...acordoDateFilter
+              },
+              _sum: { valorFinal: true }
+            })
+
+            valorTotalCorreto = Number(valorCompDacao._sum.valorTotal || 0) + Number(valorTransacao._sum.valorFinal || 0)
+          }
 
           resultados.push({
             tipoDecisao: grupo.tipoDecisao,
@@ -403,7 +463,7 @@ async function getRelatóriosRecentes() {
       where: { createdAt: { gte: dataLimite } }
     }),
     acordosRecentes: await prisma.acordo.count({
-      where: { createdAt: { gte: dataLimite } }
+      where: { dataAssinatura: { gte: dataLimite } }
     }),
     pagamentosRecentes: await prisma.parcela.count({
       where: { 

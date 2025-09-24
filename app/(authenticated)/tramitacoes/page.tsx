@@ -23,6 +23,7 @@ import {
 import Link from 'next/link'
 import { SessionUser } from '@/types'
 import { Tramitacao, Processo, Contribuinte, User } from '@prisma/client'
+import { toast } from 'sonner'
 
 type TramitacaoWithRelations = Tramitacao & {
   processo: Processo & {
@@ -52,7 +53,7 @@ export default function TramitacoesPage() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/tramitacoes')
+      const response = await fetch('/api/tramitacoes?limit=1000')
       if (response.ok) {
         const data = await response.json()
         setTramitacoes(data.tramitacoes || [])
@@ -60,6 +61,9 @@ export default function TramitacoesPage() {
       }
     } catch (error) {
       console.error('Erro ao carregar tramitações:', error)
+      toast.error('Erro ao carregar a lista de tramitações')
+      setTramitacoes([])
+      setSetores([])
     } finally {
       setLoading(false)
     }
@@ -75,15 +79,16 @@ export default function TramitacoesPage() {
       })
 
       if (response.ok) {
+        toast.success('Tramitação marcada como recebida')
         // Recarregar dados para mostrar a mudança
         loadData()
       } else {
         const errorData = await response.json()
-        alert(errorData.error || 'Erro ao marcar tramitação como recebida')
+        toast.error(errorData.error || 'Erro ao marcar tramitação como recebida')
       }
     } catch (error) {
       console.error('Erro ao marcar tramitação como recebida:', error)
-      alert('Erro ao marcar tramitação como recebida')
+      toast.error('Erro ao marcar tramitação como recebida')
     }
   }
 
@@ -162,6 +167,10 @@ export default function TramitacoesPage() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
     return diffDays
+  }
+
+  if (loading) {
+    return <div className="flex justify-center p-8">Carregando...</div>
   }
 
   return (
@@ -254,6 +263,7 @@ export default function TramitacoesPage() {
                       setSearchTerm('')
                       setStatusFilter('all')
                       setSetorFilter('all')
+                      toast.info('Filtros limpos')
                     }}
                     className="cursor-pointer"
                   >
@@ -325,12 +335,7 @@ export default function TramitacoesPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin h-8 w-8 border-2 border-gray-300 border-t-blue-600 rounded-full"></div>
-                <span className="ml-2">Carregando tramitações...</span>
-              </div>
-            ) : totalFilteredTramitacoes === 0 ? (
+            {totalFilteredTramitacoes === 0 ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <ArrowRight className="h-12 w-12 text-gray-400 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">

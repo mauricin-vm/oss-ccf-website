@@ -70,7 +70,7 @@ export default function SetoresAdminPage() {
   const loadSetores = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/setores')
+      const response = await fetch('/api/setores?limit=1000')
       if (!response.ok) {
         throw new Error('Erro ao carregar setores')
       }

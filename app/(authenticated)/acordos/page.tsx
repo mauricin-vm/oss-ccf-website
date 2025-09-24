@@ -24,6 +24,7 @@ import Link from 'next/link'
 import { SessionUser } from '@/types'
 import { formatarCpfCnpj } from '@/lib/utils'
 import { getTipoProcessoInfo } from '@/lib/constants/tipos-processo'
+import { toast } from 'sonner'
 
 interface Acordo {
   id: string
@@ -112,7 +113,7 @@ export default function AcordosPage() {
       const data = await response.json()
       setAcordos(data.acordos || [])
     } catch (error) {
-      console.error('Erro ao carregar acordos:', error)
+      toast.error('Erro ao carregar acordos')
       setAcordos([])
     } finally {
       setLoading(false)
@@ -409,6 +410,7 @@ export default function AcordosPage() {
                       setStatusFilter('all')
                       setTipoFilter('all')
                       setModalidadeFilter('all')
+                      toast.info('Filtros limpos')
                     }}
                     className="cursor-pointer"
                   >

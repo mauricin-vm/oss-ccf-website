@@ -25,11 +25,13 @@ import {
   AlertCircle,
   Trash2,
   Plus,
-  Check
+  Check,
+  X
 } from 'lucide-react'
 import Link from 'next/link'
 import { SessionUser, PautaWithRelations, ProcessoWithRelations } from '@/types'
 import { User as PrismaUser } from '@prisma/client'
+import { toast } from 'sonner'
 
 import PautaActions from '@/components/pauta/pauta-actions'
 import { formatLocalDate } from '@/lib/utils/date'
@@ -72,6 +74,7 @@ export default function PautaDetalhesPage({
         setPauta(data)
       } catch (error) {
         console.error('Erro ao carregar pauta:', error)
+        toast.error('Erro ao carregar dados da pauta')
       } finally {
         setLoading(false)
       }
@@ -92,6 +95,7 @@ export default function PautaDetalhesPage({
         }
       } catch (error) {
         console.error('Erro ao recarregar pauta:', error)
+        toast.error('Erro ao recarregar dados da pauta')
       }
     }
     fetchPauta()
@@ -114,9 +118,10 @@ export default function PautaDetalhesPage({
       }
 
       // Recarregar dados da pauta
+      toast.success(`Processo ${numeroProcesso} removido da pauta com sucesso`)
       handleEditSuccess()
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro inesperado')
+      toast.error(error instanceof Error ? error.message : 'Erro inesperado')
     } finally {
       setLoading(false)
     }
@@ -140,6 +145,7 @@ export default function PautaDetalhesPage({
       }
     } catch (error) {
       console.error('Erro ao buscar processos:', error)
+      toast.error('Erro ao buscar processos disponíveis')
     }
   }
 
@@ -156,6 +162,7 @@ export default function PautaDetalhesPage({
       }
     } catch (error) {
       console.error('Erro ao buscar informações de distribuição:', error)
+      toast.error('Erro ao obter sugestão de distribuição')
     }
   }
 
@@ -191,9 +198,42 @@ export default function PautaDetalhesPage({
     return (ultimaPauta.relator as string) || ''
   }
 
+  // Função para limpar erros visuais nos campos do modal
+  const clearFieldError = (fieldId: string) => {
+    const element = document.getElementById(fieldId)
+    if (element) {
+      element.style.borderColor = ''
+      element.style.boxShadow = ''
+    }
+  }
+
   const handleAddProcesso = async () => {
-    if (!selectedProcess || !conselheiro.trim()) {
-      alert('Selecione um processo e informe o conselheiro')
+    // Validação com toast e foco sequencial
+    if (!selectedProcess) {
+      toast.warning('Selecione um processo da lista')
+      // Focar no campo de busca após um delay
+      setTimeout(() => {
+        const element = document.getElementById('search-process')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+
+    if (!conselheiro.trim()) {
+      toast.warning('Selecione um conselheiro')
+      // Focar no select de conselheiro após um delay
+      setTimeout(() => {
+        const selectTrigger = document.querySelector('[data-field-id="conselheiro-select"]') as HTMLElement
+        if (selectTrigger) {
+          selectTrigger.focus()
+          selectTrigger.style.borderColor = '#ef4444'
+          selectTrigger.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
       return
     }
 
@@ -223,9 +263,10 @@ export default function PautaDetalhesPage({
       setIsAddProcessModalOpen(false)
 
       // Recarregar dados da pauta
+      toast.success(`Processo ${selectedProcess.numero} adicionado à pauta com sucesso`)
       handleEditSuccess()
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro inesperado')
+      toast.error(error instanceof Error ? error.message : 'Erro inesperado')
     } finally {
       setLoading(false)
     }
@@ -293,6 +334,7 @@ export default function PautaDetalhesPage({
       }
     } catch (error) {
       console.error('Erro ao carregar conselheiros:', error)
+      toast.error('Erro ao carregar lista de conselheiros')
     }
   }
 
@@ -305,6 +347,7 @@ export default function PautaDetalhesPage({
       }
     } catch (error) {
       console.error('Erro ao carregar processos disponíveis:', error)
+      toast.error('Erro ao carregar processos disponíveis')
     }
   }
 
@@ -929,20 +972,24 @@ export default function PautaDetalhesPage({
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Buscar Processo</Label>
+              <Label>Buscar Processo <span className="text-red-500">*</span></Label>
               <Input
+                id="search-process"
                 placeholder="Buscar por número ou contribuinte..."
                 value={searchProcess}
                 onChange={(e) => {
                   setSearchProcess(e.target.value)
                   searchAvailableProcesses(e.target.value)
+                  clearFieldError('search-process')
                 }}
+                onFocus={() => clearFieldError('search-process')}
+                className=""
               />
             </div>
 
-            {availableProcesses.length > 0 && (
+            {availableProcesses.length > 0 && searchProcess.length >= 3 && !selectedProcess && (
               <div className="space-y-2">
-                <Label>Processos Disponíveis</Label>
+                <Label>Processos Disponíveis <span className="text-red-500">*</span></Label>
                 <p className="text-sm text-gray-600">Clique em um processo para selecioná-lo (apenas um por vez)</p>
                 <div className="border rounded-lg max-h-60 overflow-y-auto">
                   {availableProcesses.map((processo) => (
@@ -999,9 +1046,20 @@ export default function PautaDetalhesPage({
 
             {selectedProcess && (
               <div className="space-y-2">
-                <Label>Processo Selecionado</Label>
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-1">
+                <Label>Processo Selecionado ✓</Label>
+                <div className="p-3 bg-blue-50 rounded-lg relative">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedProcess(null)
+                      setConselheiro('')
+                    }}
+                    className="absolute top-2 right-2 h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                  <div className="flex items-center gap-2 mb-1 pr-8">
                     <p className="font-medium">{selectedProcess.numero}</p>
                     <Badge className={getStatusInfo(selectedProcess.status).color}>
                       {getStatusInfo(selectedProcess.status).label}
@@ -1036,9 +1094,32 @@ export default function PautaDetalhesPage({
             )}
 
             <div className="space-y-2">
-              <Label>Conselheiro Relator</Label>
-              <Select value={conselheiro} onValueChange={setConselheiro} disabled={!selectedProcess}>
-                <SelectTrigger>
+              <Label htmlFor="conselheiro-select">Conselheiro <span className="text-red-500">*</span></Label>
+              <Select
+                value={conselheiro}
+                onValueChange={(value) => {
+                  setConselheiro(value)
+                  // Limpar estilo de erro quando valor é selecionado
+                  const selectTrigger = document.querySelector('[data-field-id="conselheiro-select"]') as HTMLElement
+                  if (selectTrigger) {
+                    selectTrigger.style.borderColor = ''
+                    selectTrigger.style.boxShadow = ''
+                  }
+                }}
+                disabled={!selectedProcess}
+              >
+                <SelectTrigger
+                  data-field-id="conselheiro-select"
+                  className="w-full"
+                  onFocus={() => {
+                    // Limpar estilo de erro quando recebe foco
+                    const selectTrigger = document.querySelector('[data-field-id="conselheiro-select"]') as HTMLElement
+                    if (selectTrigger) {
+                      selectTrigger.style.borderColor = ''
+                      selectTrigger.style.boxShadow = ''
+                    }
+                  }}
+                >
                   <SelectValue placeholder="Selecione um conselheiro..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -1068,7 +1149,7 @@ export default function PautaDetalhesPage({
             </Button>
             <Button
               onClick={handleAddProcesso}
-              disabled={!selectedProcess || !conselheiro.trim() || loading}
+              disabled={loading}
               className="cursor-pointer"
             >
               {loading ? 'Adicionando...' : 'Adicionar à Pauta'}

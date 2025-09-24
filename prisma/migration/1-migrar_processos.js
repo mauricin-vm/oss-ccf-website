@@ -152,8 +152,8 @@ async function migrarProcessos() {
           cpfCnpj: limparCpfCnpj(proc.cpf_cnpj),
           email: contatos.email && contatos.email.trim() !== '' ? contatos.email.trim() : null,
           telefone: limparTelefone(contatos.telefone),
-          createdAt: new Date(proc.data_criacao),
-          updatedAt: new Date()
+          createdAt: (() => { const d = new Date(proc.data_criacao); d.setHours(12, 0, 0, 0); return d; })(),
+          updatedAt: (() => { const d = new Date(); d.setHours(12, 0, 0, 0); return d; })()
         }
       })
 
@@ -173,7 +173,7 @@ async function migrarProcessos() {
 
     for (const proc of processosAntigos) {
       const tipoMapeado = mapearTipoProcesso(proc.tipo_processo)
-      const dataFinalizacao = proc.processo_concluido ? new Date(proc.data_atualizacao) : null
+      const dataFinalizacao = proc.processo_concluido ? (() => { const d = new Date(proc.data_atualizacao); d.setHours(12, 0, 0, 0); return d; })() : null
 
       await prisma.processo.create({
         data: {
@@ -181,13 +181,13 @@ async function migrarProcessos() {
           numero: proc.numero_processo,
           tipo: tipoMapeado,
           status: 'RECEPCIONADO',
-          dataAbertura: new Date(proc.data_abertura),
+          dataAbertura: (() => { const d = new Date(proc.data_abertura); d.setHours(12, 0, 0, 0); return d; })(),
           dataFinalizacao,
           observacoes: '',
           contribuinteId: `contrib_${proc.id_processo}`,
           createdById: usuarioMigracao.id,
-          createdAt: new Date(proc.data_criacao),
-          updatedAt: new Date()
+          createdAt: (() => { const d = new Date(proc.data_criacao); d.setHours(12, 0, 0, 0); return d; })(),
+          updatedAt: (() => { const d = new Date(); d.setHours(12, 0, 0, 0); return d; })()
         }
       })
 
@@ -219,7 +219,7 @@ async function migrarProcessos() {
           titulo: 'Processo Migrado',
           descricao: `Processo ${processo.numero} migrado do sistema antigo CCF.`,
           tipo: 'SISTEMA',
-          createdAt: processo.createdAt
+          createdAt: (() => { const d = processo.createdAt; d.setHours(12, 0, 0, 0); return d; })()
         }
       })
 
@@ -255,7 +255,7 @@ async function migrarProcessos() {
             tipo: dadosProcesso.tipo,
             status: dadosProcesso.status
           },
-          createdAt: new Date()
+          createdAt: (() => { const d = new Date(); d.setHours(12, 0, 0, 0); return d; })()
         }
       })
 

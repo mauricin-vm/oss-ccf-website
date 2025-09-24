@@ -23,6 +23,7 @@ import {
 import Link from 'next/link'
 import { SessionUser } from '@/types'
 import { getResultadoBadge } from '@/lib/constants/status'
+import { toast } from 'sonner'
 
 interface Sessao {
   id: string
@@ -100,6 +101,7 @@ export default function SessoesPage() {
       setSessoes(data.sessoes || [])
     } catch (error) {
       console.error('Erro ao carregar sessões:', error)
+      toast.error('Erro ao carregar dados das sessões')
       setSessoes([])
     } finally {
       setLoading(false)
@@ -266,6 +268,7 @@ export default function SessoesPage() {
                     onClick={() => {
                       setSearchTerm('')
                       setStatusFilter('all')
+                      toast.info('Filtros limpos')
                     }}
                     className="cursor-pointer"
                   >

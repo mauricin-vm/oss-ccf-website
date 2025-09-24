@@ -12,8 +12,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Pagination } from '@/components/ui/pagination'
 import { Loader2, AlertCircle, Search, Calendar } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { getStatusInfo } from '@/lib/constants/status'
+import { getTipoProcessoInfo } from '@/lib/constants/tipos-processo'
+import { toast } from 'sonner'
 
 interface TramitacaoFormProps {
   onSuccess?: () => void
@@ -48,7 +52,6 @@ interface Conselheiro {
 
 export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoFormProps) {
   const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [processos, setProcessos] = useState<Processo[]>([])
   const [setores, setSetores] = useState<Setor[]>([])
@@ -56,6 +59,9 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
   const [searchProcess, setSearchProcess] = useState('')
   const [selectedProcesso, setSelectedProcesso] = useState<Processo | null>(null)
   const [destinationType, setDestinationType] = useState<'setor' | 'pessoa'>('setor')
+  const [isLoadingProcessos, setIsLoadingProcessos] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(10)
 
   const {
     register,
@@ -83,7 +89,8 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
       setorDestino: '',
       prazoResposta: undefined,
       observacoes: ''
-    }
+    },
+    shouldFocusError: false // Desabilitar foco automático para controlarmos manualmente
   })
 
   // Buscar setores
@@ -120,27 +127,29 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
     fetchConselheiros()
   }, [])
 
-  // Buscar processos quando há busca
+  // Carregar todos os processos inicialmente
   useEffect(() => {
-    const fetchProcessos = async () => {
-      if (searchProcess.length < 3) {
-        setProcessos([])
-        return
-      }
-
+    const fetchAllProcessos = async () => {
       try {
-        const response = await fetch(`/api/processos?search=${encodeURIComponent(searchProcess)}`)
+        setIsLoadingProcessos(true)
+        const response = await fetch('/api/processos?limit=1000')
         if (response.ok) {
           const data = await response.json()
           setProcessos(data.processos || [])
         }
       } catch (error) {
-        console.error('Erro ao buscar processos:', error)
+        console.error('Erro ao carregar processos:', error)
+      } finally {
+        setIsLoadingProcessos(false)
       }
     }
 
-    const timeoutId = setTimeout(fetchProcessos, 300)
-    return () => clearTimeout(timeoutId)
+    fetchAllProcessos()
+  }, [])
+
+  // Reset para primeira página quando busca muda
+  useEffect(() => {
+    setCurrentPage(1)
   }, [searchProcess])
 
   // Se processoId for fornecido, buscar o processo específico
@@ -166,6 +175,44 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
     fetchProcesso()
   }, [processoId, setValue])
 
+  // Função para lidar com erros de validação do formulário
+  const onInvalid = (errors: any) => {
+    // Ordem lógica dos campos no formulário
+    const fieldOrder = [
+      'processoId',
+      'setorOrigem',
+      'setorDestino',
+      'prazoResposta',
+      'observacoes'
+    ]
+
+    // Procurar pelo primeiro erro na ordem dos campos
+    for (const field of fieldOrder) {
+      const fieldError = errors[field]
+
+      if (fieldError?.message) {
+        toast.warning(fieldError.message)
+
+        // Focar no campo com erro após um pequeno delay
+        setTimeout(() => {
+          // Para processoId, mostrar mensagem mas não focar pois não é input direto
+          if (field === 'processoId') {
+            // Processo deve ser selecionado, não há campo para focar
+            return
+          }
+
+          const element = document.getElementById(field)
+          if (element) {
+            element.focus()
+            element.style.borderColor = '#ef4444'
+            element.style.boxShadow = '0 0 0 1px #ef4444'
+          }
+        }, 100)
+        break
+      }
+    }
+  }
+
   const onSubmit = async (data: {
     processoId: string
     setorOrigem: string
@@ -174,7 +221,6 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
     observacoes?: string
   }) => {
     setIsLoading(true)
-    setError(null)
 
     try {
       const response = await fetch('/api/tramitacoes', {
@@ -192,13 +238,15 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
 
       await response.json()
 
+      toast.success('Tramitação criada com sucesso!')
+
       if (onSuccess) {
         onSuccess()
       } else {
         router.push('/tramitacoes')
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Erro inesperado')
+      toast.error(error instanceof Error ? error.message : 'Erro inesperado')
     } finally {
       setIsLoading(false)
     }
@@ -208,36 +256,33 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
     setSelectedProcesso(processo)
     setValue('processoId', processo.id)
     setSearchProcess('')
-    setProcessos([])
 
     // Manter CCF como padrão para setor de origem
     setValue('setorOrigem', 'CCF', { shouldValidate: true })
   }
 
-  const tipoProcessoMap = {
-    COMPENSACAO: 'Compensação',
-    DACAO_PAGAMENTO: 'Dação em Pagamento',
-    TRANSACAO_EXCEPCIONAL: 'Transação Excepcional'
-  }
+  // Filtragem local dos processos
+  const filteredProcessos = processos.filter((processo) => {
+    if (!searchProcess) return true
 
-  const statusMap = {
-    RECEPCIONADO: { label: 'Recepcionado', color: 'bg-gray-100 text-gray-800' },
-    EM_ANALISE: { label: 'Em Análise', color: 'bg-blue-100 text-blue-800' },
-    AGUARDANDO_DOCUMENTOS: { label: 'Aguardando Docs', color: 'bg-yellow-100 text-yellow-800' },
-    EM_PAUTA: { label: 'Em Pauta', color: 'bg-purple-100 text-purple-800' },
-    JULGADO: { label: 'Julgado', color: 'bg-indigo-100 text-indigo-800' },
-    EM_CUMPRIMENTO: { label: 'Em Cumprimento', color: 'bg-orange-100 text-orange-800' },
-    CONCLUIDO: { label: 'Concluído', color: 'bg-green-100 text-green-800' }
-  }
+    const searchLower = searchProcess.toLowerCase()
+    const searchNumbers = searchProcess.replace(/\D/g, '')
+
+    return processo.numero.toLowerCase().includes(searchLower) ||
+      processo.contribuinte.nome.toLowerCase().includes(searchLower) ||
+      (searchNumbers && processo.numero.includes(searchNumbers))
+  })
+
+  // Paginação local
+  const totalFilteredProcessos = filteredProcessos.length
+  const totalPages = Math.ceil(totalFilteredProcessos / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedProcessos = filteredProcessos.slice(startIndex, endIndex)
+
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6" noValidate>
 
       {/* Seleção de Processo */}
       <Card>
@@ -261,27 +306,64 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
                 />
               </div>
 
-              {processos.length > 0 && (
-                <div className="border rounded-lg max-h-60 overflow-y-auto">
-                  {processos.map((processo) => (
-                    <div
-                      key={processo.id}
-                      onClick={() => handleSelectProcesso(processo)}
-                      className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{processo.numero}</p>
-                          <p className="text-sm text-gray-600">{processo.contribuinte.nome}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Badge className={statusMap[processo.status as keyof typeof statusMap].color}>
-                            {statusMap[processo.status as keyof typeof statusMap].label}
-                          </Badge>
+              {isLoadingProcessos && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex flex-col items-center gap-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-gray-700">Carregando processos</p>
+                      <p className="text-xs text-gray-500">Buscando processos cadastrados...</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!isLoadingProcessos && paginatedProcessos.length > 0 && (
+                <div className="space-y-4">
+                  <div className="border rounded-lg max-h-96 overflow-y-auto">
+                    {paginatedProcessos.map((processo) => (
+                      <div
+                        key={processo.id}
+                        onClick={() => handleSelectProcesso(processo)}
+                        className="p-4 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{processo.numero}</p>
+                            <p className="text-sm text-gray-600">{processo.contribuinte.nome}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Badge className={getTipoProcessoInfo(processo.tipo).color}>
+                              {getTipoProcessoInfo(processo.tipo).label}
+                            </Badge>
+                            <Badge className={getStatusInfo(processo.status).color}>
+                              {getStatusInfo(processo.status).label}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalFilteredProcessos}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
+              )}
+
+              {!isLoadingProcessos && paginatedProcessos.length === 0 && processos.length > 0 && searchProcess && (
+                <div className="text-center py-6 text-gray-500">
+                  <p>Nenhum processo encontrado para "{searchProcess}"</p>
+                </div>
+              )}
+
+              {!isLoadingProcessos && processos.length === 0 && (
+                <div className="text-center py-6 text-gray-500">
+                  <p>Nenhum processo cadastrado</p>
                 </div>
               )}
             </div>
@@ -292,7 +374,7 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
                   <h4 className="font-medium text-blue-900">{selectedProcesso.numero}</h4>
                   <p className="text-sm text-blue-700">{selectedProcesso.contribuinte.nome}</p>
                   <p className="text-xs text-blue-600">
-                    {tipoProcessoMap[selectedProcesso.tipo as keyof typeof tipoProcessoMap]}
+                    {getTipoProcessoInfo(selectedProcesso.tipo).label}
                   </p>
                 </div>
                 <Button
@@ -337,7 +419,7 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
                   onValueChange={(value) => setValue('setorOrigem', value, { shouldValidate: true })}
                   disabled={isLoading}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="setorOrigem" className={errors.setorOrigem ? 'border-red-500 focus:ring-red-500' : ''}>
                     <SelectValue placeholder="Selecione o setor de origem" />
                   </SelectTrigger>
                   <SelectContent>
@@ -351,9 +433,6 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.setorOrigem && (
-                  <p className="text-sm text-red-500">{errors.setorOrigem.message}</p>
-                )}
               </div>
 
               <div className="space-y-2">
@@ -395,7 +474,7 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
                   onValueChange={(value) => setValue('setorDestino', value, { shouldValidate: true })}
                   disabled={isLoading}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="setorDestino" className={errors.setorDestino ? 'border-red-500 focus:ring-red-500' : ''}>
                     <SelectValue placeholder={`Selecione ${destinationType === 'setor' ? 'o setor' : 'a pessoa'} de destino`} />
                   </SelectTrigger>
                   <SelectContent>
@@ -406,7 +485,7 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
                         </SelectItem>
                       ))
                     ) : (
-                      conselheiros.map((conselheiro) => (
+                      conselheiros.filter(conselheiro => conselheiro.ativo).map((conselheiro) => (
                         <SelectItem key={conselheiro.id} value={conselheiro.nome}>
                           {conselheiro.nome}
                         </SelectItem>
@@ -414,9 +493,6 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
                     )}
                   </SelectContent>
                 </Select>
-                {errors.setorDestino && (
-                  <p className="text-sm text-red-500">{errors.setorDestino.message}</p>
-                )}
               </div>
             </div>
 
@@ -428,13 +504,10 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
                   id="prazoResposta"
                   type="date"
                   {...register('prazoResposta')}
-                  className="pl-10"
+                  className={`pl-10 ${errors.prazoResposta ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   disabled={isLoading}
                 />
               </div>
-              {errors.prazoResposta && (
-                <p className="text-sm text-red-500">{errors.prazoResposta.message}</p>
-              )}
               <p className="text-xs text-gray-500">
                 Data limite para resposta ou retorno do setor de destino
               </p>
@@ -449,9 +522,6 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
                 {...register('observacoes')}
                 disabled={isLoading}
               />
-              {errors.observacoes && (
-                <p className="text-sm text-red-500">{errors.observacoes.message}</p>
-              )}
             </div>
 
             {/* Histórico de Tramitações do Processo */}

@@ -10,10 +10,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Loader2, AlertCircle, UserPlus } from 'lucide-react'
+import { Loader2, UserPlus } from 'lucide-react'
 import { z } from 'zod'
+import { toast } from 'sonner'
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -28,8 +28,6 @@ function LoginContent() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [error, setError] = useState<string | null>(null)
-  const [registerError, setRegisterError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isRegistering, setIsRegistering] = useState(false)
   const [showRegisterDialog, setShowRegisterDialog] = useState(false)
@@ -66,9 +64,22 @@ function LoginContent() {
     resolver: zodResolver(registerSchema)
   })
 
+  // Função para lidar com erros de validação do formulário de login
+  const onLoginInvalid = (errors: any) => {
+    // Mostrar erros na ordem dos campos: email primeiro, depois senha
+    const fieldOrder = ['email', 'password']
+
+    for (const field of fieldOrder) {
+      if (errors[field]?.message) {
+        // Usar toast.warning para erros de validação (são avisos, não erros críticos)
+        toast.warning(errors[field].message)
+        break // Mostrar apenas o primeiro erro
+      }
+    }
+  }
+
   const onSubmit = async (data: LoginInput) => {
     setIsLoading(true)
-    setError(null)
 
     try {
       const result = await signIn('credentials', {
@@ -78,23 +89,37 @@ function LoginContent() {
       })
 
       if (result?.error) {
-        setError('Email ou senha inválidos')
+        toast.error('Email ou senha inválidos')
       } else if (result?.ok) {
         // Login bem-sucedido, usar router para redirecionamento suave
+        toast.success('Login realizado com sucesso!')
         const redirectUrl = getRedirectUrl()
         router.push(redirectUrl)
       }
     } catch (error) {
       console.error('Login error:', error)
-      setError('Ocorreu um erro ao fazer login')
+      toast.error('Ocorreu um erro ao fazer login')
     } finally {
       setIsLoading(false)
     }
   }
 
+  // Função para lidar com erros de validação do formulário de registro
+  const onRegisterInvalid = (errors: any) => {
+    // Mostrar erros na ordem dos campos: name, email, password, accessCode
+    const fieldOrder = ['name', 'email', 'password', 'accessCode']
+
+    for (const field of fieldOrder) {
+      if (errors[field]?.message) {
+        // Usar toast.warning para erros de validação (são avisos, não erros críticos)
+        toast.warning(errors[field].message)
+        break // Mostrar apenas o primeiro erro
+      }
+    }
+  }
+
   const onRegisterSubmit = async (data: RegisterInput) => {
     setIsRegistering(true)
-    setRegisterError(null)
 
     try {
       const response = await fetch('/api/auth/register', {
@@ -118,6 +143,7 @@ function LoginContent() {
       // Fechar modal e fazer login automático
       setShowRegisterDialog(false)
       resetRegisterForm()
+      toast.success('Conta criada com sucesso!')
 
       // Fazer login automático
       const result = await signIn('credentials', {
@@ -127,14 +153,15 @@ function LoginContent() {
       })
 
       if (result?.error) {
-        setError('Conta criada, mas erro ao fazer login. Tente fazer login manualmente.')
+        toast.error('Conta criada, mas erro ao fazer login. Tente fazer login manualmente.')
       } else if (result?.ok) {
         // Login bem-sucedido após registro, usar router para redirecionamento suave
+        toast.info('Redirecionando para o sistema...')
         const redirectUrl = getRedirectUrl()
         router.push(redirectUrl)
       }
     } catch (error) {
-      setRegisterError(error instanceof Error ? error.message : 'Erro ao criar conta')
+      toast.error(error instanceof Error ? error.message : 'Erro ao criar conta')
     } finally {
       setIsRegistering(false)
     }
@@ -165,15 +192,8 @@ function LoginContent() {
             Câmara de Conciliação Fiscal
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit, onLoginInvalid)} noValidate>
           <CardContent className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -183,10 +203,8 @@ function LoginContent() {
                 autoComplete="email"
                 {...register('email')}
                 disabled={isLoading}
+                className={errors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
-              {errors.email && (
-                <p className="text-sm text-red-500">{errors.email.message}</p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -197,10 +215,8 @@ function LoginContent() {
                 autoComplete="current-password"
                 {...register('password')}
                 disabled={isLoading}
+                className={errors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
-              {errors.password && (
-                <p className="text-sm text-red-500">{errors.password.message}</p>
-              )}
             </div>
           </CardContent>
 
@@ -238,14 +254,7 @@ function LoginContent() {
                     Preencha os dados abaixo e o código de acesso para criar sua conta
                   </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleRegisterSubmit(onRegisterSubmit)} className="space-y-4">
-                  {registerError && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{registerError}</AlertDescription>
-                    </Alert>
-                  )}
-
+                <form onSubmit={handleRegisterSubmit(onRegisterSubmit, onRegisterInvalid)} className="space-y-4" noValidate>
                   <div className="space-y-2">
                     <Label htmlFor="register-name">Nome Completo</Label>
                     <Input
@@ -254,10 +263,8 @@ function LoginContent() {
                       {...registerRegister('name')}
                       disabled={isRegistering}
                       placeholder="Seu nome completo"
+                      className={registerErrors.name ? 'border-red-500 focus-visible:ring-red-500' : ''}
                     />
-                    {registerErrors.name && (
-                      <p className="text-sm text-red-500">{registerErrors.name.message}</p>
-                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -269,10 +276,8 @@ function LoginContent() {
                       {...registerRegister('email')}
                       disabled={isRegistering}
                       placeholder="seu.email@ccf.gov.br"
+                      className={registerErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
                     />
-                    {registerErrors.email && (
-                      <p className="text-sm text-red-500">{registerErrors.email.message}</p>
-                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -284,10 +289,8 @@ function LoginContent() {
                       {...registerRegister('password')}
                       disabled={isRegistering}
                       placeholder="Mínimo 6 caracteres"
+                      className={registerErrors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}
                     />
-                    {registerErrors.password && (
-                      <p className="text-sm text-red-500">{registerErrors.password.message}</p>
-                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -298,10 +301,8 @@ function LoginContent() {
                       {...registerRegister('accessCode')}
                       disabled={isRegistering}
                       placeholder="Código fornecido pelo administrador"
+                      className={registerErrors.accessCode ? 'border-red-500 focus-visible:ring-red-500' : ''}
                     />
-                    {registerErrors.accessCode && (
-                      <p className="text-sm text-red-500">{registerErrors.accessCode.message}</p>
-                    )}
                   </div>
 
                   <div className="flex gap-2 pt-4">

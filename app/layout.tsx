@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ClientSessionProvider from "@/components/providers/SessionProvider";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,6 +31,19 @@ export default function RootLayout({
       >
         <ClientSessionProvider>
           {children}
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              className: 'sonner-toast',
+            }}
+            icons={{
+              success: '🎉',
+              error: '⚠️',
+              warning: '💡',
+              info: 'ℹ️',
+            }}
+          />
         </ClientSessionProvider>
       </body>
     </html>

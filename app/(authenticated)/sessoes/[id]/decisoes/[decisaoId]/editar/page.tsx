@@ -3,20 +3,19 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
 import { redirect, notFound } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
 import EditarDecisaoForm from '@/components/forms/editar-decisao-form'
 import { SessionUser } from '@/types'
+import { BackButton } from '@/components/ui/back-button'
 
 interface EditarDecisaoPageProps {
   params: Promise<{ id: string; decisaoId: string }>
 }
 
 
-export default async function EditarDecisaoPage({ params }: EditarDecisaoPageProps) {
+export default async function EditarDecisaoPage({ params, searchParams }: EditarDecisaoPageProps & { searchParams?: { from?: string } }) {
   const { id, decisaoId } = await params
   const session = await getServerSession(authOptions)
+  const fromProcess = searchParams?.from === 'process'
   
   if (!session) {
     redirect('/login')
@@ -24,8 +23,8 @@ export default async function EditarDecisaoPage({ params }: EditarDecisaoPagePro
 
   const user = session.user as SessionUser
 
-  // Apenas Admin e Funcionário podem editar decisões
-  if (user.role === 'VISUALIZADOR') {
+  // Apenas Admin pode editar decisões dos processos
+  if (user.role !== 'ADMIN') {
     redirect('/dashboard')
   }
 
@@ -80,8 +79,15 @@ export default async function EditarDecisaoPage({ params }: EditarDecisaoPagePro
   // Verificar se a sessão está ativa
   const isActive = !decisao.sessao?.dataFim
 
-  if (!isActive) {
+  // Se a sessão não está ativa, só permite acesso se:
+  // - Veio da página do processo E o processo está JULGADO
+  if (!isActive && !(fromProcess && decisao.processo.status === 'JULGADO')) {
     redirect(`/sessoes/${id}`)
+  }
+
+  // Verificar se o processo tem status JULGADO (apenas estes podem ser editados)
+  if (decisao.processo.status !== 'JULGADO') {
+    redirect(`/processos/${decisao.processoId}`)
   }
 
   // Buscar o processo na pauta para obter relator e revisores
@@ -93,11 +99,10 @@ export default async function EditarDecisaoPage({ params }: EditarDecisaoPagePro
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href={`/sessoes/${id}`}>
-          <Button variant="outline" size="icon" className="cursor-pointer">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
+        <BackButton
+          sessaoId={id}
+          processoId={decisao.processoId}
+        />
         <div className="flex-1">
           <h1 className="text-3xl font-bold">Editar Decisão</h1>
           <p className="text-gray-600">

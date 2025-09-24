@@ -110,15 +110,16 @@ export async function PUT(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
     const user = session.user as SessionUser
-    // Apenas Admin e Funcionário podem atualizar decisões
-    if (user.role === 'VISUALIZADOR') {
+    // Apenas Admin pode atualizar decisões de processos (via interface do processo)
+    if (user.role !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Sem permissão para atualizar decisões' },
+        { error: 'Apenas administradores podem editar decisões de processos julgados' },
         { status: 403 }
       )
     }
     const body = await request.json()
-    const validationResult = atualizarDecisaoSchema.safeParse(body)
+    const { fromProcess, ...dataToValidate } = body
+    const validationResult = atualizarDecisaoSchema.safeParse(dataToValidate)
     if (!validationResult.success) {
       return NextResponse.json(
         {
@@ -162,11 +163,28 @@ export async function PUT(
         { status: 404 }
       )
     }
+    // Verificar se pode editar sessão finalizada
     if (decisaoExistente.sessao.dataFim) {
-      return NextResponse.json(
-        { error: 'Não é possível atualizar decisões de sessões finalizadas' },
-        { status: 400 }
-      )
+      // Só permite se veio da página do processo E o processo está JULGADO
+      if (!(fromProcess && data.processoId)) {
+        return NextResponse.json(
+          { error: 'Não é possível atualizar decisões de sessões finalizadas' },
+          { status: 400 }
+        )
+      }
+
+      // Verificar se o processo está JULGADO antes de permitir
+      const processoParaVerificar = await prisma.processo.findUnique({
+        where: { id: data.processoId },
+        select: { status: true }
+      })
+
+      if (!processoParaVerificar || processoParaVerificar.status !== 'JULGADO') {
+        return NextResponse.json(
+          { error: 'Não é possível atualizar decisões de sessões finalizadas' },
+          { status: 400 }
+        )
+      }
     }
     // Verificar se o processo existe na pauta
     const processoNaPauta = decisaoExistente.sessao.pauta?.processos.find(
@@ -175,6 +193,14 @@ export async function PUT(
     if (!processoNaPauta) {
       return NextResponse.json(
         { error: 'Processo não encontrado na pauta desta sessão' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar se o processo tem status JULGADO (apenas estes podem ser editados)
+    if (processoNaPauta.processo.status !== 'JULGADO') {
+      return NextResponse.json(
+        { error: 'Apenas decisões de processos julgados podem ser editadas' },
         { status: 400 }
       )
     }

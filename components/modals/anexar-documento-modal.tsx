@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Upload, FileText, X, Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -85,7 +85,7 @@ export default function AnexarDocumentoModal({
     })
 
     if (errors.length > 0) {
-      setError(errors.join(', '))
+      toast.warning(errors.join(', '))
     }
 
     if (validFiles.length > 0) {
@@ -117,12 +117,11 @@ export default function AnexarDocumentoModal({
 
   const handleUpload = async () => {
     if (selectedFiles.length === 0) {
-      setError('Selecione pelo menos um arquivo')
+      toast.warning('Selecione pelo menos um arquivo')
       return
     }
 
     setIsUploading(true)
-    setError(null)
     setUploadProgress(0)
 
     try {
@@ -156,8 +155,8 @@ export default function AnexarDocumentoModal({
       }
 
       if (errors.length > 0) {
-        setError(`Alguns arquivos falharam: ${errors.join(', ')}`)
-        
+        toast.error(`Alguns arquivos falharam: ${errors.join(', ')}`)
+
         if (uploadedCount > 0) {
           toast.success(`${uploadedCount} arquivo(s) enviado(s) com sucesso`)
         }
@@ -167,7 +166,7 @@ export default function AnexarDocumentoModal({
         handleClose()
       }
     } catch {
-      setError('Erro inesperado durante o upload')
+      toast.error('Erro inesperado durante o upload')
     } finally {
       setIsUploading(false)
       setUploadProgress(0)
@@ -178,8 +177,8 @@ export default function AnexarDocumentoModal({
     // Limpar previews
     selectedFiles.forEach(file => URL.revokeObjectURL(file.preview))
     setSelectedFiles([])
-    setError(null)
     setUploadProgress(0)
+    setError(null)
     onOpenChange(false)
   }
 

@@ -1,155 +1,159 @@
 import { z } from 'zod'
 
-export const acordoSchema = z.object({
+// Enums
+export const tipoProcessoEnum = z.enum(['TRANSACAO_EXCEPCIONAL', 'COMPENSACAO', 'DACAO_PAGAMENTO'])
+export const tipoInscricaoEnum = z.enum(['IMOBILIARIA', 'ECONOMICA'])
+export const finalidadeInscricaoEnum = z.enum(['INCLUIDA_ACORDO', 'OFERECIDA_COMPENSACAO', 'OFERECIDA_DACAO'])
+export const tipoParcelaEnum = z.enum(['ENTRADA', 'PARCELA_ACORDO', 'PARCELA_HONORARIOS'])
+
+// Schema base para acordo
+export const acordoBaseSchema = z.object({
   processoId: z.string().min(1, 'Processo é obrigatório'),
-  valorTotal: z.number().min(0.01, 'Valor total deve ser maior que zero'),
-  valorDesconto: z.number().min(0, 'Valor do desconto não pode ser negativo').optional(),
-  percentualDesconto: z.number().min(0).max(100, 'Percentual deve estar entre 0 e 100').optional(),
-  valorFinal: z.number().min(0.01, 'Valor final deve ser maior que zero'),
+  numeroTermo: z.string().optional(),
+  tipoProcesso: tipoProcessoEnum,
   dataAssinatura: z.date({
     message: 'Data de assinatura é obrigatória'
   }),
   dataVencimento: z.date({
     message: 'Data de vencimento é obrigatória'
   }),
-  modalidadePagamento: z.enum(['avista', 'parcelado'], {
-    message: 'Modalidade de pagamento é obrigatória'
-  }),
-  numeroParcelas: z.number().min(1, 'Número de parcelas deve ser maior que zero'),
-  observacoes: z.string().optional(),
-  clausulasEspeciais: z.string().optional(),
-  // Dados específicos por tipo de processo
-  dadosEspecificos: z.object({
-    // Transação Excepcional - Novo formato
-    inscricoesAcordo: z.array(z.object({
-      id: z.string(),
-      numeroInscricao: z.string(),
-      tipoInscricao: z.string(),
-      debitos: z.array(z.object({
-        id: z.string(),
-        descricao: z.string(),
-        valor: z.number(),
-        dataVencimento: z.string()
-      }))
-    })).optional(),
-    valorInscricoes: z.number().optional(),
-    propostaFinal: z.object({
-      valorTotalProposto: z.number(),
-      metodoPagamento: z.string(),
-      valorEntrada: z.number(),
-      quantidadeParcelas: z.number(),
-      valorParcela: z.number().optional()
-    }).optional(),
-    valorTotal: z.number().optional(),
-    valorFinal: z.number().optional(),
-    metodoPagamento: z.string().optional(),
-    valorEntrada: z.number().optional(),
-    numeroParcelas: z.number().optional(),
-    observacoesAcordo: z.string().optional(),
+  observacoes: z.string().optional()
+})
 
-    // Transação Excepcional - Formato antigo (compatibilidade)
-    inscricoesSelecionadas: z.array(z.string()).optional(),
-    debitosSelecionados: z.record(z.string(), z.array(z.string())).optional(),
-    inscricoesSelecionadasDetalhes: z.array(z.unknown()).optional(),
-    // Compensação
-    creditosSelecionados: z.array(z.string()).optional(),
-    creditosAdicionados: z.array(z.object({
-      id: z.string(),
-      tipo: z.string(),
-      numero: z.string(),
-      valor: z.number(),
-      dataVencimento: z.string().optional(),
-      descricao: z.string().optional()
-    })).optional(),
-    inscricoesAdicionadas: z.array(z.object({
-      id: z.string(),
-      numeroInscricao: z.string(),
-      tipoInscricao: z.string(),
-      debitos: z.array(z.object({
-        descricao: z.string(),
-        valor: z.number(),
-        dataVencimento: z.string()
-      }))
-    })).optional(),
-    valorCreditos: z.number().optional(),
-    valorDebitos: z.number().optional(),
-    valorCompensacao: z.number().optional(),
-    saldoFinal: z.number().optional(),
-    // Dação em Pagamento
-    inscricoesOferecidas: z.array(z.string()).optional(),
-    inscricoesCompensar: z.array(z.string()).optional(),
-    inscricoesOferecidasSelecionadas: z.array(z.string()).optional(),
-    inscricoesCompensarSelecionadas: z.array(z.string()).optional(),
-    // Dação em Pagamento - Arrays completos
-    inscricoesOferecidasAdicionadas: z.array(z.object({
-      id: z.string(),
-      numeroInscricao: z.string(),
-      tipoInscricao: z.string(),
-      valor: z.number(),
-      dataVencimento: z.string().optional(),
-      descricao: z.string().optional()
-    })).optional(),
-    inscricoesCompensarAdicionadas: z.array(z.object({
-      id: z.string(),
-      numeroInscricao: z.string(),
-      tipoInscricao: z.string(),
-      debitos: z.array(z.object({
-        descricao: z.string(),
-        valor: z.number(),
-        dataVencimento: z.string()
-      }))
-    })).optional(),
-    valorOferecido: z.number().optional(),
-    valorCompensar: z.number().optional(),
-    valorDacao: z.number().optional()
-  }).optional()
+// Schema para débitos
+export const acordoDebitoSchema = z.object({
+  descricao: z.string().min(1, 'Descrição é obrigatória'),
+  valorLancado: z.number().min(0.01, 'Valor deve ser maior que zero'),
+  dataVencimento: z.date({
+    message: 'Data de vencimento é obrigatória'
+  })
+})
+
+// Schema para inscrições
+export const acordoInscricaoSchema = z.object({
+  numeroInscricao: z.string().min(1, 'Número da inscrição é obrigatório'),
+  tipoInscricao: tipoInscricaoEnum,
+  finalidade: finalidadeInscricaoEnum,
+  valorTotal: z.number().min(0.01, 'Valor total deve ser maior que zero'),
+  descricao: z.string().optional(),
+  dataVencimento: z.date().optional(),
+  debitos: z.array(acordoDebitoSchema).min(1, 'Pelo menos um débito é obrigatório')
+})
+
+// Schema para créditos (compensação)
+export const acordoCreditoSchema = z.object({
+  tipoCredito: z.string().min(1, 'Tipo de crédito é obrigatório'),
+  numeroCredito: z.string().min(1, 'Número do crédito é obrigatório'),
+  valor: z.number().min(0.01, 'Valor deve ser maior que zero'),
+  descricao: z.string().optional(),
+  dataVencimento: z.date().optional()
+})
+
+// Schema para transação excepcional
+export const acordoTransacaoSchema = z.object({
+  valorTotalProposto: z.number().min(0.01, 'Valor total proposto deve ser maior que zero'),
+  metodoPagamento: z.enum(['avista', 'parcelado'], {
+    message: 'Método de pagamento é obrigatório'
+  }),
+  valorEntrada: z.number().min(0).optional(),
+  quantidadeParcelas: z.number().min(1, 'Quantidade de parcelas deve ser maior que zero'),
+  valorParcela: z.number().min(0).optional(),
+  custasAdvocaticias: z.number().min(0).optional(),
+  honorariosValor: z.number().min(0).optional(),
+  honorariosMetodoPagamento: z.enum(['avista', 'parcelado']).optional(),
+  honorariosParcelas: z.number().min(1).optional(),
+  honorariosValorParcela: z.number().min(0).optional()
 }).refine((data) => {
-  if (data.modalidadePagamento === 'parcelado') {
-    return data.numeroParcelas >= 2
+  if (data.metodoPagamento === 'parcelado') {
+    return data.quantidadeParcelas >= 2
   }
   return true
 }, {
   message: 'Parcelamento deve ter pelo menos 2 parcelas',
-  path: ['numeroParcelas']
+  path: ['quantidadeParcelas']
 })
 
+// Schema para compensação
+export const acordoCompensacaoSchema = z.object({
+  valorTotalCreditos: z.number().min(0.01, 'Valor total dos créditos deve ser maior que zero'),
+  valorTotalDebitos: z.number().min(0.01, 'Valor total dos débitos deve ser maior que zero'),
+  valorLiquido: z.number()
+})
+
+// Schema para dação
+export const acordoDacaoSchema = z.object({
+  valorTotalOferecido: z.number().min(0.01, 'Valor total oferecido deve ser maior que zero'),
+  valorTotalCompensar: z.number().min(0.01, 'Valor total a compensar deve ser maior que zero'),
+  valorLiquido: z.number()
+})
+
+// Schema principal unificado
+export const acordoSchema = z.discriminatedUnion('tipoProcesso', [
+  // Transação Excepcional
+  z.object({
+    ...acordoBaseSchema.shape,
+    tipoProcesso: z.literal('TRANSACAO_EXCEPCIONAL'),
+    transacao: acordoTransacaoSchema,
+    inscricoes: z.array(acordoInscricaoSchema.extend({
+      finalidade: z.literal('INCLUIDA_ACORDO')
+    })).min(1, 'Pelo menos uma inscrição deve ser incluída')
+  }),
+
+  // Compensação
+  z.object({
+    ...acordoBaseSchema.shape,
+    tipoProcesso: z.literal('COMPENSACAO'),
+    compensacao: acordoCompensacaoSchema,
+    creditos: z.array(acordoCreditoSchema).min(1, 'Pelo menos um crédito é obrigatório'),
+    inscricoes: z.array(acordoInscricaoSchema.extend({
+      finalidade: z.literal('INCLUIDA_ACORDO')
+    })).min(1, 'Pelo menos uma inscrição deve ser incluída')
+  }),
+
+  // Dação em Pagamento
+  z.object({
+    ...acordoBaseSchema.shape,
+    tipoProcesso: z.literal('DACAO_PAGAMENTO'),
+    dacao: acordoDacaoSchema,
+    inscricoes: z.array(acordoInscricaoSchema).min(2, 'Dação requer inscrições oferecidas e a compensar')
+  })
+])
+
+// Schema para parcelas
 export const parcelaSchema = z.object({
   acordoId: z.string().min(1, 'Acordo é obrigatório'),
+  tipoParcela: tipoParcelaEnum.default('PARCELA_ACORDO'),
   numero: z.number().min(1, 'Número da parcela deve ser maior que zero'),
   valor: z.number().min(0.01, 'Valor da parcela deve ser maior que zero'),
   dataVencimento: z.date({
     message: 'Data de vencimento é obrigatória'
   }),
   dataPagamento: z.date().optional(),
-  valorPago: z.number().min(0, 'Valor pago não pode ser negativo').optional(),
-  status: z.enum(['pendente', 'paga', 'vencida', 'cancelada']).default('pendente'),
-  observacoes: z.string().optional()
+  status: z.enum(['PENDENTE', 'PAGO', 'VENCIDO', 'CANCELADO']).default('PENDENTE')
 })
 
-export const pagamentoSchema = z.object({
+// Schema para pagamentos
+export const pagamentoParcelaSchema = z.object({
   parcelaId: z.string().min(1, 'Parcela é obrigatória'),
+  valorPago: z.number().min(0.01, 'Valor pago deve ser maior que zero'),
   dataPagamento: z.date({
     message: 'Data de pagamento é obrigatória'
   }),
-  valorPago: z.number().min(0.01, 'Valor pago deve ser maior que zero'),
-  formaPagamento: z.enum(['dinheiro', 'pix', 'transferencia', 'boleto', 'cartao', 'dacao', 'compensacao'], {
+  formaPagamento: z.enum(['PIX', 'TED', 'DINHEIRO', 'BOLETO', 'CARTAO', 'DACAO', 'COMPENSACAO'], {
     message: 'Forma de pagamento é obrigatória'
   }),
   numeroComprovante: z.string().optional(),
   observacoes: z.string().optional()
 })
 
-export const renovacaoAcordoSchema = z.object({
-  acordoId: z.string().min(1, 'Acordo é obrigatório'),
-  novoValorTotal: z.number().min(0.01, 'Novo valor total deve ser maior que zero'),
-  novaDataVencimento: z.date({
-    message: 'Nova data de vencimento é obrigatória'
-  }),
-  motivo: z.string().min(10, 'Motivo deve ter pelo menos 10 caracteres'),
-  observacoes: z.string().optional()
-})
-
+// Tipos TypeScript
 export type AcordoInput = z.infer<typeof acordoSchema>
+export type AcordoBaseInput = z.infer<typeof acordoBaseSchema>
+export type AcordoTransacaoInput = z.infer<typeof acordoTransacaoSchema>
+export type AcordoCompensacaoInput = z.infer<typeof acordoCompensacaoSchema>
+export type AcordoDacaoInput = z.infer<typeof acordoDacaoSchema>
+export type AcordoInscricaoInput = z.infer<typeof acordoInscricaoSchema>
+export type AcordoDebitoInput = z.infer<typeof acordoDebitoSchema>
+export type AcordoCreditoInput = z.infer<typeof acordoCreditoSchema>
 export type ParcelaInput = z.infer<typeof parcelaSchema>
-export type PagamentoInput = z.infer<typeof pagamentoSchema>
-export type RenovacaoAcordoInput = z.infer<typeof renovacaoAcordoSchema>
+export type PagamentoParcelaInput = z.infer<typeof pagamentoParcelaSchema>

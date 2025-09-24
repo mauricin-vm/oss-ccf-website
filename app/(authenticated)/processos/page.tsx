@@ -22,6 +22,7 @@ import Link from 'next/link'
 import { SessionUser } from '@/types'
 import { getStatusInfo } from '@/lib/constants/status'
 import { getTipoProcessoInfo } from '@/lib/constants/tipos-processo'
+import { toast } from 'sonner'
 
 interface Processo {
   id: string
@@ -99,6 +100,7 @@ export default function ProcessosPage() {
       setProcessos(processosFormatados)
     } catch (error) {
       console.error('Erro ao carregar processos:', error)
+      toast.error('Erro ao carregar a lista de processos')
       setProcessos([])
     } finally {
       setLoading(false)
@@ -230,12 +232,13 @@ export default function ProcessosPage() {
                 </div>
                 
                 <div className="flex items-end">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setSearchTerm('')
                       setStatusFilter('all')
                       setTipoFilter('all')
+                      toast.info('Filtros limpos')
                     }}
                     className="cursor-pointer"
                   >

@@ -11,9 +11,9 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
+import { toast } from 'sonner'
 
 interface ProcessoFormProps {
   onSuccess?: () => void
@@ -21,7 +21,6 @@ interface ProcessoFormProps {
 
 export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
   const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   const {
@@ -33,13 +32,51 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
     resolver: zodResolver(processoSchema),
     defaultValues: {
       tipo: ''
-    }
+    },
+    shouldFocusError: false // Desabilitar foco automático para controlarmos manualmente
   })
+
+  // Função para lidar com erros de validação do formulário
+  const onInvalid = (errors: any) => {
+    // Ordem lógica dos campos no formulário
+    const fieldOrder = [
+      'numero',
+      'tipo',
+      'observacoes',
+      'contribuinte.cpfCnpj',
+      'contribuinte.nome',
+      'contribuinte.email',
+      'contribuinte.telefone',
+      'contribuinte.endereco',
+      'contribuinte.cidade',
+      'contribuinte.estado',
+      'contribuinte.cep'
+    ]
+
+    // Procurar pelo primeiro erro na ordem dos campos
+    for (const field of fieldOrder) {
+      const fieldError = field.includes('.')
+        ? errors[field.split('.')[0]]?.[field.split('.')[1]]
+        : errors[field]
+
+      if (fieldError?.message) {
+        toast.warning(fieldError.message)
+
+        // Focar no campo com erro após um pequeno delay para sobrescrever o comportamento padrão do React Hook Form
+        setTimeout(() => {
+          const element = document.getElementById(field)
+          if (element) {
+            element.focus()
+          }
+        }, 100)
+        break
+      }
+    }
+  }
 
 
   const onSubmit = async (data: ProcessoInput) => {
     setIsLoading(true)
-    setError(null)
 
     const processedData = {
       ...data,
@@ -67,13 +104,15 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
 
       const resultado = await response.json()
 
+      toast.success('Processo criado com sucesso!')
+
       if (onSuccess) {
         onSuccess()
       } else {
         router.push(`/processos/${resultado.id}`)
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Erro inesperado')
+      toast.error(error instanceof Error ? error.message : 'Erro inesperado')
     } finally {
       setIsLoading(false)
     }
@@ -118,13 +157,7 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6" noValidate>
 
       {/* Informações do Processo */}
       <Card>
@@ -143,10 +176,8 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
                 placeholder="CCF-2024-001"
                 {...register('numero')}
                 disabled={isLoading}
+                className={errors.numero ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
-              {errors.numero && (
-                <p className="text-sm text-red-500">{errors.numero.message}</p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -155,7 +186,7 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
                 onValueChange={(value) => setValue('tipo', value, { shouldValidate: true })}
                 disabled={isLoading}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className={errors.tipo ? 'w-full border-red-500 focus:ring-red-500' : 'w-full'}>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent>
@@ -164,9 +195,6 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
                   <SelectItem value="TRANSACAO_EXCEPCIONAL">Transação Excepcional</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.tipo && (
-                <p className="text-sm text-red-500">{errors.tipo.message}</p>
-              )}
             </div>
           </div>
 
@@ -180,9 +208,6 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
               {...register('observacoes')}
               disabled={isLoading}
             />
-            {errors.observacoes && (
-              <p className="text-sm text-red-500">{errors.observacoes.message}</p>
-            )}
           </div>
 
         </CardContent>
@@ -212,9 +237,6 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
                 }}
                 disabled={isLoading}
               />
-              {errors.contribuinte?.cpfCnpj && (
-                <p className="text-sm text-red-500">{errors.contribuinte.cpfCnpj.message}</p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -224,10 +246,8 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
                 placeholder="Nome completo ou razão social"
                 {...register('contribuinte.nome')}
                 disabled={isLoading}
+                className={errors.contribuinte?.nome ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
-              {errors.contribuinte?.nome && (
-                <p className="text-sm text-red-500">{errors.contribuinte.nome.message}</p>
-              )}
             </div>
           </div>
 
@@ -241,9 +261,6 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
                 {...register('contribuinte.email')}
                 disabled={isLoading}
               />
-              {errors.contribuinte?.email && (
-                <p className="text-sm text-red-500">{errors.contribuinte.email.message}</p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -257,9 +274,6 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
                 onBlur={handleTelefoneBlur}
                 disabled={isLoading}
               />
-              {errors.contribuinte?.telefone && (
-                <p className="text-sm text-red-500">{errors.contribuinte.telefone.message}</p>
-              )}
             </div>
           </div>
 
@@ -271,9 +285,6 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
               {...register('contribuinte.endereco')}
               disabled={isLoading}
             />
-            {errors.contribuinte?.endereco && (
-              <p className="text-sm text-red-500">{errors.contribuinte.endereco.message}</p>
-            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -285,9 +296,6 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
                 {...register('contribuinte.cidade')}
                 disabled={isLoading}
               />
-              {errors.contribuinte?.cidade && (
-                <p className="text-sm text-red-500">{errors.contribuinte.cidade.message}</p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -299,9 +307,6 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
                 {...register('contribuinte.estado')}
                 disabled={isLoading}
               />
-              {errors.contribuinte?.estado && (
-                <p className="text-sm text-red-500">{errors.contribuinte.estado.message}</p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -316,9 +321,6 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
                 }}
                 disabled={isLoading}
               />
-              {errors.contribuinte?.cep && (
-                <p className="text-sm text-red-500">{errors.contribuinte.cep.message}</p>
-              )}
             </div>
           </div>
         </CardContent>

@@ -205,6 +205,7 @@ export default function EditarDecisaoForm({
     formState: { errors }
   } = useForm<DecisaoInput>({
     resolver: zodResolver(decisaoSchema),
+    shouldFocusError: false,
     defaultValues: {
       processoId: decisaoAtual.processoId,
       tipoResultado: decisaoAtual.tipoResultado as 'SUSPENSO' | 'PEDIDO_VISTA' | 'PEDIDO_DILIGENCIA' | 'JULGADO',
@@ -229,6 +230,49 @@ export default function EditarDecisaoForm({
   })
 
   const tipoResultado = watch('tipoResultado')
+
+  // Função para lidar com erros de validação do formulário
+  const onInvalid = (errors: any) => {
+    // Ordem lógica dos campos no formulário
+    const fieldOrder = [
+      'tipoResultado',
+      'tipoDecisao',
+      'motivoSuspensao',
+      'conselheiroPedidoVista',
+      'prazoVista',
+      'especificacaoDiligencia',
+      'prazoDiligencia',
+      'tipoAcordo',
+      'ataTexto',
+      'observacoes'
+    ]
+
+    // Procurar pelo primeiro erro na ordem dos campos
+    for (const field of fieldOrder) {
+      if (errors[field]?.message) {
+        toast.warning(errors[field].message)
+
+        // Focar no campo com erro após um pequeno delay
+        setTimeout(() => {
+          const element = document.getElementById(field)
+          if (element) {
+            element.focus()
+            element.style.borderColor = '#ef4444'
+            element.style.boxShadow = '0 0 0 1px #ef4444'
+          }
+        }, 100)
+        break
+      }
+    }
+  }
+
+  const clearFieldError = (fieldId: string) => {
+    const element = document.getElementById(fieldId)
+    if (element) {
+      element.style.borderColor = ''
+      element.style.boxShadow = ''
+    }
+  }
 
   // Inicializar votos se existirem
   useEffect(() => {
@@ -298,17 +342,23 @@ export default function EditarDecisaoForm({
 
     // Validações específicas antes do envio
     if (data.tipoResultado === 'JULGADO' && !votacaoResultado) {
-      setError('Para processos julgados, é necessário ter a votação concluída.')
+      toast.warning('Para processos julgados, é necessário ter a votação concluída.')
       setIsLoading(false)
       return
     }
 
     try {
+      // Detectar se veio da página do processo
+      const urlParams = new URLSearchParams(window.location.search)
+      const fromProcess = urlParams.get('from') === 'process' ||
+                         document.referrer.includes(`/processos/${decisaoAtual.processoId}`)
+
       const payload = {
         ...data,
         // Limpar tipoDecisao se não for JULGADO
         tipoDecisao: data.tipoResultado === 'JULGADO' ? data.tipoDecisao : undefined,
-        votos: votos.length > 0 ? votos : undefined
+        votos: votos.length > 0 ? votos : undefined,
+        fromProcess // Enviar informação se veio da página do processo
       }
 
       const response = await fetch(`/api/sessoes/${sessaoId}/decisoes/${decisaoId}`, {
@@ -325,9 +375,19 @@ export default function EditarDecisaoForm({
       }
 
       toast.success('Decisão atualizada com sucesso!')
-      router.push(`/sessoes/${sessaoId}`)
+
+      // Reutilizar a variável fromProcess já definida anteriormente
+      if (fromProcess) {
+        // Redirecionar de volta para a página do processo
+        router.push(`/processos/${decisaoAtual.processoId}`)
+      } else {
+        // Comportamento original - redirecionar para a sessão
+        router.push(`/sessoes/${sessaoId}`)
+      }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Erro inesperado')
+      const errorMessage = error instanceof Error ? error.message : 'Erro inesperado'
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -433,13 +493,7 @@ export default function EditarDecisaoForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6" noValidate>
 
       {/* Informações do Processo */}
       <Card>
@@ -547,9 +601,6 @@ export default function EditarDecisaoForm({
               </div>
             </div>
           </div>
-          {errors.tipoResultado && (
-            <p className="text-sm text-red-500 mt-2">{errors.tipoResultado.message}</p>
-          )}
         </CardContent>
       </Card>
 
@@ -570,9 +621,6 @@ export default function EditarDecisaoForm({
                 rows={4}
                 {...register('motivoSuspensao')}
               />
-              {errors.motivoSuspensao && (
-                <p className="text-sm text-red-500">{errors.motivoSuspensao.message}</p>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -617,9 +665,6 @@ export default function EditarDecisaoForm({
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.conselheiroPedidoVista && (
-                  <p className="text-sm text-red-500">{errors.conselheiroPedidoVista.message}</p>
-                )}
                 {processo?.relator && (
                   <p className="text-xs text-gray-500">
                     Nota: Relatores e revisores não podem pedir vista do próprio processo.
@@ -636,9 +681,6 @@ export default function EditarDecisaoForm({
                 {...register('observacoes')}
                 disabled={isLoading}
               />
-              {errors.observacoes && (
-                <p className="text-sm text-red-500">{errors.observacoes.message}</p>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -661,9 +703,6 @@ export default function EditarDecisaoForm({
                 rows={4}
                 {...register('especificacaoDiligencia')}
               />
-              {errors.especificacaoDiligencia && (
-                <p className="text-sm text-red-500">{errors.especificacaoDiligencia.message}</p>
-              )}
             </div>
             <div className="space-y-2 w-1/2">
               <Label htmlFor="prazoDiligencia">Prazo para cumprimento <span className="text-red-500">*</span></Label>
@@ -677,9 +716,6 @@ export default function EditarDecisaoForm({
                 />
                 <span className="text-sm text-gray-600">dias</span>
               </div>
-              {errors.prazoDiligencia && (
-                <p className="text-sm text-red-500">{errors.prazoDiligencia.message}</p>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -871,9 +907,6 @@ export default function EditarDecisaoForm({
                   {...register('observacoes')}
                   disabled={isLoading}
                 />
-                {errors.observacoes && (
-                  <p className="text-sm text-red-500">{errors.observacoes.message}</p>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -897,9 +930,6 @@ export default function EditarDecisaoForm({
               {...register('ataTexto')}
               disabled={isLoading}
             />
-            {errors.ataTexto && (
-              <p className="text-sm text-red-500">{errors.ataTexto.message}</p>
-            )}
           </div>
         </CardContent>
       </Card>
