@@ -104,12 +104,29 @@ export async function PUT(
           })
         }
       }
+
+      // Se a parcela foi desmarcada como paga (volta para PENDENTE/ATRASADO), remover pagamentos automáticos
+      if ((data.status === 'PENDENTE' || data.status === 'ATRASADO') && parcelaAtual.status === 'PAGO') {
+        await tx.pagamentoParcela.deleteMany({
+          where: { parcelaId: id }
+        })
+      }
       // Verificar se todas as parcelas foram pagas para marcar acordo como cumprido
       const todasParcelas = await tx.parcela.findMany({
         where: { acordoId: parcelaAtual.acordo.id }
       })
       const todasParcelasPagas = todasParcelas.every(p => p.status === 'PAGO')
-      if (todasParcelasPagas && parcelaAtual.acordo.status === 'ativo') {
+
+      // Verificar se custas advocatícias foram pagas (se existirem)
+      let custasAdvocaticiasPagas = true
+      const transacao = await tx.acordoTransacao.findUnique({
+        where: { acordoId: parcelaAtual.acordo.id }
+      })
+      if (transacao && transacao.custasAdvocaticias && Number(transacao.custasAdvocaticias) > 0) {
+        custasAdvocaticiasPagas = !!transacao.custasDataPagamento
+      }
+
+      if (todasParcelasPagas && custasAdvocaticiasPagas && parcelaAtual.acordo.status === 'ativo') {
         await tx.acordo.update({
           where: { id: parcelaAtual.acordo.id },
           data: { status: 'cumprido' }
@@ -124,7 +141,7 @@ export async function PUT(
             processoId: parcelaAtual.acordo.processoId,
             usuarioId: user.id,
             titulo: 'Acordo de Pagamento Cumprido',
-            descricao: 'Todas as parcelas foram pagas. Acordo cumprido integralmente.',
+            descricao: 'Todas as parcelas e custas advocatícias foram pagas. Acordo cumprido integralmente.',
             tipo: 'ACORDO'
           }
         })

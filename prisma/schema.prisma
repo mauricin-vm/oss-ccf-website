@@ -449,6 +449,8 @@ model AcordoTransacao {
   quantidadeParcelas          Int
   valorParcela                Decimal?  @db.Decimal(15, 2)
   custasAdvocaticias          Decimal?  @db.Decimal(15, 2)
+  custasDataVencimento        DateTime?
+  custasDataPagamento         DateTime?
   honorariosValor             Decimal?  @db.Decimal(15, 2)
   honorariosMetodoPagamento   String?   // 'avista' ou 'parcelado'
   honorariosParcelas          Int?

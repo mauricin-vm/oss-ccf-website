@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Calculator, FileText, DollarSign, CreditCard, Plus, Edit3, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface InscricaoDebito {
   id: string
@@ -31,6 +32,11 @@ interface PropostaTransacao {
   metodoPagamento: string
   valorEntrada: number
   quantidadeParcelas: number
+  custasAdvocaticias: number
+  custasDataVencimento: string
+  honorariosValor: number
+  honorariosMetodoPagamento: string
+  honorariosParcelas: number
 }
 
 interface ValoresTransacao {
@@ -68,7 +74,14 @@ export default function TransacaoExcepcionalAcordoSection({
       debitos: [...inscricao.debitos] // Cópia profunda dos débitos
     }))
   )
-  const [propostaFinal, setPropostaFinal] = useState(valoresTransacao.proposta)
+  const [propostaFinal, setPropostaFinal] = useState({
+    ...valoresTransacao.proposta,
+    custasAdvocaticias: valoresTransacao.proposta.custasAdvocaticias || 0,
+    custasDataVencimento: valoresTransacao.proposta.custasDataVencimento || '',
+    honorariosValor: valoresTransacao.proposta.honorariosValor || 0,
+    honorariosMetodoPagamento: valoresTransacao.proposta.honorariosMetodoPagamento || 'a_vista',
+    honorariosParcelas: valoresTransacao.proposta.honorariosParcelas || 1
+  })
   const [observacoesAcordo, setObservacoesAcordo] = useState('')
   const [showInscricaoModal, setShowInscricaoModal] = useState(false)
   const [editingInscricao, setEditingInscricao] = useState<InscricaoTransacao | null>(null)
@@ -99,7 +112,13 @@ export default function TransacaoExcepcionalAcordoSection({
       valorInscricoes: valorTotalInscricoes,
       propostaFinal: propostaFinal,
       valorEntrada: propostaFinal.valorEntrada,
-      observacoesAcordo: observacoesAcordo
+      observacoesAcordo: observacoesAcordo,
+      // Incluir custas e honorários nos dados
+      custasAdvocaticias: propostaFinal.custasAdvocaticias,
+      custasDataVencimento: propostaFinal.custasDataVencimento,
+      honorariosValor: propostaFinal.honorariosValor,
+      honorariosMetodoPagamento: propostaFinal.honorariosMetodoPagamento,
+      honorariosParcelas: propostaFinal.honorariosParcelas
     }
 
 
@@ -127,9 +146,62 @@ export default function TransacaoExcepcionalAcordoSection({
     setShowInscricaoModal(true)
   }
 
-  const salvarInscricao = () => {
-    if (inscricaoForm.numeroInscricao.trim() === '') return
+  const validateAndSaveInscricao = () => {
+    // Validar campos obrigatórios
+    const errors: string[] = []
+    let firstErrorField = ''
 
+    if (!inscricaoForm.numeroInscricao.trim()) {
+      errors.push('Número da inscrição é obrigatório')
+      if (!firstErrorField) firstErrorField = 'numeroInscricao'
+    }
+
+    // Validar débitos
+    if (inscricaoForm.debitos.length === 0) {
+      errors.push('Adicione pelo menos um débito à inscrição')
+    } else {
+      for (let i = 0; i < inscricaoForm.debitos.length; i++) {
+        const debito = inscricaoForm.debitos[i]
+        if (!debito.descricao.trim()) {
+          errors.push(`Descrição do ${i + 1}º débito é obrigatória`)
+          if (!firstErrorField) firstErrorField = `descricao-${i}`
+          break
+        }
+        if (debito.valor <= 0) {
+          errors.push(`Valor do ${i + 1}º débito deve ser maior que zero`)
+          if (!firstErrorField) firstErrorField = `valor-${i}`
+          break
+        }
+        if (!debito.dataVencimento) {
+          errors.push(`Data de vencimento do ${i + 1}º débito é obrigatória`)
+          if (!firstErrorField) firstErrorField = `dataVencimento-${i}`
+          break
+        }
+      }
+    }
+
+    if (errors.length > 0) {
+      toast.warning(errors[0])
+
+      // Focar no primeiro campo com erro
+      if (firstErrorField) {
+        setTimeout(() => {
+          const element = document.getElementById(firstErrorField)
+          if (element) {
+            element.focus()
+            element.style.borderColor = '#ef4444'
+            element.style.boxShadow = '0 0 0 1px #ef4444'
+          }
+        }, 100)
+      }
+      return
+    }
+
+    // Se chegou até aqui, todas as validações passaram
+    salvarInscricao()
+  }
+
+  const salvarInscricao = () => {
     if (editingInscricao) {
       // Editando inscrição existente
       setInscricoesAcordo(prev => prev.map(inscricao =>
@@ -155,6 +227,7 @@ export default function TransacaoExcepcionalAcordoSection({
 
     setShowInscricaoModal(false)
     setEditingInscricao(null)
+    toast.success(editingInscricao ? 'Inscrição editada com sucesso!' : 'Inscrição adicionada com sucesso!')
   }
 
   const removerInscricao = (inscricaoId: string) => {
@@ -218,11 +291,11 @@ export default function TransacaoExcepcionalAcordoSection({
       debitos: prev.debitos.map((debito, i) =>
         i === index
           ? {
-              ...debito,
-              [field]: field === 'valor'
-                ? parseCurrencyToNumber(value as string)
-                : value
-            }
+            ...debito,
+            [field]: field === 'valor'
+              ? parseCurrencyToNumber(value as string)
+              : value
+          }
           : debito
       )
     }))
@@ -230,6 +303,14 @@ export default function TransacaoExcepcionalAcordoSection({
 
   const getTipoInscricaoLabel = (tipo: string) => {
     return tipo === 'imobiliaria' ? 'Imobiliária' : 'Econômica'
+  }
+
+  const clearFieldError = (fieldId: string) => {
+    const element = document.getElementById(fieldId)
+    if (element) {
+      element.style.borderColor = ''
+      element.style.boxShadow = ''
+    }
   }
 
 
@@ -399,9 +480,13 @@ export default function TransacaoExcepcionalAcordoSection({
               <div className="space-y-2">
                 <Label htmlFor="modal-inscricao-numero">Número da Inscrição <span className="text-red-500">*</span></Label>
                 <Input
-                  id="modal-inscricao-numero"
+                  id="numeroInscricao"
                   value={inscricaoForm.numeroInscricao}
-                  onChange={(e) => setInscricaoForm({ ...inscricaoForm, numeroInscricao: e.target.value })}
+                  onChange={(e) => {
+                    setInscricaoForm({ ...inscricaoForm, numeroInscricao: e.target.value })
+                    clearFieldError('numeroInscricao')
+                  }}
+                  onFocus={() => clearFieldError('numeroInscricao')}
                   placeholder="Ex: 123.456.789"
                 />
               </div>
@@ -455,19 +540,23 @@ export default function TransacaoExcepcionalAcordoSection({
 
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-2">
-                        <Label htmlFor={`debito-desc-${index}`}>Descrição <span className="text-red-500">*</span></Label>
+                        <Label htmlFor={`descricao-${index}`}>Descrição <span className="text-red-500">*</span></Label>
                         <Input
-                          id={`debito-desc-${index}`}
+                          id={`descricao-${index}`}
                           value={debito.descricao}
-                          onChange={(e) => updateDebito(index, 'descricao', e.target.value)}
+                          onChange={(e) => {
+                            updateDebito(index, 'descricao', e.target.value)
+                            clearFieldError(`descricao-${index}`)
+                          }}
+                          onFocus={() => clearFieldError(`descricao-${index}`)}
                           placeholder="Ex: IPTU 2024"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor={`debito-valor-${index}`}>Valor Lançado <span className="text-red-500">*</span></Label>
+                        <Label htmlFor={`valor-${index}`}>Valor Lançado <span className="text-red-500">*</span></Label>
                         <Input
-                          id={`debito-valor-${index}`}
+                          id={`valor-${index}`}
                           type="text"
                           value={debito.valor ? debito.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}
                           onChange={(e) => {
@@ -481,18 +570,27 @@ export default function TransacaoExcepcionalAcordoSection({
                                 i === index ? { ...d, valor: numericValue } : d
                               )
                             }))
+                            clearFieldError(`valor-${index}`)
                           }}
+                          onFocus={() => clearFieldError(`valor-${index}`)}
                           placeholder="Ex: 1.500,00"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor={`debito-vencimento-${index}`}>Data de Vencimento <span className="text-red-500">*</span></Label>
+                        <Label htmlFor={`dataVencimento-${index}`}>Data de Vencimento <span className="text-red-500">*</span></Label>
                         <Input
-                          id={`debito-vencimento-${index}`}
+                          id={`dataVencimento-${index}`}
                           type="date"
-                          value={debito.dataVencimento}
-                          onChange={(e) => updateDebito(index, 'dataVencimento', e.target.value)}
+                          value={debito.dataVencimento ? debito.dataVencimento.split('T')[0] : ''}
+                          onChange={(e) => {
+                            // Tratar timezone para data de vencimento
+                            const dateValue = e.target.value
+                            const adjustedDate = dateValue ? dateValue + 'T12:00:00' : dateValue
+                            updateDebito(index, 'dataVencimento', adjustedDate)
+                            clearFieldError(`dataVencimento-${index}`)
+                          }}
+                          onFocus={() => clearFieldError(`dataVencimento-${index}`)}
                         />
                       </div>
                     </div>
@@ -511,8 +609,7 @@ export default function TransacaoExcepcionalAcordoSection({
               </Button>
               <Button
                 type="button"
-                onClick={salvarInscricao}
-                disabled={!inscricaoForm.numeroInscricao.trim()}
+                onClick={validateAndSaveInscricao}
                 className="cursor-pointer"
               >
                 <Plus className="mr-2 h-4 w-4" />
@@ -590,7 +687,7 @@ export default function TransacaoExcepcionalAcordoSection({
             {propostaFinal.metodoPagamento === 'parcelado' && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="quantidadeParcelas">Quantidade de Parcelas (máx. 120)</Label>
+                  <Label htmlFor="quantidadeParcelas">Quantidade de Parcelas (máx. 120) <span className="text-red-500">*</span></Label>
                   <Input
                     id="quantidadeParcelas"
                     type="text"
@@ -607,9 +704,8 @@ export default function TransacaoExcepcionalAcordoSection({
                   <Label htmlFor="valorParcela">Valor da Parcela</Label>
                   <Input
                     id="valorParcela"
-                    type="number"
-                    step="0.01"
-                    value={((propostaFinal.valorTotalProposto - propostaFinal.valorEntrada) / propostaFinal.quantidadeParcelas).toFixed(2)}
+                    type="text"
+                    value={((propostaFinal.valorTotalProposto - propostaFinal.valorEntrada) / propostaFinal.quantidadeParcelas).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     disabled={true}
                     className="bg-gray-100"
                   />
@@ -621,11 +717,107 @@ export default function TransacaoExcepcionalAcordoSection({
             )}
           </div>
 
+          {/* Custas Advocatícias e Honorários */}
+          <div className="border-t pt-4">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="space-y-2">
+                <Label htmlFor="custasAdvocaticias">Custas Advocatícias</Label>
+                <Input
+                  id="custasAdvocaticias"
+                  type="text"
+                  value={propostaFinal.custasAdvocaticias ? propostaFinal.custasAdvocaticias.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}
+                  onChange={(e) => {
+                    const formattedValue = formatCurrency(e.target.value)
+                    const numericValue = parseCurrencyToNumber(formattedValue)
+                    setPropostaFinal(prev => ({
+                      ...prev,
+                      custasAdvocaticias: numericValue
+                    }))
+                  }}
+                  placeholder="Ex: 5.000,00"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="honorariosValor">Honorários</Label>
+                <Input
+                  id="honorariosValor"
+                  type="text"
+                  value={propostaFinal.honorariosValor ? propostaFinal.honorariosValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}
+                  onChange={(e) => {
+                    const formattedValue = formatCurrency(e.target.value)
+                    const numericValue = parseCurrencyToNumber(formattedValue)
+                    setPropostaFinal(prev => ({
+                      ...prev,
+                      honorariosValor: numericValue
+                    }))
+                  }}
+                  placeholder="Ex: 10.000,00"
+                />
+              </div>
+            </div>
+
+            {/* Configurações dos Honorários (só aparece se tem valor) */}
+            {propostaFinal.honorariosValor > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="honorariosMetodoPagamento">Forma de Pagamento dos Honorários</Label>
+                  <select
+                    id="honorariosMetodoPagamento"
+                    value={propostaFinal.honorariosMetodoPagamento}
+                    onChange={(e) => setPropostaFinal(prev => ({
+                      ...prev,
+                      honorariosMetodoPagamento: e.target.value,
+                      honorariosParcelas: e.target.value === 'a_vista' ? 1 : prev.honorariosParcelas
+                    }))}
+                    className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    <option value="a_vista">À Vista</option>
+                    <option value="parcelado">Parcelado</option>
+                  </select>
+                </div>
+
+                {propostaFinal.honorariosMetodoPagamento === 'parcelado' && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="honorariosParcelas">Parcelas dos Honorários</Label>
+                      <Input
+                        id="honorariosParcelas"
+                        type="text"
+                        value={propostaFinal.honorariosParcelas}
+                        onChange={(e) => setPropostaFinal(prev => ({
+                          ...prev,
+                          honorariosParcelas: parseInt(e.target.value) || 1
+                        }))}
+                        placeholder="Ex: 6"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="honorariosValorParcela">Valor por Parcela</Label>
+                      <Input
+                        id="honorariosValorParcela"
+                        type="text"
+                        value={(propostaFinal.honorariosValor / propostaFinal.honorariosParcelas).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        disabled={true}
+                        className="bg-gray-100"
+                      />
+
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Simulação de Pagamento */}
           {propostaFinal.valorTotalProposto > 0 && (
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
               <h5 className="font-medium mb-3 text-blue-800">Simulação do Pagamento:</h5>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 text-sm">
+
+              {/* Valores Principais */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm mb-4">
                 <div>
                   <span className="text-blue-600">Valor Original:</span>
                   <p className="font-medium text-blue-700">
@@ -650,24 +842,73 @@ export default function TransacaoExcepcionalAcordoSection({
                     R$ {(propostaFinal.valorEntrada || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
+              </div>
+
+              {/* Parcelas do Acordo */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
                 <div>
                   <span className="text-blue-600">
                     {propostaFinal.metodoPagamento === 'parcelado' ? 'Valor das Parcelas:' : 'Valor Total:'}
                   </span>
                   <p className="font-medium text-blue-700">
                     {propostaFinal.metodoPagamento === 'parcelado' && propostaFinal.quantidadeParcelas > 0
-                      ? `${propostaFinal.quantidadeParcelas}x de R$ ${((propostaFinal.valorTotalProposto - propostaFinal.valorEntrada) / propostaFinal.quantidadeParcelas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                      ? `${propostaFinal.quantidadeParcelas}x de R$ ${((propostaFinal.valorTotalProposto - propostaFinal.valorEntrada) / propostaFinal.quantidadeParcelas).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                       : `R$ ${propostaFinal.valorTotalProposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                     }
                   </p>
                 </div>
                 <div>
-                  <span className="text-blue-600">Total Final:</span>
+                  <span className="text-blue-600">Total do Acordo:</span>
                   <p className="font-bold text-blue-700">
                     R$ {propostaFinal.valorTotalProposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
+
+              {/* Custas e Honorários (só aparece se tiver valores) */}
+              {(propostaFinal.custasAdvocaticias > 0 || propostaFinal.honorariosValor > 0) && (
+                <>
+                  <div className="border-t border-blue-200 pt-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      {propostaFinal.custasAdvocaticias > 0 && (
+                        <div>
+                          <span className="text-amber-600">Custas Advocatícias:</span>
+                          <p className="font-medium text-amber-700">
+                            R$ {propostaFinal.custasAdvocaticias.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      )}
+                      {propostaFinal.honorariosValor > 0 && (
+                        <div>
+                          <span className="text-amber-600">Honorários:</span>
+                          <p className="font-medium text-amber-700">
+                            {propostaFinal.honorariosMetodoPagamento === 'parcelado'
+                              ? `${propostaFinal.honorariosParcelas}x de R$ ${(propostaFinal.honorariosValor / propostaFinal.honorariosParcelas).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                              : `R$ ${propostaFinal.honorariosValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                            }
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-amber-600">Total Adicional:</span>
+                        <p className="font-bold text-amber-700">
+                          R$ {((propostaFinal.custasAdvocaticias || 0) + (propostaFinal.honorariosValor || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Total Geral */}
+                  <div className="border-t border-blue-200 pt-3 mt-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-medium text-blue-800">Total Geral do Acordo:</span>
+                      <p className="text-xl font-bold text-blue-900">
+                        R$ {(propostaFinal.valorTotalProposto + (propostaFinal.custasAdvocaticias || 0) + (propostaFinal.honorariosValor || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </CardContent>

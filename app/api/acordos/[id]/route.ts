@@ -43,6 +43,16 @@ export async function GET(
               orderBy: { createdAt: 'desc' }
             }
           }
+        },
+        // Incluir dados específicos por tipo
+        transacao: true,
+        compensacao: true,
+        dacao: true,
+        creditos: true,
+        inscricoes: {
+          include: {
+            debitos: true
+          }
         }
       }
     })
@@ -52,6 +62,54 @@ export async function GET(
         { status: 404 }
       )
     }
+
+    // Processar dados específicos da transação excepcional
+    if (acordo.tipoProcesso === 'TRANSACAO_EXCEPCIONAL' && acordo.transacao) {
+      const transacao = acordo.transacao
+
+      // Calcular valores baseados nos dados da transação
+      const valorTotal = acordo.inscricoes.reduce((total, inscricao) => {
+        return total + inscricao.debitos.reduce((subtotal, debito) => {
+          return subtotal + Number(debito.valorLancado)
+        }, 0)
+      }, 0)
+
+      const valorProposto = Number(transacao.valorTotalProposto)
+      const valorDesconto = valorTotal - valorProposto
+      const valorEntrada = Number(transacao.valorEntrada) || 0
+      const quantidadeParcelas = transacao.quantidadeParcelas || 1
+      const metodoPagamento = transacao.metodoPagamento
+
+      // Adicionar campos calculados ao acordo
+      const acordoEnriquecido = {
+        ...acordo,
+        // Campos para compatibilidade com o frontend
+        valorTotal: valorTotal,
+        valorFinal: valorProposto,
+        valorDesconto: valorDesconto,
+        valorEntrada: valorEntrada,
+        modalidadePagamento: metodoPagamento,
+        numeroParcelas: quantidadeParcelas,
+        // Dados da transação para cálculos detalhados
+        transacaoDetails: {
+          valorTotalInscricoes: valorTotal,
+          valorTotalProposto: valorProposto,
+          desconto: valorDesconto,
+          percentualDesconto: valorTotal > 0 ? (valorDesconto / valorTotal) * 100 : 0,
+          entrada: valorEntrada,
+          custasAdvocaticias: Number(transacao.custasAdvocaticias) || 0,
+          custasDataVencimento: transacao.custasDataVencimento ? transacao.custasDataVencimento.toISOString() : null,
+          custasDataPagamento: transacao.custasDataPagamento ? transacao.custasDataPagamento.toISOString() : null,
+          honorariosValor: Number(transacao.honorariosValor) || 0,
+          honorariosMetodoPagamento: transacao.honorariosMetodoPagamento,
+          honorariosParcelas: transacao.honorariosParcelas,
+          totalGeral: valorProposto + (Number(transacao.custasAdvocaticias) || 0) + (Number(transacao.honorariosValor) || 0)
+        }
+      }
+
+      return NextResponse.json(acordoEnriquecido)
+    }
+
     return NextResponse.json(acordo)
   } catch (error) {
     console.error('Erro ao buscar acordo:', error)
@@ -164,11 +222,11 @@ export async function PUT(
         where: { id: acordoAtual.processoId },
         data: { status: 'JULGADO' } // Volta para o status anterior
       })
-      // Cancelar parcelas pendentes
+      // Cancelar parcelas pendentes e atrasadas
       await prisma.parcela.updateMany({
         where: {
           acordoId: id,
-          status: 'PENDENTE'
+          status: { in: ['PENDENTE', 'ATRASADO'] }
         },
         data: { status: 'CANCELADO' }
       })
@@ -256,17 +314,62 @@ export async function DELETE(
         { status: 400 }
       )
     }
-    // Deletar em cascata: parcelas primeiro, depois acordo
-    await prisma.parcela.deleteMany({
-      where: { acordoId: id }
-    })
-    await prisma.acordo.delete({
-      where: { id }
-    })
-    // Retornar processo ao status anterior
-    await prisma.processo.update({
-      where: { id: acordo.processoId },
-      data: { status: 'JULGADO' }
+    // Usar transação para deletar tudo de forma consistente
+    await prisma.$transaction(async (tx) => {
+      // Deletar pagamentos das parcelas primeiro
+      await tx.pagamentoParcela.deleteMany({
+        where: {
+          parcela: {
+            acordoId: id
+          }
+        }
+      })
+
+      // Deletar parcelas
+      await tx.parcela.deleteMany({
+        where: { acordoId: id }
+      })
+
+      // Deletar registros específicos por tipo de acordo
+      await tx.acordoTransacao.deleteMany({
+        where: { acordoId: id }
+      })
+
+      await tx.acordoCompensacao.deleteMany({
+        where: { acordoId: id }
+      })
+
+      await tx.acordoDacao.deleteMany({
+        where: { acordoId: id }
+      })
+
+      // Deletar inscrições e créditos do acordo
+      await tx.acordoDebito.deleteMany({
+        where: {
+          inscricao: {
+            acordoId: id
+          }
+        }
+      })
+
+      await tx.acordoInscricao.deleteMany({
+        where: { acordoId: id }
+      })
+
+      await tx.acordoCredito.deleteMany({
+        where: { acordoId: id }
+      })
+
+      // Finalmente deletar o acordo
+      await tx.acordo.delete({
+        where: { id }
+      })
+
+      // Retornar processo ao status anterior
+      await tx.processo.update({
+        where: { id: acordo.processoId },
+        data: { status: 'JULGADO' }
+      })
     })
     // Registrar no histórico do processo
     const tipoProcesso = acordo.processo.tipo

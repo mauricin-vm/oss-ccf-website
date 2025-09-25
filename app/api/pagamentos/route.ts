@@ -118,7 +118,17 @@ export async function POST(request: NextRequest) {
         const totalPago = p.pagamentos.reduce((total, pag) => total + Number(pag.valorPago), 0)
         return totalPago >= Number(p.valor)
       })
-      if (todasParcelasPagas) {
+
+      // Verificar se custas advocatícias foram pagas (se existirem)
+      let custasAdvocaticiasPagas = true
+      const transacao = await tx.acordoTransacao.findUnique({
+        where: { acordoId: parcela.acordo.id }
+      })
+      if (transacao && transacao.custasAdvocaticias && Number(transacao.custasAdvocaticias) > 0) {
+        custasAdvocaticiasPagas = !!transacao.custasDataPagamento
+      }
+
+      if (todasParcelasPagas && custasAdvocaticiasPagas) {
         await tx.acordo.update({
           where: { id: parcela.acordo.id },
           data: { status: 'cumprido' }
@@ -133,7 +143,7 @@ export async function POST(request: NextRequest) {
             processoId: parcela.acordo.processoId,
             usuarioId: user.id,
             titulo: 'Acordo de Pagamento Cumprido',
-            descricao: 'Todas as parcelas foram pagas. Acordo cumprido integralmente.',
+            descricao: 'Todas as parcelas e custas advocatícias foram pagas. Acordo cumprido integralmente.',
             tipo: 'ACORDO'
           }
         })

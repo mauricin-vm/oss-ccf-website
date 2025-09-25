@@ -65,11 +65,11 @@ export const acordoTransacaoSchema = z.object({
   honorariosValorParcela: z.number().min(0).optional()
 }).refine((data) => {
   if (data.metodoPagamento === 'parcelado') {
-    return data.quantidadeParcelas >= 2
+    return data.quantidadeParcelas >= 1
   }
   return true
 }, {
-  message: 'Parcelamento deve ter pelo menos 2 parcelas',
+  message: 'Parcelamento deve ter pelo menos 1 parcela',
   path: ['quantidadeParcelas']
 })
 

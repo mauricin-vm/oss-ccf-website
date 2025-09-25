@@ -5,6 +5,24 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { acordoSchema, type AcordoInput } from '@/lib/validations/acordo'
+import { z } from 'zod'
+
+// Schema simplificado para o formulário da página (não precisa ser tão complexo quanto o da API)
+const acordoFormSchema = z.object({
+  processoId: z.string().min(1, 'Por favor, selecione um processo para criar o acordo'),
+  dataAssinatura: z.date({
+    message: 'Data de assinatura é obrigatória'
+  }),
+  dataVencimento: z.date({
+    message: 'Data de vencimento é obrigatória'
+  }),
+  modalidadePagamento: z.enum(['avista', 'parcelado']).optional(),
+  numeroParcelas: z.number().optional(),
+  valorTotal: z.number().optional(),
+  valorFinal: z.number().optional()
+})
+
+type AcordoFormInput = z.infer<typeof acordoFormSchema>
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -304,11 +322,10 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
     watch,
     formState: { errors },
     setFocus
-  } = useForm<AcordoInput>({
-    resolver: zodResolver(acordoSchema),
+  } = useForm<AcordoFormInput>({
+    resolver: zodResolver(acordoFormSchema),
     defaultValues: {
       modalidadePagamento: 'avista',
-      dataAssinatura: new Date(),
       numeroParcelas: 1
     }
   })
@@ -524,55 +541,31 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
 
   calcularValores()
 
-  const onSubmit = async (data: AcordoInput) => {
+  const onSubmit = async (data: AcordoFormInput) => {
     console.log('onSubmit chamado com dados:', data)
     setIsLoading(true)
 
     try {
       // Validação básica primeiro
       if (!selectedProcesso) {
-        console.log('Tentando mostrar toast de erro...')
         toast.warning('Por favor, selecione um processo para criar o acordo.')
         setIsLoading(false)
         return
       }
-      // Validação específica para compensação
-      if (selectedProcesso?.tipo === 'COMPENSACAO') {
+
+      // As validações específicas por tipo são tratadas na função onInvalid
+      // Aqui manteremos apenas as validações de lógica de negócio básicas
+      if (selectedProcesso.tipo === 'TRANSACAO_EXCEPCIONAL' && dadosEspecificos?.valorInscricoes) {
+        // Validação adicional para transação excepcional se necessário
+      } else if (selectedProcesso.tipo === 'COMPENSACAO') {
         if (!dadosEspecificos || !dadosEspecificos.valorTotal || !dadosEspecificos.valorFinal) {
-          toast.warning('Para acordos de compensação, é necessário configurar créditos e inscrições antes de criar o acordo.')
+          toast.warning('Configure os dados de compensação antes de criar o acordo.')
           setIsLoading(false)
           return
         }
-
-        if (!dadosEspecificos.creditosAdicionados || dadosEspecificos.creditosAdicionados.length === 0) {
-          toast.warning('É necessário adicionar pelo menos um crédito para compensação.')
-          setIsLoading(false)
-          return
-        }
-
-        if (!dadosEspecificos.inscricoesAdicionadas || dadosEspecificos.inscricoesAdicionadas.length === 0) {
-          toast.warning('É necessário adicionar pelo menos uma inscrição para compensação.')
-          setIsLoading(false)
-          return
-        }
-      }
-
-      // Validação específica para dação em pagamento
-      if (selectedProcesso?.tipo === 'DACAO_PAGAMENTO') {
+      } else if (selectedProcesso.tipo === 'DACAO_PAGAMENTO') {
         if (!dadosEspecificos || !dadosEspecificos.valorTotal || !dadosEspecificos.valorFinal) {
-          toast.warning('Para acordos de dação em pagamento, é necessário configurar inscrições oferecidas e a compensar antes de criar o acordo.')
-          setIsLoading(false)
-          return
-        }
-
-        if (!dadosEspecificos.inscricoesOferecidasAdicionadas || dadosEspecificos.inscricoesOferecidasAdicionadas.length === 0) {
-          toast.warning('É necessário adicionar pelo menos uma inscrição oferecida para dação em pagamento.')
-          setIsLoading(false)
-          return
-        }
-
-        if (!dadosEspecificos.inscricoesCompensarAdicionadas || dadosEspecificos.inscricoesCompensarAdicionadas.length === 0) {
-          toast.warning('É necessário adicionar pelo menos uma inscrição a compensar para dação em pagamento.')
+          toast.warning('Configure os dados de dação em pagamento antes de criar o acordo.')
           setIsLoading(false)
           return
         }
@@ -724,26 +717,126 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
   const processosFiltrados = paginatedProcessos
 
 
-  // Função para lidar com erros de validação do formulário
-  const onInvalid = (errors: any) => {
-    // Pegar o primeiro campo com erro e focar nele
-    const firstErrorField = Object.keys(errors)[0]
-    if (firstErrorField) {
-      setFocus(firstErrorField as any)
+  // Função para validar dados customizados (não relacionados aos inputs do formulário)
+  const validateCustomData = () => {
+    if (!selectedProcesso) {
+      toast.warning('Por favor, selecione um processo para criar o acordo.')
+      return false
     }
 
-    // Pegar a primeira mensagem de erro e exibir como toast
-    const firstError = Object.values(errors)[0] as any
-    if (firstError?.message) {
-      // Usar toast.warning para erros de validação (são avisos, não erros críticos)
-      toast.warning(firstError.message)
+    // Validações customizadas por tipo de processo (SEM foco em campos)
+    if (selectedProcesso.tipo === 'TRANSACAO_EXCEPCIONAL') {
+      // 1. Inscrições incluídas (min 1)
+      if (!dadosEspecificos?.valorInscricoes) {
+        toast.warning('Selecione as inscrições a serem incluídas no acordo')
+        return false
+      }
+      // 2. Valor total proposto
+      if (!dadosEspecificos?.propostaFinal?.valorTotalProposto) {
+        toast.warning('Configure o valor total proposto para o acordo')
+        return false
+      }
+      // 3. Método de pagamento
+      if (!dadosEspecificos?.propostaFinal?.metodoPagamento) {
+        toast.warning('Selecione o método de pagamento')
+        return false
+      }
+      // 4. Se parcelado, quantidade de parcelas
+      if (dadosEspecificos?.propostaFinal?.metodoPagamento === 'parcelado' &&
+          (!dadosEspecificos?.propostaFinal?.quantidadeParcelas || dadosEspecificos?.propostaFinal?.quantidadeParcelas < 1)) {
+        toast.warning('Para parcelamento, defina uma quantidade válida de parcelas (mínimo 1)')
+        return false
+      }
+    }
+    else if (selectedProcesso.tipo === 'DACAO_PAGAMENTO') {
+      // 1. Inscrições oferecidas (min 1)
+      if (!dadosEspecificos?.inscricoesOferecidasAdicionadas ||
+          dadosEspecificos.inscricoesOferecidasAdicionadas.length === 0) {
+        toast.warning('Adicione pelo menos uma inscrição oferecida para dação em pagamento')
+        return false
+      }
+      // 2. Inscrições a compensar (min 1)
+      if (!dadosEspecificos?.inscricoesCompensarAdicionadas ||
+          dadosEspecificos.inscricoesCompensarAdicionadas.length === 0) {
+        toast.warning('Adicione pelo menos uma inscrição a compensar')
+        return false
+      }
+    }
+    else if (selectedProcesso.tipo === 'COMPENSACAO') {
+      // 1. Créditos para compensação (min 1)
+      if (!dadosEspecificos?.creditosAdicionados ||
+          dadosEspecificos.creditosAdicionados.length === 0) {
+        toast.warning('Adicione pelo menos um crédito para compensação')
+        return false
+      }
+      // 2. Inscrições a compensar (min 1)
+      if (!dadosEspecificos?.inscricoesAdicionadas ||
+          dadosEspecificos.inscricoesAdicionadas.length === 0) {
+        toast.warning('Adicione pelo menos uma inscrição a compensar')
+        return false
+      }
+    }
+
+    return true // Todas as validações customizadas passaram
+  }
+
+  // Função para lidar APENAS com erros de validação dos campos do formulário
+  const onInvalid = (errors: any) => {
+    // Definir ordem de prioridade dos campos - SEMPRE dataAssinatura antes de dataVencimento
+    const fieldOrder = ['processoId', 'dataAssinatura', 'dataVencimento']
+
+    // Procurar erros nos campos do formulário na ordem específica
+    let firstErrorField = null
+    let firstErrorMessage = null
+
+    for (const field of fieldOrder) {
+      if (errors[field]?.message) {
+        firstErrorField = field
+        firstErrorMessage = errors[field].message
+        break
+      }
+    }
+
+    // Se não encontrou erro nos campos prioritários, pegar qualquer primeiro erro
+    if (!firstErrorField) {
+      const allErrorFields = Object.keys(errors)
+      if (allErrorFields.length > 0) {
+        firstErrorField = allErrorFields[0]
+        const firstError = Object.values(errors)[0] as any
+        firstErrorMessage = firstError?.message
+      }
+    }
+
+    // Mostrar toast e focar no campo (APENAS para erros de formulário)
+    if (firstErrorMessage) {
+      toast.warning(firstErrorMessage)
+
+      // Focar no campo com erro
+      if (firstErrorField) {
+        setTimeout(() => {
+          setFocus(firstErrorField as any)
+        }, 100)
+      }
     } else {
       toast.warning('Por favor, corrija os erros no formulário')
     }
   }
 
+  // Função que intercepta o submit e faz validações customizadas ANTES do handleSubmit
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // Primeiro: validações customizadas (sem foco)
+    if (!validateCustomData()) {
+      return // Para aqui se houver erro customizado
+    }
+
+    // Segundo: se passou nas validações customizadas, executar o handleSubmit normal
+    handleSubmit(onSubmit, onInvalid)(e)
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
+    <form onSubmit={handleFormSubmit} className="space-y-6">
       {/* Alertas de erro removidos - usando toasts agora */}
 
       {/* Seleção de Processo */}
@@ -763,7 +856,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                   placeholder="Buscar processo por número ou contribuinte..."
                   value={searchProcesso}
                   onChange={(e) => setSearchProcesso(e.target.value)}
-                  className="pl-10"
+                  className={`pl-10 ${!selectedProcesso && errors.processoId ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   disabled={isLoading || isLoadingProcessos}
                 />
               </div>
@@ -1041,29 +1134,36 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="dataAssinatura">Data de Assinatura <span className={selectedProcesso.tipo === 'COMPENSACAO' || selectedProcesso.tipo === 'DACAO_PAGAMENTO' ? 'text-red-500' : ''}>*</span></Label>
+                  <Label htmlFor="dataAssinatura">Data de Assinatura <span className="text-red-500">*</span></Label>
                   <Input
                     id="dataAssinatura"
                     type="date"
                     {...register('dataAssinatura', {
-                      setValueAs: (value) => value ? new Date(value) : undefined
+                      setValueAs: (value) => {
+                        if (!value) return undefined
+                        const date = new Date(value + 'T12:00:00') // Adicionar horário para evitar timezone
+                        return date
+                      }
                     })}
                     disabled={isLoading}
-                    defaultValue={new Date().toISOString().slice(0, 10)}
-                    className={errors.dataAssinatura ? 'border-red-500 focus:border-red-500' : ''}
+                    className={errors.dataAssinatura ? 'border-red-500 focus-visible:ring-red-500' : ''}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="dataVencimento">Data de Vencimento <span className={selectedProcesso.tipo === 'COMPENSACAO' || selectedProcesso.tipo === 'DACAO_PAGAMENTO' ? 'text-red-500' : ''}>*</span></Label>
+                  <Label htmlFor="dataVencimento">Data de Vencimento <span className="text-red-500">*</span></Label>
                   <Input
                     id="dataVencimento"
                     type="date"
                     {...register('dataVencimento', {
-                      setValueAs: (value) => value ? new Date(value) : undefined
+                      setValueAs: (value) => {
+                        if (!value) return undefined
+                        const date = new Date(value + 'T12:00:00') // Adicionar horário para evitar timezone
+                        return date
+                      }
                     })}
                     disabled={isLoading}
-                    className={errors.dataVencimento ? 'border-red-500 focus:border-red-500' : ''}
+                    className={errors.dataVencimento ? 'border-red-500 focus-visible:ring-red-500' : ''}
                   />
                 </div>
               </div>

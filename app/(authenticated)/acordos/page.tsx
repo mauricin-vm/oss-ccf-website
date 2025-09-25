@@ -18,7 +18,8 @@ import {
   FileText,
   Filter,
   CheckCircle,
-  X
+  X,
+  CreditCard
 } from 'lucide-react'
 import Link from 'next/link'
 import { SessionUser } from '@/types'
@@ -54,11 +55,20 @@ interface Acordo {
     valor: number
     status: string
     dataVencimento: string
+    tipoParcela: string
     pagamentos: Array<{
       id: string
       valorPago: number
     }>
   }>
+  transacaoDetails?: {
+    custasAdvocaticias: number
+    custasDataVencimento: string | null
+    custasDataPagamento: string | null
+    honorariosValor: number
+    honorariosMetodoPagamento: string | null
+    honorariosParcelas: number | null
+  }
   detalhes: Array<{
     tipo: string
     descricao: string
@@ -163,6 +173,18 @@ export default function AcordosPage() {
     })
   }
 
+  // Função helper para formatar datas corretamente (evitando problema de timezone)
+  const formatarData = (data: string | Date) => {
+    const date = new Date(data)
+    // Para datas que vêm do backend (ISO string), usar apenas a parte da data
+    if (typeof data === 'string' && data.includes('T')) {
+      const [datePart] = data.split('T')
+      const [year, month, day] = datePart.split('-').map(Number)
+      return new Date(year, month - 1, day).toLocaleDateString('pt-BR')
+    }
+    return date.toLocaleDateString('pt-BR')
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ativo': return 'bg-green-100 text-green-800'
@@ -234,8 +256,16 @@ export default function AcordosPage() {
   const totalAcordos = totalFilteredAcordos
   const acordosAtivos = filteredAcordos.filter(a => a.status === 'ativo').length
   const acordosVencidos = filteredAcordos.filter(a => {
+    if (a.status !== 'ativo') return false
+
+    // Para acordos de transação excepcional, verificar parcelas atrasadas
+    if (a.processo?.tipo === 'TRANSACAO_EXCEPCIONAL') {
+      return (a.parcelas || []).some(parcela => parcela.status === 'ATRASADO')
+    }
+
+    // Para outros tipos, usar data de vencimento do acordo
     const hoje = new Date()
-    return a.status === 'ativo' && new Date(a.dataVencimento) < hoje
+    return new Date(a.dataVencimento) < hoje
   }).length
 
   const valorTotalAcordos = filteredAcordos
@@ -246,26 +276,47 @@ export default function AcordosPage() {
 
   const getProgressoPagamento = (acordo: Acordo) => {
     const tipoProcesso = acordo.processo?.tipo
-    const valorTotal = getValorAcordo(acordo)
 
-    // Para transação excepcional, calcular progresso baseado em pagamentos
+    // Para transação excepcional, usar a mesma lógica da página de detalhes
     if (tipoProcesso === 'TRANSACAO_EXCEPCIONAL') {
-      const valorPago = (acordo.parcelas || []).reduce((total: number, parcela) => {
-        return total + (parcela.pagamentos || []).reduce((subtotal: number, pagamento) => {
-          return subtotal + (Number(pagamento.valorPago) || 0)
+      const parcelas = acordo.parcelas || []
+
+      // Calcular valor total das parcelas (acordo + honorários)
+      const valorTotalParcelas = parcelas.reduce((total: number, parcela) => {
+        return total + Number(parcela.valor || 0)
+      }, 0)
+
+      // Adicionar custas advocatícias (se existir)
+      const custasAdvocaticias = acordo.transacaoDetails?.custasAdvocaticias || 0
+      const valorTotalGeral = valorTotalParcelas + custasAdvocaticias
+
+      // Calcular valor pago de todas as parcelas (acordo + honorários)
+      let valorPago = parcelas.reduce((total: number, parcela) => {
+        const pagamentos = parcela.pagamentos || []
+        return total + pagamentos.reduce((subtotal: number, pagamento) => {
+          return subtotal + Number(pagamento.valorPago || 0)
         }, 0)
       }, 0)
-      const percentual = valorTotal > 0 ? Math.round((valorPago / valorTotal) * 100) : 0
+
+      // Adicionar custas advocatícias se foram pagas
+      if (acordo.transacaoDetails?.custasDataPagamento && custasAdvocaticias > 0) {
+        valorPago += custasAdvocaticias
+      }
+
+      const percentual = valorTotalGeral > 0 ? Math.round((valorPago / valorTotalGeral) * 100) : 0
 
       return {
-        valorTotal,
+        valorTotal: valorTotalGeral,
         valorPago,
-        valorPendente: valorTotal - valorPago,
+        valorPendente: valorTotalGeral - valorPago,
         percentual
       }
     }
 
-    // Para compensação e dação, progresso baseado no status
+    // Para compensação e dação, usar valorTotal baseado no tipo
+    const valorTotal = getValorAcordo(acordo)
+
+    // Progresso baseado no status
     if (acordo.status === 'cumprido') {
       return {
         valorTotal,
@@ -284,21 +335,77 @@ export default function AcordosPage() {
   }
 
 
-  const isVencido = (dataVencimento: Date) => {
-    return new Date(dataVencimento) < new Date()
+  const isVencido = (acordo: Acordo) => {
+    if (acordo.status !== 'ativo') return false
+
+    // Para acordos de transação excepcional, verificar parcelas atrasadas
+    if (acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL') {
+      return (acordo.parcelas || []).some(parcela => parcela.status === 'ATRASADO')
+    }
+
+    // Para outros tipos, usar data de vencimento do acordo
+    return new Date(acordo.dataVencimento) < new Date()
   }
 
   const getDisplayParcelasInfo = (acordo: Acordo) => {
     const totalParcelas = (acordo.parcelas || []).length
 
-    // Para transação excepcional parcelada, mostrar "Entrada + x parcelas"
-    if (acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' && acordo.modalidadePagamento === 'parcelado' && totalParcelas > 1) {
-      const parcelasRestantes = totalParcelas - 1 // Excluir a entrada
-      return `Entrada + ${parcelasRestantes} parcela${parcelasRestantes !== 1 ? 's' : ''}`
+    // Para transação excepcional, mostrar formato completo
+    if (acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL') {
+      const parcelasRegulares = (acordo.parcelas || []).filter(p => p.tipoParcela === 'PARCELA_ACORDO').length
+      const temEntrada = (acordo.parcelas || []).some(p => p.tipoParcela === 'ENTRADA')
+      const temHonorarios = acordo.transacaoDetails?.honorariosValor && Number(acordo.transacaoDetails.honorariosValor) > 0
+      const temCustas = acordo.transacaoDetails?.custasAdvocaticias && Number(acordo.transacaoDetails.custasAdvocaticias) > 0
+
+      let resultado = ''
+
+      if (temEntrada) {
+        resultado += 'Entrada'
+        if (parcelasRegulares > 0) {
+          resultado += ` + ${parcelasRegulares} parcela${parcelasRegulares !== 1 ? 's' : ''}`
+        }
+      } else {
+        resultado = `${parcelasRegulares} parcela${parcelasRegulares !== 1 ? 's' : ''}`
+      }
+
+      const extras = []
+      if (temHonorarios) extras.push('Hon.')
+      if (temCustas) extras.push('Cust.')
+
+      if (extras.length > 0) {
+        resultado += ` + ${extras.join('/')}`
+      }
+
+      return resultado
     }
 
     // Para outros tipos, mostrar formato padrão
     return `${totalParcelas} parcela${totalParcelas !== 1 ? 's' : ''}`
+  }
+
+  const getTotalPagamentos = (acordo: Acordo) => {
+    // Contar pagamentos das parcelas - apenas de parcelas pagas
+    const pagamentosParcelas = (acordo.parcelas || []).reduce((total, parcela) => {
+      // Só contar pagamentos se a parcela estiver com status PAGO
+      if (parcela.status === 'PAGO') {
+        return total + (parcela.pagamentos?.length || 0)
+      }
+      return total
+    }, 0)
+
+    // Para transação excepcional, somar pagamentos de custas
+    if (acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL') {
+      let totalPagamentos = pagamentosParcelas
+
+      // Se custas foram pagas, conta como 1 pagamento
+      if (acordo.transacaoDetails?.custasDataPagamento) {
+        totalPagamentos += 1
+      }
+
+      return totalPagamentos
+    }
+
+    return pagamentosParcelas
   }
 
   if (loading) {
@@ -507,7 +614,6 @@ export default function AcordosPage() {
               <>
                 {paginatedAcordos.map((acordo) => {
                   const progresso = getProgressoPagamento(acordo)
-                  const vencido = isVencido(new Date(acordo.dataVencimento))
 
                   return (
                     <Card key={acordo.id} className="hover:shadow-md transition-shadow">
@@ -525,7 +631,7 @@ export default function AcordosPage() {
                               <Badge className={getStatusColor(acordo.status)}>
                                 {getStatusLabel(acordo.status)}
                               </Badge>
-                              {vencido && acordo.status === 'ativo' && (
+                              {isVencido(acordo) && (
                                 <Badge className="bg-red-100 text-red-800">
                                   <AlertTriangle className="mr-1 h-3 w-3" />
                                   Vencido
@@ -603,21 +709,21 @@ export default function AcordosPage() {
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
                               <div className="flex items-center gap-2">
                                 <Calendar className="h-4 w-4" />
-                                <span>Assinado: {new Date(acordo.dataAssinatura).toLocaleDateString('pt-BR')}</span>
+                                <span>Assinado: {formatarData(acordo.dataAssinatura)}</span>
                               </div>
                               {acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' && (
                                 <>
                                   <div className="flex items-center gap-2">
                                     <Calendar className="h-4 w-4" />
-                                    <span>Vence: {new Date(acordo.dataVencimento).toLocaleDateString('pt-BR')}</span>
+                                    <span>Vence: {formatarData(acordo.dataVencimento)}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <FileText className="h-4 w-4" />
                                     <span>{getDisplayParcelasInfo(acordo)}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <DollarSign className="h-4 w-4" />
-                                    <span>{(acordo.parcelas || []).reduce((total, p) => total + (p.pagamentos?.length || 0), 0)} pagamento{(acordo.parcelas || []).reduce((total, p) => total + (p.pagamentos?.length || 0), 0) !== 1 ? 's' : ''}</span>
+                                    <CreditCard className="h-4 w-4" />
+                                    <span>{getTotalPagamentos(acordo)} pagamento{getTotalPagamentos(acordo) !== 1 ? 's' : ''}</span>
                                   </div>
                                 </>
                               )}
@@ -636,7 +742,7 @@ export default function AcordosPage() {
                                     .map((parcela) => (
                                       <div key={parcela.id} className="text-sm flex items-center justify-between">
                                         <span>
-                                          {parcela.numero === 0 ? 'Entrada' : `Parcela ${parcela.numero}`} - {new Date(parcela.dataVencimento).toLocaleDateString('pt-BR')}
+                                          {parcela.numero === 0 ? 'Entrada' : `Parcela ${parcela.numero}`} - {formatarData(parcela.dataVencimento)}
                                         </span>
                                         <span className="font-medium">
                                           {formatarMoeda(parcela.valor)}
@@ -702,7 +808,7 @@ export default function AcordosPage() {
           <CardContent>
             <div className="space-y-2">
               {filteredAcordos
-                .filter(a => a.status === 'ativo' && isVencido(new Date(a.dataVencimento)))
+                .filter(a => isVencido(a))
                 .slice(0, 3)
                 .map((acordo) => {
                   const progresso = getProgressoPagamento(acordo)

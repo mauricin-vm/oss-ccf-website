@@ -36,13 +36,141 @@ interface AcordoPageProps {
   params: Promise<{ id: string }>
 }
 
+interface Pagamento {
+  id: string
+  valorPago: number
+  dataPagamento: string
+  formaPagamento: string
+  numeroComprovante?: string
+}
+
+interface Parcela {
+  id: string
+  numero: number
+  valor: number
+  dataVencimento: string
+  dataPagamento?: string
+  status: 'PENDENTE' | 'PAGO' | 'ATRASADO' | 'CANCELADO'
+  tipoParcela: 'ENTRADA' | 'PARCELA_ACORDO' | 'PARCELA_HONORARIOS'
+  pagamentos: Pagamento[]
+}
+
+interface TransacaoDetails {
+  custasAdvocaticias: number
+  custasDataVencimento?: string
+  custasDataPagamento?: string
+  honorariosValor: number
+  honorariosMetodoPagamento: string
+  honorariosParcelas: number
+}
+
+interface Contribuinte {
+  nome: string
+}
+
+interface Processo {
+  id: string
+  numero: string
+  tipo: string
+  contribuinte: Contribuinte
+}
+
+interface DetalhesAcordo {
+  detalhes: DetalheAcordo[]
+}
+
+interface DetalheAcordo {
+  id: string
+  tipo: string
+  descricao: string
+  valorOriginal: number
+  observacoes?: string
+  inscricoes?: InscricaoDetalhe[]
+  imovel?: Imovel
+  credito?: Credito
+}
+
+interface InscricaoDetalhe {
+  id: string
+  numeroInscricao: string
+  tipoInscricao: string
+  valorDebito: number
+  descricaoDebitos: DebitoDetalhe[]
+}
+
+interface DebitoDetalhe {
+  id: string
+  descricao: string
+  valorLancado: number
+  dataVencimento?: string
+}
+
+interface Imovel {
+  matricula: string
+  endereco: string
+  valorAvaliado: number
+}
+
+interface Credito {
+  id: string
+  numero: string
+  tipo: string
+  valor: number
+}
+
+interface CreditoOferecido {
+  id?: string
+  numero: string
+  tipo: string
+  valor: number
+  descricao?: string
+}
+
+interface InscricaoOferecida {
+  id?: string
+  numeroInscricao: string
+  tipoInscricao: string
+  valor: number
+  descricao?: string
+  dataVencimento?: string
+}
+
+interface DadosCreditos {
+  creditosOferecidos: CreditoOferecido[]
+  valorTotalCreditos: number
+}
+
+interface DadosDacao {
+  inscricoesOferecidas: InscricaoOferecida[]
+  valorTotalOferecido: number
+}
+
+interface AcordoData {
+  id: string
+  status: string
+  valorTotal: number
+  valorFinal: number
+  valorDesconto: number
+  valorEntrada: number
+  numeroParcelas: number
+  modalidadePagamento: string
+  dataAssinatura: string
+  dataVencimento: string
+  observacoes?: string
+  clausulasEspeciais?: string
+  parcelas: Parcela[]
+  transacaoDetails?: TransacaoDetails
+  processo: Processo
+}
+
 export default function AcordoPage({ params }: AcordoPageProps) {
   const { data: session } = useSession()
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
-  const [acordo, setAcordo] = useState<Record<string, unknown> | null>(null)
+  const [acordo, setAcordo] = useState<AcordoData | null>(null)
   const [loading, setLoading] = useState(true)
   const [modoRegistrarPagamento, setModoRegistrarPagamento] = useState(false)
   const [parcelasSelecionadas, setParcelasSelecionadas] = useState<Set<string>>(new Set())
+  const [custasSeelcionada, setCustasSeelcionada] = useState(false)
   const [processandoPagamento, setProcessandoPagamento] = useState(false)
   const [parcelaEditando, setParcelaEditando] = useState<string | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -51,7 +179,12 @@ export default function AcordoPage({ params }: AcordoPageProps) {
     dataPagamento: ''
   })
   const [errorEdit, setErrorEdit] = useState<string | null>(null)
-  const [detalhesAcordo, setDetalhesAcordo] = useState<Record<string, unknown> | null>(null)
+  const [detalhesAcordo, setDetalhesAcordo] = useState<DetalhesAcordo | null>(null)
+  const [showEditCustasModal, setShowEditCustasModal] = useState(false)
+  const [formEdicaoCustas, setFormEdicaoCustas] = useState({
+    dataVencimento: '',
+    dataPagamento: ''
+  })
   const [processandoConclusao, setProcessandoConclusao] = useState(false)
 
   useEffect(() => {
@@ -124,6 +257,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
   const handleCancelarRegistroPagamento = () => {
     setModoRegistrarPagamento(false)
     setParcelasSelecionadas(new Set())
+    setCustasSeelcionada(false)
   }
 
   const handleToggleParcela = (parcelaId: string) => {
@@ -136,21 +270,27 @@ export default function AcordoPage({ params }: AcordoPageProps) {
     setParcelasSelecionadas(novaSelecao)
   }
 
+  const handleToggleCustas = () => {
+    setCustasSeelcionada(prev => !prev)
+  }
+
   const handleConfirmarPagamento = async () => {
-    if (parcelasSelecionadas.size === 0) {
-      toast.error('Selecione pelo menos uma parcela para registrar o pagamento')
+    if (parcelasSelecionadas.size === 0 && !custasSeelcionada) {
+      toast.error('Selecione pelo menos uma parcela ou custas para registrar o pagamento')
       return
     }
 
     setProcessandoPagamento(true)
     try {
-      const parcelasParaPagar = Array.from(parcelasSelecionadas)
+      let totalRegistros = 0
 
+      // Processar parcelas selecionadas
+      const parcelasParaPagar = Array.from(parcelasSelecionadas)
       for (const parcelaId of parcelasParaPagar) {
-        const parcela = (acordo.parcelas as Record<string, unknown>[])?.find((p: Record<string, unknown>) => p.id === parcelaId)
+        const parcela = acordo.parcelas?.find((p: Parcela) => p.id === parcelaId)
         if (!parcela) continue
 
-        const valorPago = (parcela.pagamentos as Record<string, unknown>[])?.reduce((total: number, p: Record<string, unknown>) => total + Number(p.valorPago || 0), 0) || 0
+        const valorPago = parcela.pagamentos?.reduce((total: number, p: Pagamento) => total + Number(p.valorPago || 0), 0) || 0
         const valorRestante = Number(parcela.valor) - valorPago
 
         if (valorRestante <= 0) continue
@@ -170,11 +310,35 @@ export default function AcordoPage({ params }: AcordoPageProps) {
 
         if (!response.ok) {
           const error = await response.json()
-          throw new Error(error.error || 'Erro ao registrar pagamento')
+          throw new Error(error.error || 'Erro ao registrar pagamento da parcela')
         }
+        totalRegistros++
       }
 
-      toast.success(`Pagamento${parcelasSelecionadas.size > 1 ? 's' : ''} registrado${parcelasSelecionadas.size > 1 ? 's' : ''} com sucesso!`)
+      // Processar custas se selecionadas
+      if (custasSeelcionada && acordo?.transacaoDetails?.custasAdvocaticias > 0) {
+        const response = await fetch(`/api/acordos/${acordo.id}/custas`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            custasDataVencimento: acordo.transacaoDetails.custasDataVencimento || acordo.dataVencimento,
+            custasDataPagamento: new Date(),
+            status: 'PAGO'
+          })
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || 'Erro ao registrar pagamento das custas')
+        }
+        totalRegistros++
+      }
+
+      if (totalRegistros > 0) {
+        toast.success(`Pagamento${totalRegistros > 1 ? 's' : ''} registrado${totalRegistros > 1 ? 's' : ''} com sucesso!`)
+      }
 
       // Recarregar dados e sair do modo de pagamento
       await loadAcordo()
@@ -188,11 +352,11 @@ export default function AcordoPage({ params }: AcordoPageProps) {
   }
 
   // Funções para edição de parcelas
-  const handleEditarParcela = (parcela: Record<string, unknown>) => {
-    setParcelaEditando(parcela.id as string)
+  const handleEditarParcela = (parcela: Parcela) => {
+    setParcelaEditando(parcela.id)
     setFormEdicaoParcela({
-      dataVencimento: new Date(parcela.dataVencimento as string).toISOString().split('T')[0],
-      dataPagamento: parcela.dataPagamento ? new Date(parcela.dataPagamento as string).toISOString().split('T')[0] : ''
+      dataVencimento: new Date(parcela.dataVencimento).toISOString().split('T')[0],
+      dataPagamento: parcela.dataPagamento ? new Date(parcela.dataPagamento).toISOString().split('T')[0] : ''
     })
     setErrorEdit(null)
     setShowEditModal(true)
@@ -206,6 +370,9 @@ export default function AcordoPage({ params }: AcordoPageProps) {
       dataPagamento: ''
     })
     setErrorEdit(null)
+    // Limpar bordas vermelhas dos campos
+    clearFieldErrorEdit('dataVencimento-edit')
+    clearFieldErrorEdit('dataPagamento-edit')
   }
 
   const calcularStatusAutomatico = (dataVencimento: string, dataPagamento: string) => {
@@ -217,10 +384,18 @@ export default function AcordoPage({ params }: AcordoPageProps) {
     const vencimento = new Date(dataVencimento)
 
     if (vencimento < hoje) {
-      return 'VENCIDO'
+      return 'ATRASADO'
     }
 
     return 'PENDENTE'
+  }
+
+  const clearFieldErrorEdit = (fieldId: string) => {
+    const element = document.getElementById(fieldId)
+    if (element) {
+      element.style.borderColor = ''
+      element.style.boxShadow = ''
+    }
   }
 
   const handleSalvarEdicaoParcela = async (e: React.FormEvent) => {
@@ -229,7 +404,18 @@ export default function AcordoPage({ params }: AcordoPageProps) {
     if (!parcelaEditando) return
 
     if (!formEdicaoParcela.dataVencimento.trim()) {
-      setErrorEdit('Data de vencimento é obrigatória')
+      const errorMessage = 'Data de vencimento é obrigatória'
+      toast.error(errorMessage)
+      setErrorEdit(errorMessage)
+
+      setTimeout(() => {
+        const element = document.getElementById('dataVencimento-edit')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
       return
     }
 
@@ -245,15 +431,17 @@ export default function AcordoPage({ params }: AcordoPageProps) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          dataVencimento: new Date(formEdicaoParcela.dataVencimento),
-          dataPagamento: formEdicaoParcela.dataPagamento ? new Date(formEdicaoParcela.dataPagamento) : null,
+          dataVencimento: new Date(formEdicaoParcela.dataVencimento + 'T12:00:00'),
+          dataPagamento: formEdicaoParcela.dataPagamento ? new Date(formEdicaoParcela.dataPagamento + 'T12:00:00') : null,
           status: status
         })
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Erro ao atualizar parcela')
+        const errorMessage = errorData.error || 'Erro ao atualizar parcela'
+        toast.error(errorMessage)
+        throw new Error(errorMessage)
       }
 
       toast.success('Parcela atualizada com sucesso!')
@@ -263,7 +451,93 @@ export default function AcordoPage({ params }: AcordoPageProps) {
       handleCancelarEdicao()
     } catch (error) {
       console.error('Erro ao atualizar parcela:', error)
-      setErrorEdit(error instanceof Error ? error.message : 'Erro ao atualizar parcela')
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar parcela'
+      setErrorEdit(errorMessage)
+    } finally {
+      setProcessandoPagamento(false)
+    }
+  }
+
+  // Funções para edição de custas advocatícias
+  const handleEditarCustas = () => {
+    setFormEdicaoCustas({
+      dataVencimento: acordo?.transacaoDetails?.custasDataVencimento
+        ? new Date(acordo.transacaoDetails.custasDataVencimento).toISOString().split('T')[0]
+        : acordo?.dataVencimento
+          ? new Date(acordo.dataVencimento).toISOString().split('T')[0]
+          : '',
+      dataPagamento: acordo?.transacaoDetails?.custasDataPagamento
+        ? new Date(acordo.transacaoDetails.custasDataPagamento).toISOString().split('T')[0]
+        : ''
+    })
+    setErrorEdit(null)
+    setShowEditCustasModal(true)
+  }
+
+  const handleCancelarEdicaoCustas = () => {
+    setShowEditCustasModal(false)
+    setFormEdicaoCustas({ dataVencimento: '', dataPagamento: '' })
+    setErrorEdit(null)
+    // Limpar bordas vermelhas dos campos
+    clearFieldErrorEdit('custasDataVencimento-edit')
+    clearFieldErrorEdit('custasDataPagamento-edit')
+  }
+
+  const handleSalvarEdicaoCustas = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!acordo?.id) return
+
+    if (!formEdicaoCustas.dataVencimento.trim()) {
+      const errorMessage = 'Data de vencimento é obrigatória'
+      toast.error(errorMessage)
+      setErrorEdit(errorMessage)
+
+      setTimeout(() => {
+        const element = document.getElementById('custasDataVencimento-edit')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+
+    try {
+      setProcessandoPagamento(true)
+      setErrorEdit(null)
+
+      const status = calcularStatusAutomatico(formEdicaoCustas.dataVencimento, formEdicaoCustas.dataPagamento)
+
+      const response = await fetch(`/api/acordos/${acordo.id}/custas`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          custasDataVencimento: new Date(formEdicaoCustas.dataVencimento + 'T12:00:00'),
+          custasDataPagamento: formEdicaoCustas.dataPagamento ? new Date(formEdicaoCustas.dataPagamento + 'T12:00:00') : null,
+          status: status
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        const errorMessage = errorData.error || 'Erro ao atualizar custas advocatícias'
+        toast.error(errorMessage)
+        throw new Error(errorMessage)
+      }
+
+      const acordoAtualizado = await response.json()
+      setAcordo(acordoAtualizado)
+      setShowEditCustasModal(false)
+      toast.success('Custas advocatícias atualizadas com sucesso!')
+
+    } catch (error) {
+      console.error('Erro ao atualizar custas:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
+      setErrorEdit(errorMessage)
     } finally {
       setProcessandoPagamento(false)
     }
@@ -304,17 +578,14 @@ export default function AcordoPage({ params }: AcordoPageProps) {
     }
   }
 
-  // Helper para acessar propriedades do acordo
-  const acordo_data = acordo as Record<string, unknown>
-
   const canEdit = user.role === 'ADMIN' || user.role === 'FUNCIONARIO'
-  const canRegisterPayment = canEdit && acordo_data?.status === 'ativo'
+  const canRegisterPayment = canEdit && acordo?.status === 'ativo'
 
   // Verificar se é um tipo de processo que tem parcelas/pagamentos
-  const tipoProcesso = (acordo_data.processo as Record<string, unknown>)?.tipo as string
+  const tipoProcesso = acordo?.processo?.tipo
   const temParcelas = tipoProcesso === 'TRANSACAO_EXCEPCIONAL'
 
-  if (!acordo_data) {
+  if (!acordo) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin h-8 w-8 border-2 border-gray-300 border-t-blue-600 rounded-full"></div>
@@ -350,7 +621,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
     switch (status) {
       case 'PENDENTE': return 'bg-yellow-100 text-yellow-800'
       case 'PAGO': return 'bg-green-100 text-green-800'
-      case 'VENCIDO': return 'bg-red-100 text-red-800'
+      case 'ATRASADO': return 'bg-red-100 text-red-800'
       case 'CANCELADO': return 'bg-orange-100 text-orange-800'
       default: return 'bg-gray-100 text-gray-800'
     }
@@ -360,27 +631,47 @@ export default function AcordoPage({ params }: AcordoPageProps) {
     switch (status) {
       case 'PENDENTE': return 'Pendente'
       case 'PAGO': return 'Pago'
-      case 'VENCIDO': return 'Vencido'
+      case 'ATRASADO': return 'Atrasado'
       case 'CANCELADO': return 'Cancelado'
       default: return status
     }
   }
 
   const getProgressoPagamento = () => {
-    const valorTotal = Number(acordo_data.valorFinal || 0)
-    const parcelas = (acordo_data.parcelas as Record<string, unknown>[]) || []
-    const valorPago = parcelas.reduce((total: number, parcela: Record<string, unknown>) => {
-      const pagamentos = (parcela.pagamentos as Record<string, unknown>[]) || []
-      return total + pagamentos.reduce((subtotal: number, pagamento: Record<string, unknown>) => {
+    const parcelas = acordo.parcelas || []
+
+    // Calcular valor total das parcelas (acordo + honorários)
+    const valorTotalParcelas = parcelas.reduce((total: number, parcela: Parcela) => {
+      return total + Number(parcela.valor || 0)
+    }, 0)
+
+    // Adicionar custas advocatícias (se existir)
+    const custasAdvocaticias = acordo.transacaoDetails?.custasAdvocaticias || 0
+    const valorTotalGeral = valorTotalParcelas + custasAdvocaticias
+
+    // Calcular valor pago de todas as parcelas (acordo + honorários)
+    let valorPago = parcelas.reduce((total: number, parcela: Parcela) => {
+      const pagamentos = parcela.pagamentos || []
+      return total + pagamentos.reduce((subtotal: number, pagamento: Pagamento) => {
         return subtotal + Number(pagamento.valorPago || 0)
       }, 0)
     }, 0)
-    const percentual = valorTotal > 0 ? Math.round((valorPago / valorTotal) * 100) : 0
+
+    // Adicionar custas advocatícias se foram pagas
+    if (acordo.transacaoDetails?.custasDataPagamento && custasAdvocaticias > 0) {
+      valorPago += custasAdvocaticias
+    }
+
+    // Note: As custas advocatícias geralmente são pagas à vista na assinatura
+    // Se não houver um sistema específico para rastrear pagamento das custas,
+    // consideramos elas como pendentes no cálculo do progresso
+
+    const percentual = valorTotalGeral > 0 ? Math.round((valorPago / valorTotalGeral) * 100) : 0
 
     return {
-      valorTotal,
+      valorTotal: valorTotalGeral,
       valorPago,
-      valorPendente: valorTotal - valorPago,
+      valorPendente: valorTotalGeral - valorPago,
       percentual
     }
   }
@@ -388,44 +679,64 @@ export default function AcordoPage({ params }: AcordoPageProps) {
   // Função helper para formatar datas corretamente (evitando problema de timezone)
   const formatarData = (data: string | Date) => {
     const date = new Date(data)
-    // Adicionar um dia para compensar o timezone
-    date.setDate(date.getDate() + 1)
+    // Para datas que vêm do backend (ISO string), usar apenas a parte da data
+    if (typeof data === 'string' && data.includes('T')) {
+      const [datePart] = data.split('T')
+      const [year, month, day] = datePart.split('-').map(Number)
+      return new Date(year, month - 1, day).toLocaleDateString('pt-BR')
+    }
     return date.toLocaleDateString('pt-BR')
   }
 
-  const isVencido = (dataVencimento: Date) => {
-    return new Date(dataVencimento) < new Date() && acordo_data.status === 'ativo'
+  const isVencido = () => {
+    if (acordo.status !== 'ativo') return false
+
+    // Verificar se há parcelas vencidas (ATRASADO)
+    const temParcelaVencida = acordo.parcelas?.some((parcela: Parcela) => parcela.status === 'ATRASADO')
+
+    // Verificar se há custas vencidas (custas com data de vencimento passada e sem data de pagamento)
+    let temCustasVencida = false
+    if (acordo.transacaoDetails?.custasAdvocaticias > 0) {
+      const custasDataVencimento = acordo.transacaoDetails.custasDataVencimento || acordo.dataVencimento
+      const custasDataPagamento = acordo.transacaoDetails.custasDataPagamento
+
+      if (custasDataVencimento && !custasDataPagamento) {
+        temCustasVencida = new Date(custasDataVencimento) < new Date()
+      }
+    }
+
+    return temParcelaVencida || temCustasVencida
   }
 
   // Função para calcular o valor do acordo baseado no tipo (compensação/dação)
   const getValorAcordo = () => {
     if (temParcelas) {
       // Para transação excepcional, usar valorFinal padrão
-      return Number(acordo_data.valorFinal || 0)
+      return Number(acordo.valorFinal || 0)
     }
 
     // Para compensação e dação, usar valorTotal que representa o valor original/base
     if (tipoProcesso === 'COMPENSACAO' || tipoProcesso === 'DACAO_PAGAMENTO') {
       // Primeiro tentar o valorTotal que foi corrigido no backend para representar o valor correto
-      if (acordo_data.valorTotal) {
-        return Number(acordo_data.valorTotal)
+      if (acordo.valorTotal) {
+        return Number(acordo.valorTotal)
       }
 
     }
 
     // Fallback para detalhes do acordo
     if (!detalhesAcordo) {
-      return Number(acordo_data.valorFinal || 0)
+      return Number(acordo.valorFinal || 0)
     }
 
-    const detalhes = (detalhesAcordo as Record<string, unknown>).detalhes as Record<string, unknown>[]
+    const detalhes = detalhesAcordo.detalhes
     if (!detalhes || !Array.isArray(detalhes) || detalhes.length === 0) {
-      return Number(acordo_data.valorFinal || 0)
+      return Number(acordo.valorFinal || 0)
     }
 
     let valorTotal = 0
 
-    detalhes.forEach((detalhe: Record<string, unknown>) => {
+    detalhes.forEach((detalhe: DetalheAcordo) => {
       if (detalhe.tipo === 'compensacao') {
         // Para compensação: usar valorOriginal do detalhe
         valorTotal += Number(detalhe.valorOriginal || 0)
@@ -435,11 +746,11 @@ export default function AcordoPage({ params }: AcordoPageProps) {
       }
     })
 
-    return valorTotal > 0 ? valorTotal : Number(acordo_data.valorFinal || 0)
+    return valorTotal > 0 ? valorTotal : Number(acordo.valorFinal || 0)
   }
 
-  const progresso = acordo_data ? getProgressoPagamento() : null
-  const vencido = acordo_data ? isVencido(acordo_data.dataVencimento as Date) : false
+  const progresso = acordo ? getProgressoPagamento() : null
+  const vencido = acordo ? isVencido() : false
 
   return (
     <div className="space-y-6">
@@ -452,8 +763,8 @@ export default function AcordoPage({ params }: AcordoPageProps) {
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold">Acordo de Pagamento</h1>
-            <Badge className={getStatusColor(acordo_data.status as string)}>
-              {getStatusLabel(acordo_data.status as string)}
+            <Badge className={getStatusColor(acordo.status)}>
+              {getStatusLabel(acordo.status)}
             </Badge>
             {vencido && (
               <Badge className="bg-red-100 text-red-800">
@@ -463,7 +774,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
             )}
           </div>
           <p className="text-gray-600">
-            Processo: {(acordo_data.processo as Record<string, unknown>)?.numero as string} - {((acordo_data.processo as Record<string, unknown>)?.contribuinte as Record<string, unknown>)?.nome as string}
+            Processo: {acordo.processo?.numero} - {acordo.processo?.contribuinte?.nome}
           </p>
         </div>
         <div className="flex gap-2">
@@ -473,7 +784,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
               Registrar Pagamento
             </Button>
           )}
-          {!temParcelas && canEdit && acordo_data?.status === 'ativo' && (
+          {!temParcelas && canEdit && acordo?.status === 'ativo' && (
             <Button
               onClick={handleConcluirAcordo}
               disabled={processandoConclusao}
@@ -496,7 +807,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
             <>
               <Button
                 onClick={handleConfirmarPagamento}
-                disabled={parcelasSelecionadas.size === 0 || processandoPagamento}
+                disabled={(parcelasSelecionadas.size === 0 && !custasSeelcionada) || processandoPagamento}
                 className="bg-green-600 hover:bg-green-700 cursor-pointer"
               >
                 {processandoPagamento ? (
@@ -507,7 +818,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                 ) : (
                   <>
                     <Check className="mr-2 h-4 w-4" />
-                    Confirmar Pagamento ({parcelasSelecionadas.size})
+                    Confirmar Pagamento ({parcelasSelecionadas.size + (custasSeelcionada ? 1 : 0)})
                   </>
                 )}
               </Button>
@@ -524,7 +835,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
           )}
           {canEdit && !(
             !temParcelas &&
-            acordo_data.status === 'cumprido' &&
+            acordo.status === 'cumprido' &&
             (tipoProcesso === 'COMPENSACAO' || tipoProcesso === 'DACAO_PAGAMENTO')
           ) && (
               <AcordoActions acordo={acordo as { id: string; status: string; parcelas: { id: string; pagamentos: { id: string; valorPago: number; }[]; }[]; valorFinal: number; }} />
@@ -545,24 +856,24 @@ export default function AcordoPage({ params }: AcordoPageProps) {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">Data de Assinatura:</span>
-                <p className="font-medium">{formatarData(acordo_data.dataAssinatura as Date)}</p>
+                <p className="font-medium">{formatarData(acordo.dataAssinatura)}</p>
               </div>
               <div>
                 <span className="text-gray-600">Data de Vencimento:</span>
-                <p className="font-medium">{formatarData(acordo_data.dataVencimento as Date)}</p>
+                <p className="font-medium">{formatarData(acordo.dataVencimento)}</p>
               </div>
               {/* Mostrar modalidade apenas para transação excepcional */}
               {temParcelas && (
                 <div>
                   <span className="text-gray-600">Modalidade:</span>
                   <p className="font-medium">
-                    {acordo_data.modalidadePagamento === 'avista' ? 'À Vista' : `Parcelamento (${acordo_data.numeroParcelas as number}x)`}
+                    {acordo.modalidadePagamento === 'avista' ? 'À Vista' : `Parcelamento (${acordo.numeroParcelas || 1}x)`}
                   </p>
                 </div>
               )}
               <div>
                 <span className="text-gray-600">Status:</span>
-                <p className="font-medium">{getStatusLabel(acordo_data.status as string)}</p>
+                <p className="font-medium">{getStatusLabel(acordo.status as string)}</p>
               </div>
             </div>
           </CardContent>
@@ -580,25 +891,25 @@ export default function AcordoPage({ params }: AcordoPageProps) {
               <div>
                 <span className="text-gray-600">Número do Processo:</span>
                 <Link
-                  href={`/processos/${(acordo_data.processo as Record<string, unknown>).id as string}`}
+                  href={`/processos/${acordo.processo.id}`}
                   className="font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors block"
                 >
-                  {(acordo_data.processo as Record<string, unknown>).numero as string}
+                  {acordo.processo.numero}
                 </Link>
               </div>
               <div>
                 <span className="text-gray-600">Contribuinte:</span>
-                <p className="font-medium">{((acordo_data.processo as Record<string, unknown>).contribuinte as Record<string, unknown>).nome as string}</p>
+                <p className="font-medium">{acordo.processo.contribuinte.nome}</p>
               </div>
             </div>
             <div className="grid grid-cols-1 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">Tipo de Processo:</span>
                 <p className="font-medium">
-                  {(acordo_data.processo as Record<string, unknown>).tipo === 'TRANSACAO_EXCEPCIONAL' ? 'Transação Excepcional' :
-                    (acordo_data.processo as Record<string, unknown>).tipo === 'COMPENSACAO' ? 'Compensação' :
-                      (acordo_data.processo as Record<string, unknown>).tipo === 'DACAO_PAGAMENTO' ? 'Dação em Pagamento' :
-                        (acordo_data.processo as Record<string, unknown>).tipo as string}
+                  {acordo.processo.tipo === 'TRANSACAO_EXCEPCIONAL' ? 'Transação Excepcional' :
+                    acordo.processo.tipo === 'COMPENSACAO' ? 'Compensação' :
+                      acordo.processo.tipo === 'DACAO_PAGAMENTO' ? 'Dação em Pagamento' :
+                        acordo.processo.tipo}
                 </p>
               </div>
             </div>
@@ -627,52 +938,93 @@ export default function AcordoPage({ params }: AcordoPageProps) {
             {/* Mostrar detalhamento apenas para transação excepcional */}
             {temParcelas && (
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <h5 className="font-medium mb-3 text-blue-800">Detalhamento do Acordo:</h5>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 text-sm">
+                <h5 className="font-medium mb-3 text-blue-800">Simulação do Pagamento:</h5>
+
+                {/* Valores Principais */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm mb-4">
                   <div>
                     <span className="text-blue-600">Valor Original:</span>
                     <p className="font-medium text-blue-700">
-                      R$ {Number(acordo_data.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {Number(acordo.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div>
                     <span className="text-blue-600">Valor Proposto:</span>
                     <p className="font-medium text-blue-700">
-                      R$ {Number(acordo_data.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {Number(acordo.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div>
                     <span className="text-blue-600">Desconto:</span>
                     <p className="font-medium text-blue-700">
-                      R$ {Number(acordo_data.valorDesconto || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {Math.max(0, Number(acordo.valorDesconto || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div>
                     <span className="text-blue-600">Valor de Entrada:</span>
                     <p className="font-medium text-blue-700">
-                      R$ {Number(acordo_data.valorEntrada || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {Number(acordo.valorEntrada || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
+                </div>
+
+                {/* Parcelas do Acordo */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
                   <div>
                     <span className="text-blue-600">
-                      {acordo_data.modalidadePagamento === 'avista' ? 'Valor Total:' : 'Valor das Parcelas:'}
+                      {acordo.modalidadePagamento === 'avista' ? 'Valor Total:' : 'Valor das Parcelas:'}
                     </span>
                     <p className="font-medium text-blue-700">
-                      {acordo_data.modalidadePagamento === 'avista'
-                        ? `R$ ${Number(acordo_data.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                        : (acordo_data.numeroParcelas as number) > 0
-                          ? `${acordo_data.numeroParcelas as number}x de R$ ${((Number(acordo_data.valorFinal) - Number(acordo_data.valorEntrada || 0)) / (acordo_data.numeroParcelas as number)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                          : `R$ ${Number(acordo_data.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                      {acordo.modalidadePagamento === 'avista'
+                        ? `R$ ${Number(acordo.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                        : (acordo.numeroParcelas as number) > 0
+                          ? `${acordo.numeroParcelas as number}x de R$ ${((Number(acordo.valorFinal) - Number(acordo.valorEntrada || 0)) / (acordo.numeroParcelas as number)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : `R$ ${Number(acordo.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                       }
                     </p>
                   </div>
                   <div>
-                    <span className="text-blue-600">Total Final:</span>
+                    <span className="text-blue-600">Total do Acordo:</span>
                     <p className="font-bold text-blue-700">
-                      R$ {Number(acordo_data.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {Number(acordo.valorFinal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
+
+                {/* Custas e Honorários (só aparece se tiver valores) */}
+                {acordo.transacaoDetails && (acordo.transacaoDetails.custasAdvocaticias > 0 || acordo.transacaoDetails.honorariosValor > 0) && (
+                  <>
+                    <div className="border-t border-blue-200 pt-3">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        {acordo.transacaoDetails.custasAdvocaticias > 0 && (
+                          <div>
+                            <span className="text-amber-600">Custas Advocatícias:</span>
+                            <p className="font-medium text-amber-700">
+                              R$ {acordo.transacaoDetails.custasAdvocaticias.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                        )}
+                        {acordo.transacaoDetails.honorariosValor > 0 && (
+                          <div>
+                            <span className="text-amber-600">Honorários:</span>
+                            <p className="font-medium text-amber-700">
+                              {acordo.transacaoDetails.honorariosMetodoPagamento === 'parcelado' && acordo.transacaoDetails.honorariosParcelas > 1
+                                ? `${acordo.transacaoDetails.honorariosParcelas}x de R$ ${(acordo.transacaoDetails.honorariosValor / acordo.transacaoDetails.honorariosParcelas).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                : `R$ ${acordo.transacaoDetails.honorariosValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                              }
+                            </p>
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-amber-600">Total Adicional:</span>
+                          <p className="font-bold text-amber-700">
+                            R$ {(acordo.transacaoDetails.custasAdvocaticias + acordo.transacaoDetails.honorariosValor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -684,7 +1036,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                 <span className="font-medium">
                   {temParcelas
                     ? `${(progresso?.percentual as number) || 0}%`
-                    : acordo_data.status === 'cumprido' ? '100%' : '0%'
+                    : acordo.status === 'cumprido' ? '100%' : '0%'
                   }
                 </span>
               </div>
@@ -694,7 +1046,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                   style={{
                     width: temParcelas
                       ? `${progresso?.percentual || 0}%`
-                      : acordo_data.status === 'cumprido' ? '100%' : '0%'
+                      : acordo.status === 'cumprido' ? '100%' : '0%'
                   }}
                 />
               </div>
@@ -733,8 +1085,8 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                     </p>
                   </div>
                   <div>
-                    <p className={`text-lg font-bold ${acordo_data.status === 'cumprido' ? 'text-green-600' : acordo_data.status === 'ativo' ? 'text-yellow-600' : 'text-red-600'}`}>
-                      {getStatusLabel(acordo_data.status as string)}
+                    <p className={`text-lg font-bold ${acordo.status === 'cumprido' ? 'text-green-600' : acordo.status === 'ativo' ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {getStatusLabel(acordo.status)}
                     </p>
                     <p className="text-xs text-gray-600">Status Atual</p>
                   </div>
@@ -743,12 +1095,12 @@ export default function AcordoPage({ params }: AcordoPageProps) {
             </div>
 
             {/* Observações do Acordo */}
-            {(acordo_data.observacoes as string) && (
+            {(acordo.observacoes as string) && (
               <div className="border-t pt-4">
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-gray-900">Observações do Acordo</h4>
                   <p className="text-sm text-gray-600 leading-relaxed">
-                    {acordo_data.observacoes as string}
+                    {acordo.observacoes as string}
                   </p>
                 </div>
               </div>
@@ -757,7 +1109,210 @@ export default function AcordoPage({ params }: AcordoPageProps) {
         </CardContent>
       </Card>
 
-      {/* Parcelas - apenas para transação excepcional */}
+      {/* Custas e Honorários - apenas para transação excepcional */}
+      {temParcelas && acordo.transacaoDetails && (acordo.transacaoDetails.custasAdvocaticias > 0 || acordo.transacaoDetails.honorariosValor > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-amber-600" />
+              Custas e Honorários
+            </CardTitle>
+            <CardDescription>
+              Custas advocatícias e cronograma de pagamento dos honorários
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {/* Custas Advocatícias - primeira seção */}
+              {acordo.transacaoDetails && acordo.transacaoDetails.custasAdvocaticias > 0 && (() => {
+                // Calcular status das custas
+                const custasStatus = acordo.transacaoDetails.custasDataPagamento
+                  ? 'PAGO'
+                  : acordo.transacaoDetails.custasDataVencimento && new Date(acordo.transacaoDetails.custasDataVencimento) < new Date()
+                    ? 'ATRASADO'
+                    : 'PENDENTE'
+
+                const isVencidaCustas = custasStatus === 'ATRASADO'
+                const isPagaCustas = custasStatus === 'PAGO'
+
+                const isClickable = modoRegistrarPagamento && (custasStatus === 'PENDENTE' || custasStatus === 'ATRASADO')
+
+                return (
+                  <div
+                    onClick={isClickable ? () => handleToggleCustas() : undefined}
+                    className={`border rounded-lg p-4 ${isPagaCustas ? 'bg-green-50 border-green-200' :
+                      isVencidaCustas ? 'bg-red-50 border-red-200' :
+                        'bg-orange-50 border-orange-200'
+                      } ${isClickable ? 'cursor-pointer hover:bg-orange-100 hover:border-orange-300 transition-colors' : ''}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {modoRegistrarPagamento && (custasStatus === 'PENDENTE' || custasStatus === 'ATRASADO') ? (
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={custasSeelcionada}
+                              onCheckedChange={handleToggleCustas}
+                              className="w-6 h-6 cursor-pointer"
+                            />
+                          </div>
+                        ) : (
+                          <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isPagaCustas ? 'bg-orange-100 text-orange-800' :
+                            isVencidaCustas ? 'bg-red-100 text-red-800' :
+                              'bg-orange-100 text-orange-800'
+                            }`}>
+                            C
+                          </span>
+                        )}
+                        <div>
+                          <p className="font-medium">Custas Advocatícias</p>
+                          <p className="text-sm text-orange-600">
+                            Vencimento: {formatarData(acordo.transacaoDetails.custasDataVencimento || acordo.dataVencimento)}
+                          </p>
+                          {acordo.transacaoDetails.custasDataPagamento && (
+                            <p className="text-sm text-green-600">
+                              Pago em: {formatarData(acordo.transacaoDetails.custasDataPagamento)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-center gap-2 justify-end mb-2">
+                          <Badge className={getParcelaStatusColor(custasStatus as any)}>
+                            {getParcelaStatusLabel(custasStatus as any)}
+                          </Badge>
+                          {canEdit && !modoRegistrarPagamento && acordo.status !== 'cancelado' && acordo.status !== 'cumprido' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEditarCustas()
+                              }}
+                              className={`cursor-pointer ${
+                                isPagaCustas ? 'border-green-300 text-green-700 hover:bg-green-100' :
+                                isVencidaCustas ? 'border-red-300 text-red-700 hover:bg-red-100' :
+                                'border-orange-300 text-orange-700 hover:bg-orange-100'
+                              }`}
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-sm font-medium">
+                          R$ {acordo.transacaoDetails.custasAdvocaticias.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Parcelas de Honorários */}
+              {acordo.parcelas
+                .filter((parcela: Parcela) => parcela.tipoParcela === 'PARCELA_HONORARIOS')
+                .map((parcela: Parcela) => {
+                  const isVencidaParcela = parcela.status === 'ATRASADO'
+                  const totalPagoParcela = parcela.pagamentos.reduce((total: number, p: Pagamento) => total + Number(p.valorPago), 0)
+                  const restanteParcela = Number(parcela.valor) - totalPagoParcela
+
+                  const isClickable = modoRegistrarPagamento && (parcela.status === 'PENDENTE' || parcela.status === 'ATRASADO') && restanteParcela > 0
+
+                  return (
+                    <div
+                      key={parcela.id}
+                      onClick={isClickable ? () => handleToggleParcela(parcela.id) : undefined}
+                      className={`border rounded-lg p-4 ${parcela.status === 'PAGO' ? 'bg-green-50 border-green-200' :
+                        isVencidaParcela ? 'bg-red-50 border-red-200' :
+                          'bg-gray-50'
+                        } ${isClickable ? 'cursor-pointer hover:bg-amber-50 hover:border-amber-300 transition-colors' : ''}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {modoRegistrarPagamento && (parcela.status === 'PENDENTE' || parcela.status === 'ATRASADO') && restanteParcela > 0 ? (
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={parcelasSelecionadas.has(parcela.id)}
+                                onCheckedChange={() => handleToggleParcela(parcela.id)}
+                                className="w-6 h-6 cursor-pointer"
+                              />
+                            </div>
+                          ) : (
+                            <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${parcela.status === 'PAGO' ? 'bg-amber-100 text-amber-800' :
+                              isVencidaParcela ? 'bg-red-100 text-red-800' :
+                                'bg-amber-100 text-amber-800'
+                              }`}>
+                              H{parcela.numero}
+                            </span>
+                          )}
+                          <div>
+                            <p className="font-medium">
+                              Honorários {parcela.numero} de {acordo.transacaoDetails?.honorariosParcelas || 1}
+                            </p>
+                            <p className="text-sm text-amber-600">
+                              Vencimento: {formatarData(parcela.dataVencimento)}
+                            </p>
+                            {parcela.dataPagamento && (
+                              <p className="text-sm text-green-600">
+                                Pago em: {formatarData(parcela.dataPagamento)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center gap-2 justify-end mb-2">
+                            <Badge className={getParcelaStatusColor(parcela.status)}>
+                              {getParcelaStatusLabel(parcela.status)}
+                            </Badge>
+                            {canEdit && !modoRegistrarPagamento && acordo.status !== 'cancelado' && acordo.status !== 'cumprido' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditarParcela(parcela)
+                                }}
+                                className={`cursor-pointer ${
+                                  parcela.status === 'PAGO' ? 'border-green-300 text-green-700 hover:bg-green-100' :
+                                  isVencidaParcela ? 'border-red-300 text-red-700 hover:bg-red-100' :
+                                  parcela.tipoParcela === 'PARCELA_HONORARIOS' ? 'border-amber-300 text-amber-700 hover:bg-amber-100' :
+                                  Number(parcela.numero) === 0 ? 'border-purple-300 text-purple-700 hover:bg-purple-100' :
+                                  'border-gray-300 text-gray-700 hover:bg-gray-100'
+                                }`}
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                          <p className="text-sm font-medium">
+                            R$ {Number(parcela.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                          {parcela.status === 'PENDENTE' && totalPagoParcela > 0 && (
+                            <p className="text-xs text-blue-600">
+                              Pago: R$ {totalPagoParcela.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                    </div>
+                  )
+                })}
+
+              {/* Mensagem se não houver parcelas de honorários mas houver custas */}
+              {acordo.parcelas
+                .filter((parcela: Parcela) => parcela.tipoParcela === 'PARCELA_HONORARIOS').length === 0 &&
+                acordo.transacaoDetails && acordo.transacaoDetails.honorariosValor > 0 && (
+                  <div className="text-center py-4 text-amber-600 bg-amber-50 rounded-lg border border-amber-200">
+                    <Receipt className="mx-auto h-8 w-8 text-amber-400 mb-2" />
+                    <p className="text-sm">Honorários configurados para pagamento à vista na data de assinatura</p>
+                  </div>
+                )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Parcelas do Acordo - apenas para transação excepcional */}
       {temParcelas && (
         <Card>
           <CardHeader>
@@ -766,116 +1321,106 @@ export default function AcordoPage({ params }: AcordoPageProps) {
               Parcelas do Acordo
             </CardTitle>
             <CardDescription>
-              Cronograma de pagamento e status das parcelas
+              Cronograma de pagamento e status das parcelas do acordo
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {(acordo_data.parcelas as Record<string, unknown>[]).map((parcela: Record<string, unknown>) => {
-                const isVencidaParcela = new Date(parcela.dataVencimento as string) < new Date() && parcela.status === 'PENDENTE'
-                const totalPagoParcela = (parcela.pagamentos as Record<string, unknown>[]).reduce((total: number, p: Record<string, unknown>) => total + Number(p.valorPago), 0)
-                const restanteParcela = Number(parcela.valor) - totalPagoParcela
+              {/* Filtrar apenas parcelas do acordo (não de honorários) */}
+              {acordo.parcelas
+                .filter((parcela: Parcela) => parcela.tipoParcela !== 'PARCELA_HONORARIOS')
+                .map((parcela: Parcela) => {
+                  const isVencidaParcela = parcela.status === 'ATRASADO'
+                  const totalPagoParcela = parcela.pagamentos.reduce((total: number, p: Pagamento) => total + Number(p.valorPago), 0)
+                  const restanteParcela = Number(parcela.valor) - totalPagoParcela
 
-                const isClickable = modoRegistrarPagamento && parcela.status === 'PENDENTE' && restanteParcela > 0
+                  const isClickable = modoRegistrarPagamento && (parcela.status === 'PENDENTE' || parcela.status === 'ATRASADO') && restanteParcela > 0
 
-                return (
-                  <div
-                    key={parcela.id as string}
-                    onClick={isClickable ? () => handleToggleParcela(parcela.id as string) : undefined}
-                    className={`border rounded-lg p-4 ${parcela.status === 'PAGO' ? 'bg-green-50 border-green-200' :
-                      isVencidaParcela ? 'bg-red-50 border-red-200' :
-                        'bg-gray-50'
-                      } ${isClickable ? 'cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors' : ''}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {modoRegistrarPagamento && parcela.status === 'PENDENTE' && restanteParcela > 0 ? (
-                          <div onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={parcelasSelecionadas.has(parcela.id as string)}
-                              onCheckedChange={() => handleToggleParcela(parcela.id as string)}
-                              className="w-6 h-6 cursor-pointer"
-                            />
+                  return (
+                    <div
+                      key={parcela.id}
+                      onClick={isClickable ? () => handleToggleParcela(parcela.id) : undefined}
+                      className={`border rounded-lg p-4 ${parcela.status === 'PAGO' ? 'bg-green-50 border-green-200' :
+                        isVencidaParcela ? 'bg-red-50 border-red-200' :
+                          Number(parcela.numero) === 0 ? 'bg-purple-50 border-purple-200' : 'bg-gray-50'
+                        } ${isClickable ? 'cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors' : ''}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {modoRegistrarPagamento && (parcela.status === 'PENDENTE' || parcela.status === 'ATRASADO') && restanteParcela > 0 ? (
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={parcelasSelecionadas.has(parcela.id)}
+                                onCheckedChange={() => handleToggleParcela(parcela.id)}
+                                className="w-6 h-6 cursor-pointer"
+                              />
+                            </div>
+                          ) : (
+                            <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${parcela.status === 'PAGO' ? 'bg-green-100 text-green-800' :
+                              isVencidaParcela ? 'bg-red-100 text-red-800' :
+                                Number(parcela.numero) === 0 ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                              }`}>
+                              {Number(parcela.numero) === 0 ? '1' : (acordo.valorEntrada > 0 ? (Number(parcela.numero) + 1).toString() : Number(parcela.numero).toString())}
+                            </span>
+                          )}
+                          <div>
+                            <p className="font-medium">
+                              {Number(parcela.numero) === 0
+                                ? 'Parcela 1 (Entrada)'
+                                : acordo.valorEntrada > 0
+                                  ? `Parcela ${(Number(parcela.numero) + 1).toString()} de ${(acordo.numeroParcelas || 1) + 1}`
+                                  : `Parcela ${Number(parcela.numero).toString()} de ${acordo.numeroParcelas || 1}`
+                              }
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Vencimento: {formatarData(parcela.dataVencimento)}
+                            </p>
+                            {parcela.dataPagamento && (
+                              <p className="text-sm text-green-600">
+                                Paga em: {formatarData(parcela.dataPagamento)}
+                              </p>
+                            )}
                           </div>
-                        ) : (
-                          <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${parcela.status === 'PAGO' ? 'bg-green-100 text-green-800' :
-                            isVencidaParcela ? 'bg-red-100 text-red-800' :
-                              'bg-blue-100 text-blue-800'
-                            }`}>
-                            {Number(parcela.numero) === 0 ? 'E' : parcela.numero as string}
-                          </span>
-                        )}
-                        <div>
-                          <p className="font-medium">
-                            {Number(parcela.numero) === 0 ? 'Entrada' : `Parcela ${parcela.numero as string} de ${acordo_data.numeroParcelas as string}`}
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center gap-2 justify-end mb-2">
+                            <Badge className={getParcelaStatusColor(parcela.status)}>
+                              {getParcelaStatusLabel(parcela.status)}
+                            </Badge>
+                            {canEdit && !modoRegistrarPagamento && acordo.status !== 'cancelado' && acordo.status !== 'cumprido' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditarParcela(parcela)
+                                }}
+                                className={`cursor-pointer ${
+                                  parcela.status === 'PAGO' ? 'border-green-300 text-green-700 hover:bg-green-100' :
+                                  isVencidaParcela ? 'border-red-300 text-red-700 hover:bg-red-100' :
+                                  parcela.tipoParcela === 'PARCELA_HONORARIOS' ? 'border-amber-300 text-amber-700 hover:bg-amber-100' :
+                                  Number(parcela.numero) === 0 ? 'border-purple-300 text-purple-700 hover:bg-purple-100' :
+                                  'border-gray-300 text-gray-700 hover:bg-gray-100'
+                                }`}
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                          <p className="text-sm font-medium">
+                            R$ {Number(parcela.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </p>
-                          <p className="text-sm text-gray-600">
-                            Vencimento: {formatarData(parcela.dataVencimento as string)}
-                          </p>
-                          {(parcela.dataPagamento as string) && (
-                            <p className="text-sm text-green-600">
-                              Paga em: {formatarData(parcela.dataPagamento as string)}
+                          {parcela.status === 'PENDENTE' && totalPagoParcela > 0 && (
+                            <p className="text-xs text-blue-600">
+                              Pago: R$ {totalPagoParcela.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </p>
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="flex items-center gap-2 justify-end mb-2">
-                          <Badge className={getParcelaStatusColor(parcela.status as string)}>
-                            {getParcelaStatusLabel(parcela.status as string)}
-                          </Badge>
-                          {canEdit && !modoRegistrarPagamento && acordo_data.status !== 'cancelado' && acordo_data.status !== 'cumprido' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleEditarParcela(parcela as Record<string, unknown>)
-                              }}
-                              className="cursor-pointer"
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                        <p className="text-sm font-medium">
-                          R$ {Number(parcela.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
-                        {parcela.status === 'PENDENTE' && totalPagoParcela > 0 && (
-                          <p className="text-xs text-blue-600">
-                            Pago: R$ {totalPagoParcela.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </p>
-                        )}
-                      </div>
-                    </div>
 
-                    {/* Pagamentos da parcela */}
-                    {(parcela.pagamentos as Record<string, unknown>[]).length > 0 && parcela.status !== 'PAGO' && parcelaEditando !== parcela.id && (
-                      <div className="mt-3 pl-11 space-y-2">
-                        <h5 className="text-sm font-medium">Pagamentos:</h5>
-                        {(parcela.pagamentos as Record<string, unknown>[]).map((pagamento: Record<string, unknown>) => (
-                          <div key={pagamento.id as string} className="text-sm bg-white p-2 rounded border">
-                            <div className="flex justify-between items-center">
-                              <span>
-                                {formatarData(pagamento.dataPagamento as string)} -
-                                {(pagamento.formaPagamento as string).replace('_', ' ').toLowerCase()}
-                              </span>
-                              <span className="font-medium">
-                                R$ {Number(pagamento.valorPago).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </span>
-                            </div>
-                            {(pagamento.numeroComprovante as string) && (
-                              <p className="text-xs text-gray-500">
-                                Comprovante: {pagamento.numeroComprovante as string}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+                    </div>
+                  )
+                })}
             </div>
           </CardContent>
         </Card>
@@ -896,20 +1441,98 @@ export default function AcordoPage({ params }: AcordoPageProps) {
           <CardContent>
             <div className="space-y-4">
               {/* Verificar se tem detalhes */}
-              {(detalhesAcordo as Record<string, unknown>).detalhes && Array.isArray((detalhesAcordo as Record<string, unknown>).detalhes) && ((detalhesAcordo as Record<string, unknown>).detalhes as Record<string, unknown>[]).length > 0 ? (
-                ((detalhesAcordo as Record<string, unknown>).detalhes as Record<string, unknown>[]).map((detalhe: Record<string, unknown>) => (
-                  <div key={detalhe.id as string} className="border rounded-lg p-4">
+              {detalhesAcordo?.detalhes && Array.isArray(detalhesAcordo.detalhes) && detalhesAcordo.detalhes.length > 0 ? (
+                detalhesAcordo.detalhes.map((detalhe: DetalheAcordo) => (
+                  <div key={detalhe.id} className="border rounded-lg p-4">
                     {/* <div className="flex items-center gap-2 mb-4">
                       <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                       <h4 className="font-medium text-gray-900">
-                        {(detalhe.tipo as string) === 'compensacao' ? '' :
-                          (detalhe.tipo as string) === 'dacao' ? 'Dação em Pagamento' :
-                            detalhe.descricao as string}
+                        {detalhe.tipo === 'compensacao' ? '' :
+                          detalhe.tipo === 'dacao' ? 'Dação em Pagamento' :
+                            detalhe.descricao}
                       </h4>
                     </div> */}
 
+                    {/* Para Transação Excepcional: Mostrar inscrições incluídas */}
+                    {detalhe.tipo === 'transacao' && (
+                      <>
+                        {/* Inscrições Incluídas */}
+                        <div className="mb-6">
+                          <h5 className="text-sm font-medium text-blue-700 mb-3 flex items-center gap-2">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            Inscrições Incluídas
+                          </h5>
+                          {detalhe.inscricoes && Array.isArray(detalhe.inscricoes) && detalhe.inscricoes.length > 0 ? (
+                            <div className="space-y-3">
+                              {detalhe.inscricoes.map((inscricao: InscricaoDetalhe, idx: number) => (
+                                <div key={inscricao.id || `inscricao-${idx}`} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                      <div>
+                                        <p className="font-medium text-sm text-blue-900">{inscricao.numeroInscricao}</p>
+                                        <p className="text-xs text-blue-700 capitalize">
+                                          {inscricao.tipoInscricao === 'imobiliaria' ? 'Imobiliária' : 'Econômica'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-sm font-medium text-blue-900">
+                                        Total: R$ {(isNaN(Number(inscricao.valorDebito)) ? 0 : Number(inscricao.valorDebito || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  {/* Débitos da inscrição */}
+                                  {inscricao.descricaoDebitos && Array.isArray(inscricao.descricaoDebitos) && inscricao.descricaoDebitos.length > 0 && (
+                                    <div className="mt-3 pt-3 border-t border-blue-300">
+                                      <h6 className="text-xs font-medium text-blue-700 mb-2">Débitos Incluídos:</h6>
+                                      <div className="space-y-2">
+                                        {inscricao.descricaoDebitos.map((debito: DebitoDetalhe, idx: number) => (
+                                          <div key={debito.id || `debito-${idx}`} className="flex items-center justify-between text-xs bg-white p-2 rounded">
+                                            <span className="text-gray-700">{debito.descricao}</span>
+                                            <div className="text-right">
+                                              <span className="font-medium text-gray-900">
+                                                R$ {(isNaN(Number(debito.valorLancado)) ? 0 : Number(debito.valorLancado || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                              </span>
+                                              {debito.dataVencimento && (
+                                                <div className="text-gray-500">
+                                                  Venc: {new Date(debito.dataVencimento).toLocaleDateString('pt-BR')}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                              {/* Total das Inscrições */}
+                              <div className="p-3 bg-blue-100 rounded-lg border border-blue-300">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-medium text-blue-800">Total das Inscrições:</span>
+                                  <span className="text-sm font-bold text-blue-900">
+                                    R$ {(detalhe.inscricoes && Array.isArray(detalhe.inscricoes)
+                                      ? detalhe.inscricoes.reduce((total: number, inscricao: InscricaoDetalhe) => {
+                                          const valor = Number(inscricao.valorDebito || 0)
+                                          return total + (isNaN(valor) ? 0 : valor)
+                                        }, 0)
+                                      : 0
+                                    ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500">Nenhuma inscrição encontrada.</p>
+                          )}
+                        </div>
+                      </>
+                    )}
+
                     {/* Para Compensação: Mostrar créditos oferecidos separadamente */}
-                    {(detalhe.tipo as string) === 'compensacao' && (
+                    {detalhe.tipo === 'compensacao' && (
                       <>
                         {/* Créditos Oferecidos */}
                         <div className="mb-6">
@@ -919,32 +1542,32 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                           </h5>
                           {(() => {
                             try {
-                              const observacoes = detalhe.observacoes as string
+                              const observacoes = detalhe.observacoes
                               if (observacoes) {
-                                const dadosCreditos = JSON.parse(observacoes)
+                                const dadosCreditos = JSON.parse(observacoes) as DadosCreditos
                                 if (dadosCreditos.creditosOferecidos && Array.isArray(dadosCreditos.creditosOferecidos)) {
                                   return (
                                     <div className="space-y-3">
-                                      {dadosCreditos.creditosOferecidos.map((credito: Record<string, unknown>, idx: number) => (
-                                        <div key={credito.id as string || `credito-${idx}`} className="p-3 bg-green-50 rounded-lg border border-green-200">
+                                      {dadosCreditos.creditosOferecidos.map((credito: CreditoOferecido, idx: number) => (
+                                        <div key={credito.id || `credito-${idx}`} className="p-3 bg-green-50 rounded-lg border border-green-200">
                                           <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
                                               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                                               <div>
-                                                <p className="font-medium text-sm text-green-900">{credito.numero as string}</p>
+                                                <p className="font-medium text-sm text-green-900">{credito.numero}</p>
                                                 <p className="text-xs text-green-700 capitalize">
-                                                  {(credito.tipo as string).replace('_', ' ')}
+                                                  {credito.tipo.replace('_', ' ')}
                                                 </p>
                                               </div>
                                             </div>
                                             <div className="text-right">
                                               <p className="text-sm font-medium text-green-900">
-                                                R$ {Number(credito.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                R$ {(isNaN(Number(credito.valor)) ? 0 : Number(credito.valor || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                               </p>
                                             </div>
                                           </div>
-                                          {(credito.descricao as string) && (
-                                            <p className="text-xs text-green-600 mt-1">{credito.descricao as string}</p>
+                                          {credito.descricao && (
+                                            <p className="text-xs text-green-600 mt-1">{credito.descricao}</p>
                                           )}
                                         </div>
                                       ))}
@@ -977,7 +1600,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
 
 
                     {/* Para Dação em Pagamento: Mostrar inscrições oferecidas separadamente */}
-                    {(detalhe.tipo as string) === 'dacao' && (
+                    {detalhe.tipo === 'dacao' && (
                       <>
                         {/* Inscrições Oferecidas */}
                         <div className="mb-6">
@@ -987,37 +1610,37 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                           </h5>
                           {(() => {
                             try {
-                              const observacoes = detalhe.observacoes as string
+                              const observacoes = detalhe.observacoes
                               if (observacoes) {
-                                const dadosDacao = JSON.parse(observacoes)
+                                const dadosDacao = JSON.parse(observacoes) as DadosDacao
                                 if (dadosDacao.inscricoesOferecidas && Array.isArray(dadosDacao.inscricoesOferecidas)) {
                                   return (
                                     <div className="space-y-3">
-                                      {dadosDacao.inscricoesOferecidas.map((inscricao: Record<string, unknown>, idx: number) => (
-                                        <div key={inscricao.id as string || `inscricao-oferecida-${idx}`} className="p-3 bg-green-50 rounded-lg border border-green-200">
+                                      {dadosDacao.inscricoesOferecidas.map((inscricao: InscricaoOferecida, idx: number) => (
+                                        <div key={inscricao.id || `inscricao-oferecida-${idx}`} className="p-3 bg-green-50 rounded-lg border border-green-200">
                                           <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
                                               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                                               <div>
-                                                <p className="font-medium text-sm text-green-900">{inscricao.numeroInscricao as string}</p>
+                                                <p className="font-medium text-sm text-green-900">{inscricao.numeroInscricao}</p>
                                                 <p className="text-xs text-green-700 capitalize">
-                                                  {(inscricao.tipoInscricao as string) === 'imobiliaria' ? 'Imobiliária' : 'Econômica'}
+                                                  {inscricao.tipoInscricao === 'imobiliaria' ? 'Imobiliária' : 'Econômica'}
                                                 </p>
                                               </div>
                                             </div>
                                             <div className="text-right">
                                               <p className="text-sm font-medium text-green-900">
-                                                R$ {Number(inscricao.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                R$ {(isNaN(Number(inscricao.valor)) ? 0 : Number(inscricao.valor || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                               </p>
                                               {inscricao.dataVencimento && String(inscricao.dataVencimento) !== '' ? (
                                                 <p className="text-xs text-green-600">
-                                                  Venc: {new Date(inscricao.dataVencimento as string).toLocaleDateString('pt-BR')}
+                                                  Venc: {new Date(inscricao.dataVencimento).toLocaleDateString('pt-BR')}
                                                 </p>
                                               ) : null}
                                             </div>
                                           </div>
-                                          {(inscricao.descricao as string) && (
-                                            <p className="text-xs text-green-600 mt-1">{inscricao.descricao as string}</p>
+                                          {inscricao.descricao && (
+                                            <p className="text-xs text-green-600 mt-1">{inscricao.descricao}</p>
                                           )}
                                         </div>
                                       ))}
@@ -1048,96 +1671,30 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                       </>
                     )}
 
-                    {/* Inscrições Incluídas - Layout padronizado para todos os tipos */}
-                    {(detalhe.inscricoes as Record<string, unknown>) && Array.isArray(detalhe.inscricoes) && (detalhe.inscricoes as Record<string, unknown>[]).length > 0 && (
-                      <div>
-                        <h5 className="text-sm font-medium text-blue-700 mb-3 flex items-center gap-2">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          Inscrições Incluídas
-                        </h5>
-                        <div className="space-y-3">
-                          {(detalhe.inscricoes as Record<string, unknown>[]).map((inscricao: Record<string, unknown>) => (
-                            <div key={inscricao.id as string} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                  <div>
-                                    <p className="font-medium text-sm text-blue-900">{inscricao.numeroInscricao as string}</p>
-                                    <p className="text-xs text-blue-700 capitalize">
-                                      {(inscricao.tipoInscricao as string) === 'imobiliaria' ? 'Imobiliária' : 'Econômica'}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <p className="text-sm font-medium text-blue-900">
-                                    Total: R$ {Number(inscricao.valorDebito || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Débitos da inscrição */}
-                              {(inscricao.descricaoDebitos as Record<string, unknown>[]) && Array.isArray(inscricao.descricaoDebitos) && (inscricao.descricaoDebitos as Record<string, unknown>[]).length > 0 && (
-                                <div className="mt-3 pt-3 border-t border-blue-300">
-                                  <h6 className="text-xs font-medium text-blue-700 mb-2">Débitos Incluídos:</h6>
-                                  <div className="space-y-2">
-                                    {(inscricao.descricaoDebitos as Record<string, unknown>[]).map((debito: Record<string, unknown>, idx: number) => (
-                                      <div key={(debito.id as string) || `debito-${idx}`} className="flex items-center justify-between text-xs bg-white p-2 rounded">
-                                        <span className="text-gray-700">{debito.descricao as string}</span>
-                                        <div className="text-right">
-                                          <span className="font-medium text-gray-900">
-                                            R$ {Number(debito.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                          </span>
-                                          {(debito.dataVencimento as string) && (
-                                            <div className="text-gray-500">
-                                              Venc: {new Date(debito.dataVencimento as string).toLocaleDateString('pt-BR')}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                          {/* Total das Inscrições */}
-                          <div className="p-3 bg-blue-100 rounded-lg border border-blue-300">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm font-medium text-blue-800">Total das Inscrições:</span>
-                              <span className="text-sm font-bold text-blue-900">
-                                R$ {(detalhe.inscricoes as Record<string, unknown>[]).reduce((total: number, inscricao: Record<string, unknown>) => {
-                                  return total + Number(inscricao.valorDebito || 0)
-                                }, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
 
                     {/* Imóvel relacionado (para dação) */}
-                    {(detalhe.imovel as Record<string, unknown>) && (
+                    {detalhe.imovel && (
                       <div className="mt-4">
                         <h5 className="text-sm font-medium text-gray-700 mb-2">Imóvel:</h5>
                         <div className="p-3 bg-gray-50 rounded-lg">
-                          <p className="font-medium text-sm">{(detalhe.imovel as Record<string, unknown>).matricula as string}</p>
-                          <p className="text-xs text-gray-600">{(detalhe.imovel as Record<string, unknown>).endereco as string}</p>
+                          <p className="font-medium text-sm">{detalhe.imovel.matricula}</p>
+                          <p className="text-xs text-gray-600">{detalhe.imovel.endereco}</p>
                           <p className="text-sm font-medium mt-1">
-                            Valor Avaliado: R$ {Number((detalhe.imovel as Record<string, unknown>).valorAvaliado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            Valor Avaliado: R$ {(isNaN(Number(detalhe.imovel.valorAvaliado)) ? 0 : Number(detalhe.imovel.valorAvaliado || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </p>
                         </div>
                       </div>
                     )}
 
                     {/* Crédito relacionado (para compensação) */}
-                    {(detalhe.credito as Record<string, unknown>) && (
+                    {detalhe.credito && (
                       <div className="mt-4">
                         <h5 className="text-sm font-medium text-gray-700 mb-2">Crédito:</h5>
                         <div className="p-3 bg-gray-50 rounded-lg">
-                          <p className="font-medium text-sm">{(detalhe.credito as Record<string, unknown>).numero as string}</p>
-                          <p className="text-xs text-gray-600 capitalize">{((detalhe.credito as Record<string, unknown>).tipo as string).replace('_', ' ')}</p>
+                          <p className="font-medium text-sm">{detalhe.credito.numero}</p>
+                          <p className="text-xs text-gray-600 capitalize">{detalhe.credito.tipo.replace('_', ' ')}</p>
                           <p className="text-sm font-medium mt-1">
-                            Valor: R$ {Number((detalhe.credito as Record<string, unknown>).valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            Valor: R$ {(isNaN(Number(detalhe.credito.valor)) ? 0 : Number(detalhe.credito.valor || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </p>
                         </div>
                       </div>
@@ -1157,21 +1714,21 @@ export default function AcordoPage({ params }: AcordoPageProps) {
       )}
 
       {/* Cláusulas Especiais */}
-      {(acordo_data.clausulasEspeciais as string) && (
+      {(acordo.clausulasEspeciais as string) && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Cláusulas Especiais</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-700 whitespace-pre-wrap">{acordo_data.clausulasEspeciais as string}</p>
+            <p className="text-gray-700 whitespace-pre-wrap">{acordo.clausulasEspeciais as string}</p>
           </CardContent>
         </Card>
       )}
 
       {/* Detalhes Específicos do Acordo */}
       <CumprimentoWrapper
-        acordoId={acordo_data.id as string}
-        detalhes={(acordo_data.detalhes as Record<string, unknown>[]) || []}
+        acordoId={acordo.id as string}
+        detalhes={[]}
       />
 
       {/* Modal de Edição de Parcela */}
@@ -1196,24 +1753,32 @@ export default function AcordoPage({ params }: AcordoPageProps) {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="dataVencimento">Data de Vencimento <span className="text-red-500">*</span></Label>
+              <Label htmlFor="dataVencimento-edit">Data de Vencimento <span className="text-red-500">*</span></Label>
               <Input
-                id="dataVencimento"
+                id="dataVencimento-edit"
                 type="date"
                 value={formEdicaoParcela.dataVencimento}
-                onChange={(e) => setFormEdicaoParcela(prev => ({ ...prev, dataVencimento: e.target.value }))}
+                onChange={(e) => {
+                  setFormEdicaoParcela(prev => ({ ...prev, dataVencimento: e.target.value }))
+                  clearFieldErrorEdit('dataVencimento-edit')
+                }}
+                onFocus={() => clearFieldErrorEdit('dataVencimento-edit')}
                 disabled={processandoPagamento}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="dataPagamento">Data de Pagamento (opcional)</Label>
+              <Label htmlFor="dataPagamento-edit">Data de Pagamento</Label>
               <Input
-                id="dataPagamento"
+                id="dataPagamento-edit"
                 type="date"
                 value={formEdicaoParcela.dataPagamento}
-                onChange={(e) => setFormEdicaoParcela(prev => ({ ...prev, dataPagamento: e.target.value }))}
+                onChange={(e) => {
+                  setFormEdicaoParcela(prev => ({ ...prev, dataPagamento: e.target.value }))
+                  clearFieldErrorEdit('dataPagamento-edit')
+                }}
+                onFocus={() => clearFieldErrorEdit('dataPagamento-edit')}
                 disabled={processandoPagamento}
               />
               <p className="text-xs text-gray-500">
@@ -1239,6 +1804,93 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                 {processandoPagamento ? (
                   <>
                     <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Salvar Alterações
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Edição de Custas Advocatícias */}
+      <Dialog open={showEditCustasModal} onOpenChange={handleCancelarEdicaoCustas}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5 text-blue-600" />
+              Editar Custas Advocatícias
+            </DialogTitle>
+            <DialogDescription>
+              Edite as informações das custas advocatícias. O status será calculado automaticamente com base nas datas informadas.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSalvarEdicaoCustas} className="space-y-4">
+            {errorEdit && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{errorEdit}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="custasDataVencimento-edit">Data de Vencimento <span className="text-red-500">*</span></Label>
+              <Input
+                id="custasDataVencimento-edit"
+                type="date"
+                value={formEdicaoCustas.dataVencimento}
+                onChange={(e) => {
+                  setFormEdicaoCustas(prev => ({ ...prev, dataVencimento: e.target.value }))
+                  clearFieldErrorEdit('custasDataVencimento-edit')
+                }}
+                onFocus={() => clearFieldErrorEdit('custasDataVencimento-edit')}
+                disabled={processandoPagamento}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="custasDataPagamento-edit">Data de Pagamento</Label>
+              <Input
+                id="custasDataPagamento-edit"
+                type="date"
+                value={formEdicaoCustas.dataPagamento}
+                onChange={(e) => {
+                  setFormEdicaoCustas(prev => ({ ...prev, dataPagamento: e.target.value }))
+                  clearFieldErrorEdit('custasDataPagamento-edit')
+                }}
+                onFocus={() => clearFieldErrorEdit('custasDataPagamento-edit')}
+                disabled={processandoPagamento}
+              />
+              <p className="text-xs text-gray-500">
+                Deixe em branco se as custas não foram pagas. O status será calculado automaticamente.
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancelarEdicaoCustas}
+                disabled={processandoPagamento}
+                className="cursor-pointer"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={processandoPagamento}
+                className="cursor-pointer"
+              >
+                {processandoPagamento ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
                     Salvando...
                   </>
                 ) : (

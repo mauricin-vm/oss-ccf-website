@@ -14,28 +14,103 @@ export async function GET(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
     const resolvedParams = await params
-    const detalhes = await prisma.acordoDetalhes.findMany({
-      where: { acordoId: resolvedParams.id },
+
+    // Buscar acordo com seus dados específicos
+    const acordo = await prisma.acordo.findUnique({
+      where: { id: resolvedParams.id },
       include: {
-        inscricoes: true,
-        imovel: true,
-        credito: true
-      },
-      orderBy: { createdAt: 'asc' }
+        transacao: true,
+        compensacao: true,
+        dacao: true,
+        creditos: true,
+        inscricoes: {
+          include: {
+            debitos: true
+          }
+        },
+        processo: true
+      }
     })
 
-    // Parse JSON fields for inscricoes
-    const detalhesProcessados = detalhes.map(detalhe => ({
-      ...detalhe,
-      inscricoes: detalhe.inscricoes.map(inscricao => ({
-        ...inscricao,
-        descricaoDebitos: inscricao.descricaoDebitos
-          ? JSON.parse(inscricao.descricaoDebitos as string)
-          : null
-      }))
-    }))
+    if (!acordo) {
+      return NextResponse.json({ error: 'Acordo não encontrado' }, { status: 404 })
+    }
 
-    return NextResponse.json({ detalhes: detalhesProcessados })
+    // Construir detalhes baseado no tipo de processo
+    const detalhes: any[] = []
+
+    if (acordo.tipoProcesso === 'TRANSACAO_EXCEPCIONAL') {
+      // Para transação excepcional, criar um detalhe com as inscrições
+      const detalhe = {
+        id: `transacao-${acordo.id}`,
+        tipo: 'transacao',
+        descricao: 'Transação Excepcional',
+        valorOriginal: acordo.inscricoes.reduce((total, inscricao) => {
+          return total + inscricao.debitos.reduce((subtotal, debito) => {
+            return subtotal + Number(debito.valorLancado)
+          }, 0)
+        }, 0),
+        inscricoes: acordo.inscricoes.map(inscricao => ({
+          ...inscricao,
+          valorDebito: inscricao.debitos.reduce((total, debito) => total + Number(debito.valorLancado), 0),
+          descricaoDebitos: inscricao.debitos
+        })),
+        createdAt: acordo.createdAt
+      }
+      detalhes.push(detalhe)
+    }
+
+    if (acordo.tipoProcesso === 'COMPENSACAO') {
+      // Para compensação, criar detalhes baseados nos créditos e inscrições
+      const detalhe = {
+        id: `compensacao-${acordo.id}`,
+        tipo: 'compensacao',
+        descricao: 'Compensação de Créditos e Débitos',
+        valorOriginal: acordo.creditos.reduce((total, credito) => total + Number(credito.valor), 0),
+        inscricoes: acordo.inscricoes.map(inscricao => ({
+          ...inscricao,
+          valorDebito: inscricao.debitos.reduce((total, debito) => total + Number(debito.valorLancado), 0),
+          descricaoDebitos: inscricao.debitos
+        })),
+        observacoes: JSON.stringify({
+          creditosOferecidos: acordo.creditos,
+          valorTotalCreditos: acordo.creditos.reduce((total, credito) => total + Number(credito.valor), 0)
+        }),
+        createdAt: acordo.createdAt
+      }
+      detalhes.push(detalhe)
+    }
+
+    if (acordo.tipoProcesso === 'DACAO_PAGAMENTO') {
+      // Para dação, criar detalhes baseados nos créditos (inscrições oferecidas) e inscrições a compensar
+      const inscricoesOferecidas = acordo.creditos.filter(c => c.tipoCredito === 'DACAO_IMOVEL')
+
+      const detalhe = {
+        id: `dacao-${acordo.id}`,
+        tipo: 'dacao',
+        descricao: 'Dação em Pagamento',
+        valorOriginal: inscricoesOferecidas.reduce((total, inscricao) => total + Number(inscricao.valor), 0),
+        inscricoes: acordo.inscricoes.map(inscricao => ({
+          ...inscricao,
+          valorDebito: inscricao.debitos.reduce((total, debito) => total + Number(debito.valorLancado), 0),
+          descricaoDebitos: inscricao.debitos
+        })),
+        observacoes: JSON.stringify({
+          inscricoesOferecidas: inscricoesOferecidas.map(inscricao => ({
+            numeroInscricao: inscricao.numeroCredito,
+            tipoInscricao: 'imobiliaria', // Assumindo que dação é sempre imobiliária
+            valor: Number(inscricao.valor),
+            descricao: inscricao.descricao,
+            dataVencimento: inscricao.dataVencimento
+          })),
+          valorTotalOferecido: inscricoesOferecidas.reduce((total, inscricao) => total + Number(inscricao.valor), 0)
+        }),
+        createdAt: acordo.createdAt
+      }
+      detalhes.push(detalhe)
+    }
+
+    return NextResponse.json({ detalhes })
   } catch (error) {
     console.error('Erro ao buscar detalhes do acordo:', error)
     return NextResponse.json(

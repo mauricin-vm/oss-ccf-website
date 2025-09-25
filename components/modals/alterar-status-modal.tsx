@@ -36,7 +36,7 @@ export default function AlterarStatusModal({
     e.preventDefault()
 
     if (novoStatus === statusAtual) {
-      setError('Selecione um status diferente do atual')
+      toast.warning('Selecione um status diferente do atual')
       return
     }
 
@@ -65,7 +65,7 @@ export default function AlterarStatusModal({
       handleClose()
     } catch (error) {
       console.error('Erro ao alterar status:', error)
-      setError(error instanceof Error ? error.message : 'Erro ao alterar status')
+      toast.error(error instanceof Error ? error.message : 'Erro ao alterar status')
     } finally {
       setIsSubmitting(false)
     }

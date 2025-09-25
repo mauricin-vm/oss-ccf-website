@@ -190,12 +190,58 @@ export default function CompensacaoSection({
     setShowCreditoModal(true)
   }
 
-  const handleSaveCredito = () => {
-    const valor = parseCurrencyToNumber(creditoForm.valor)
-    if (!creditoForm.numero || valor <= 0) {
-      toast.error('Preencha todos os campos obrigatórios')
+  const clearFieldError = (fieldId: string) => {
+    const element = document.getElementById(fieldId)
+    if (element) {
+      element.style.borderColor = ''
+      element.style.boxShadow = ''
+    }
+  }
+
+  const validateAndSaveCredito = () => {
+    const errors: string[] = []
+    let firstErrorField = ''
+
+    if (!creditoForm.tipo.trim()) {
+      errors.push('Tipo de crédito é obrigatório')
+      if (!firstErrorField) firstErrorField = 'creditoTipo'
+    }
+    if (!creditoForm.numero.trim()) {
+      errors.push('Número do crédito é obrigatório')
+      if (!firstErrorField) firstErrorField = 'creditoNumero'
+    }
+    if (!creditoForm.valor.trim()) {
+      errors.push('Valor do crédito é obrigatório')
+      if (!firstErrorField) firstErrorField = 'creditoValor'
+    } else {
+      const valor = parseCurrencyToNumber(creditoForm.valor)
+      if (valor <= 0) {
+        errors.push('Valor deve ser maior que zero')
+        if (!firstErrorField) firstErrorField = 'creditoValor'
+      }
+    }
+
+    if (errors.length > 0) {
+      toast.warning(errors[0])
+
+      if (firstErrorField) {
+        setTimeout(() => {
+          const element = document.getElementById(firstErrorField)
+          if (element) {
+            element.focus()
+            element.style.borderColor = '#ef4444'
+            element.style.boxShadow = '0 0 0 1px #ef4444'
+          }
+        }, 100)
+      }
       return
     }
+
+    handleSaveCredito()
+  }
+
+  const handleSaveCredito = () => {
+    const valor = parseCurrencyToNumber(creditoForm.valor)
 
     const creditoData: Credito = {
       id: Date.now().toString(), // ID temporário
@@ -255,20 +301,69 @@ export default function CompensacaoSection({
     setShowInscricaoModal(true)
   }
 
-  const handleSaveInscricao = () => {
-    if (!inscricaoForm.numeroInscricao) {
-      toast.error('Número da inscrição é obrigatório')
+  const validateAndSaveInscricao = () => {
+    const errors: string[] = []
+    let firstErrorField = ''
+
+    if (!inscricaoForm.numeroInscricao.trim()) {
+      errors.push('Número da inscrição é obrigatório')
+      if (!firstErrorField) firstErrorField = 'inscricaoNumero'
+    }
+
+    // Validar débitos
+    if (inscricaoForm.debitos.length === 0) {
+      errors.push('Adicione pelo menos um débito à inscrição')
+    } else {
+      for (let i = 0; i < inscricaoForm.debitos.length; i++) {
+        const debito = inscricaoForm.debitos[i]
+        if (!debito.descricao.trim()) {
+          errors.push(`Descrição do ${i + 1}º débito é obrigatória`)
+          if (!firstErrorField) firstErrorField = `debitoDescricao-${i}`
+          break
+        }
+        if (!debito.valor.trim()) {
+          errors.push(`Valor do ${i + 1}º débito é obrigatório`)
+          if (!firstErrorField) firstErrorField = `debitoValor-${i}`
+          break
+        } else {
+          const valor = parseCurrencyToNumber(debito.valor)
+          if (valor <= 0) {
+            errors.push(`Valor do ${i + 1}º débito deve ser maior que zero`)
+            if (!firstErrorField) firstErrorField = `debitoValor-${i}`
+            break
+          }
+        }
+        if (!debito.dataVencimento) {
+          errors.push(`Data de vencimento do ${i + 1}º débito é obrigatória`)
+          if (!firstErrorField) firstErrorField = `debitoData-${i}`
+          break
+        }
+      }
+    }
+
+    if (errors.length > 0) {
+      toast.warning(errors[0])
+
+      if (firstErrorField) {
+        setTimeout(() => {
+          const element = document.getElementById(firstErrorField)
+          if (element) {
+            element.focus()
+            element.style.borderColor = '#ef4444'
+            element.style.boxShadow = '0 0 0 1px #ef4444'
+          }
+        }, 100)
+      }
       return
     }
 
+    handleSaveInscricao()
+  }
+
+  const handleSaveInscricao = () => {
     const debitosValidos = inscricaoForm.debitos.filter(d =>
       d.descricao && d.valor && d.dataVencimento
     )
-
-    if (debitosValidos.length === 0) {
-      toast.error('Pelo menos um débito deve ser informado')
-      return
-    }
 
     const inscricaoData: InscricaoCompensacao = {
       id: Date.now().toString(), // ID temporário
@@ -626,9 +721,13 @@ export default function CompensacaoSection({
             <div className="space-y-2">
               <Label htmlFor="modal-tipo">Tipo de Crédito <span className="text-red-500">*</span></Label>
               <select
-                id="modal-tipo"
+                id="creditoTipo"
                 value={creditoForm.tipo}
-                onChange={(e) => setCreditoForm({ ...creditoForm, tipo: e.target.value as 'precatorio' | 'credito_tributario' | 'alvara_judicial' | 'outro' })}
+                onChange={(e) => {
+                  setCreditoForm({ ...creditoForm, tipo: e.target.value as 'precatorio' | 'credito_tributario' | 'alvara_judicial' | 'outro' })
+                  clearFieldError('creditoTipo')
+                }}
+                onFocus={() => clearFieldError('creditoTipo')}
                 className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="precatorio">Precatório</option>
@@ -641,9 +740,13 @@ export default function CompensacaoSection({
             <div className="space-y-2">
               <Label htmlFor="modal-numero">Número do Crédito <span className="text-red-500">*</span></Label>
               <Input
-                id="modal-numero"
+                id="creditoNumero"
                 value={creditoForm.numero}
-                onChange={(e) => setCreditoForm({ ...creditoForm, numero: e.target.value })}
+                onChange={(e) => {
+                  setCreditoForm({ ...creditoForm, numero: e.target.value })
+                  clearFieldError('creditoNumero')
+                }}
+                onFocus={() => clearFieldError('creditoNumero')}
                 placeholder="Ex: PRE-2024-001"
               />
             </div>
@@ -651,13 +754,15 @@ export default function CompensacaoSection({
             <div className="space-y-2">
               <Label htmlFor="modal-valor">Valor <span className="text-red-500">*</span></Label>
               <Input
-                id="modal-valor"
+                id="creditoValor"
                 type="text"
                 value={creditoForm.valor}
                 onChange={(e) => {
                   const formatted = formatCurrency(e.target.value)
                   setCreditoForm({ ...creditoForm, valor: formatted })
+                  clearFieldError('creditoValor')
                 }}
+                onFocus={() => clearFieldError('creditoValor')}
                 placeholder="Ex: 50.000,00"
               />
             </div>
@@ -665,20 +770,30 @@ export default function CompensacaoSection({
             <div className="space-y-2">
               <Label htmlFor="modal-vencimento">Data de Vencimento</Label>
               <Input
-                id="modal-vencimento"
+                id="creditoVencimento"
                 type="date"
-                value={creditoForm.dataVencimento}
-                onChange={(e) => setCreditoForm({ ...creditoForm, dataVencimento: e.target.value })}
+                value={creditoForm.dataVencimento ? creditoForm.dataVencimento.split('T')[0] : ''}
+                onChange={(e) => {
+                  const dateValue = e.target.value
+                  const adjustedDate = dateValue ? dateValue + 'T12:00:00' : dateValue
+                  setCreditoForm({ ...creditoForm, dataVencimento: adjustedDate })
+                  clearFieldError('creditoVencimento')
+                }}
+                onFocus={() => clearFieldError('creditoVencimento')}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="modal-descricao">Descrição</Label>
               <Textarea
-                id="modal-descricao"
+                id="creditoDescricao"
                 rows={2}
                 value={creditoForm.descricao}
-                onChange={(e) => setCreditoForm({ ...creditoForm, descricao: e.target.value })}
+                onChange={(e) => {
+                  setCreditoForm({ ...creditoForm, descricao: e.target.value })
+                  clearFieldError('creditoDescricao')
+                }}
+                onFocus={() => clearFieldError('creditoDescricao')}
                 placeholder="Informações adicionais sobre o crédito..."
               />
             </div>
@@ -694,8 +809,7 @@ export default function CompensacaoSection({
               </Button>
               <Button
                 type="button"
-                onClick={handleSaveCredito}
-                disabled={!creditoForm.numero || !creditoForm.valor}
+                onClick={validateAndSaveCredito}
                 className="cursor-pointer"
               >
                 {editingCredito ? 'Atualizar' : 'Adicionar'}
@@ -723,9 +837,13 @@ export default function CompensacaoSection({
               <div className="space-y-2">
                 <Label htmlFor="modal-inscricao-numero">Número da Inscrição <span className="text-red-500">*</span></Label>
                 <Input
-                  id="modal-inscricao-numero"
+                  id="inscricaoNumero"
                   value={inscricaoForm.numeroInscricao}
-                  onChange={(e) => setInscricaoForm({ ...inscricaoForm, numeroInscricao: e.target.value })}
+                  onChange={(e) => {
+                    setInscricaoForm({ ...inscricaoForm, numeroInscricao: e.target.value })
+                    clearFieldError('inscricaoNumero')
+                  }}
+                  onFocus={() => clearFieldError('inscricaoNumero')}
                   placeholder="Ex: 123.456.789"
                 />
               </div>
@@ -733,9 +851,13 @@ export default function CompensacaoSection({
               <div className="space-y-2">
                 <Label htmlFor="modal-inscricao-tipo">Tipo de Inscrição <span className="text-red-500">*</span></Label>
                 <select
-                  id="modal-inscricao-tipo"
+                  id="inscricaoTipo"
                   value={inscricaoForm.tipoInscricao}
-                  onChange={(e) => setInscricaoForm({ ...inscricaoForm, tipoInscricao: e.target.value as 'imobiliaria' | 'economica' })}
+                  onChange={(e) => {
+                    setInscricaoForm({ ...inscricaoForm, tipoInscricao: e.target.value as 'imobiliaria' | 'economica' })
+                    clearFieldError('inscricaoTipo')
+                  }}
+                  onFocus={() => clearFieldError('inscricaoTipo')}
                   className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
                   <option value="imobiliaria">Imobiliária</option>
@@ -779,36 +901,48 @@ export default function CompensacaoSection({
 
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-2">
-                        <Label htmlFor={`debito-desc-${index}`}>Descrição <span className="text-red-500">*</span></Label>
+                        <Label htmlFor={`debitoDescricao-${index}`}>Descrição <span className="text-red-500">*</span></Label>
                         <Input
-                          id={`debito-desc-${index}`}
+                          id={`debitoDescricao-${index}`}
                           value={debito.descricao}
-                          onChange={(e) => updateDebito(index, 'descricao', e.target.value)}
+                          onChange={(e) => {
+                            updateDebito(index, 'descricao', e.target.value)
+                            clearFieldError(`debitoDescricao-${index}`)
+                          }}
+                          onFocus={() => clearFieldError(`debitoDescricao-${index}`)}
                           placeholder="Ex: IPTU 2024"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor={`debito-valor-${index}`}>Valor Lançado <span className="text-red-500">*</span></Label>
+                        <Label htmlFor={`debitoValor-${index}`}>Valor Lançado <span className="text-red-500">*</span></Label>
                         <Input
-                          id={`debito-valor-${index}`}
+                          id={`debitoValor-${index}`}
                           type="text"
                           value={debito.valor}
                           onChange={(e) => {
                             const formatted = formatCurrency(e.target.value)
                             updateDebito(index, 'valor', formatted)
+                            clearFieldError(`debitoValor-${index}`)
                           }}
+                          onFocus={() => clearFieldError(`debitoValor-${index}`)}
                           placeholder="Ex: 1.500,00"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor={`debito-vencimento-${index}`}>Data de Vencimento <span className="text-red-500">*</span></Label>
+                        <Label htmlFor={`debitoData-${index}`}>Data de Vencimento <span className="text-red-500">*</span></Label>
                         <Input
-                          id={`debito-vencimento-${index}`}
+                          id={`debitoData-${index}`}
                           type="date"
-                          value={debito.dataVencimento}
-                          onChange={(e) => updateDebito(index, 'dataVencimento', e.target.value)}
+                          value={debito.dataVencimento ? debito.dataVencimento.split('T')[0] : ''}
+                          onChange={(e) => {
+                            const dateValue = e.target.value
+                            const adjustedDate = dateValue ? dateValue + 'T12:00:00' : dateValue
+                            updateDebito(index, 'dataVencimento', adjustedDate)
+                            clearFieldError(`debitoData-${index}`)
+                          }}
+                          onFocus={() => clearFieldError(`debitoData-${index}`)}
                         />
                       </div>
                     </div>
@@ -837,8 +971,7 @@ export default function CompensacaoSection({
               </Button>
               <Button
                 type="button"
-                onClick={handleSaveInscricao}
-                disabled={!inscricaoForm.numeroInscricao || inscricaoForm.debitos.some(d => !d.descricao || !d.valor || !d.dataVencimento)}
+                onClick={validateAndSaveInscricao}
                 className="cursor-pointer"
               >
                 {editingInscricao ? 'Atualizar' : 'Adicionar'}

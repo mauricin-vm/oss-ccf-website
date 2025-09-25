@@ -37,7 +37,7 @@ export default function AnexarDocumentoModal({
 
   const allowedTypes = [
     '.pdf',
-    '.doc', 
+    '.doc',
     '.docx',
     '.xls',
     '.xlsx',
@@ -190,7 +190,7 @@ export default function AnexarDocumentoModal({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    
+
     const files = Array.from(e.dataTransfer.files)
     if (files.length > 0) {
       // Simular evento de input
@@ -215,7 +215,7 @@ export default function AnexarDocumentoModal({
         <DialogHeader>
           <DialogTitle>Anexar Documentos</DialogTitle>
           <DialogDescription>
-            Selecione os arquivos que deseja anexar ao processo. 
+            Selecione os arquivos que deseja anexar ao processo.
             Tipos permitidos: PDF, DOC, XLS, imagens e TXT (máximo 100MB cada).
           </DialogDescription>
         </DialogHeader>
@@ -279,7 +279,7 @@ export default function AnexarDocumentoModal({
                       </p>
                       <div className="space-y-1">
                         <Label htmlFor={`nome-${index}`} className="text-xs">
-                          Nome do documento (opcional)
+                          Nome do documento
                         </Label>
                         <Input
                           id={`nome-${index}`}

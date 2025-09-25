@@ -9,14 +9,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
 } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, AlertCircle, Edit3, Calendar, User } from 'lucide-react'
@@ -46,12 +46,12 @@ interface EditarInformacoesSessaoFormProps {
     presidenteId?: string
     dataInicio: Date
     horario?: string
-    conselheiros?: Array<{id: string, nome: string}>
+    conselheiros?: Array<{ id: string, nome: string }>
   }
 }
 
-export default function EditarInformacoesSessaoForm({ 
-  sessaoId, 
+export default function EditarInformacoesSessaoForm({
+  sessaoId,
   currentData
 }: EditarInformacoesSessaoFormProps) {
   const router = useRouter()
@@ -129,7 +129,7 @@ export default function EditarInformacoesSessaoForm({
           const removeResponse = await fetch(`/api/sessoes/${sessaoId}/conselheiros/${data.presidenteId}`, {
             method: 'DELETE'
           })
-          
+
           if (!removeResponse.ok) {
             console.warn('Não foi possível remover o conselheiro da lista de participantes')
           }
@@ -208,7 +208,7 @@ export default function EditarInformacoesSessaoForm({
                 <SelectTrigger className="w-full">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-gray-400" />
-                    <SelectValue placeholder="Selecionar presidente (opcional)" />
+                    <SelectValue placeholder="Selecionar presidente" />
                   </div>
                 </SelectTrigger>
                 <SelectContent>

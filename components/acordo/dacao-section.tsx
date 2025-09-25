@@ -182,12 +182,54 @@ export default function DacaoSection({
     setShowInscricaoOferecidaModal(true)
   }
 
-  const handleSaveInscricaoOferecida = () => {
-    const valor = parseCurrencyToNumber(inscricaoOferecidaForm.valor)
-    if (!inscricaoOferecidaForm.numeroInscricao || valor <= 0) {
-      toast.error('Preencha todos os campos obrigatórios')
+  const clearFieldError = (fieldId: string) => {
+    const element = document.getElementById(fieldId)
+    if (element) {
+      element.style.borderColor = ''
+      element.style.boxShadow = ''
+    }
+  }
+
+  const validateAndSaveInscricaoOferecida = () => {
+    const errors: string[] = []
+    let firstErrorField = ''
+
+    if (!inscricaoOferecidaForm.numeroInscricao.trim()) {
+      errors.push('Número da inscrição é obrigatório')
+      if (!firstErrorField) firstErrorField = 'oferecidaNumero'
+    }
+    if (!inscricaoOferecidaForm.valor.trim()) {
+      errors.push('Valor da inscrição é obrigatório')
+      if (!firstErrorField) firstErrorField = 'oferecidaValor'
+    } else {
+      const valor = parseCurrencyToNumber(inscricaoOferecidaForm.valor)
+      if (valor <= 0) {
+        errors.push('Valor deve ser maior que zero')
+        if (!firstErrorField) firstErrorField = 'oferecidaValor'
+      }
+    }
+
+    if (errors.length > 0) {
+      toast.warning(errors[0])
+
+      if (firstErrorField) {
+        setTimeout(() => {
+          const element = document.getElementById(firstErrorField)
+          if (element) {
+            element.focus()
+            element.style.borderColor = '#ef4444'
+            element.style.boxShadow = '0 0 0 1px #ef4444'
+          }
+        }, 100)
+      }
       return
     }
+
+    handleSaveInscricaoOferecida()
+  }
+
+  const handleSaveInscricaoOferecida = () => {
+    const valor = parseCurrencyToNumber(inscricaoOferecidaForm.valor)
 
     const inscricaoData: InscricaoOferecida = {
       id: editingInscricaoOferecida ? editingInscricaoOferecida.inscricao.id : `oferecida-${Date.now()}`,
@@ -265,18 +307,71 @@ export default function DacaoSection({
     }
   }
 
-  const handleSaveInscricaoCompensar = () => {
-    if (!inscricaoCompensarForm.numeroInscricao) {
-      toast.error('Número da inscrição é obrigatório')
+  const validateAndSaveInscricaoCompensar = () => {
+    const errors: string[] = []
+    let firstErrorField = ''
+
+    if (!inscricaoCompensarForm.numeroInscricao.trim()) {
+      errors.push('Número da inscrição é obrigatório')
+      if (!firstErrorField) firstErrorField = 'compensarNumero'
+    }
+
+    // Validar débitos
+    if (inscricaoCompensarForm.debitos.length === 0) {
+      errors.push('Adicione pelo menos um débito à inscrição')
+    } else {
+      for (let i = 0; i < inscricaoCompensarForm.debitos.length; i++) {
+        const debito = inscricaoCompensarForm.debitos[i]
+        if (!debito.descricao.trim()) {
+          errors.push(`Descrição do ${i + 1}º débito é obrigatória`)
+          if (!firstErrorField) firstErrorField = `compensarDebitoDescricao-${i}`
+          break
+        }
+        if (!debito.valor.trim()) {
+          errors.push(`Valor do ${i + 1}º débito é obrigatório`)
+          if (!firstErrorField) firstErrorField = `compensarDebitoValor-${i}`
+          break
+        } else {
+          const valor = parseCurrencyToNumber(debito.valor)
+          if (valor <= 0) {
+            errors.push(`Valor do ${i + 1}º débito deve ser maior que zero`)
+            if (!firstErrorField) firstErrorField = `compensarDebitoValor-${i}`
+            break
+          }
+        }
+        if (!debito.dataVencimento) {
+          errors.push(`Data de vencimento do ${i + 1}º débito é obrigatória`)
+          if (!firstErrorField) firstErrorField = `compensarDebitoData-${i}`
+          break
+        }
+      }
+    }
+
+    if (errors.length > 0) {
+      toast.warning(errors[0])
+
+      if (firstErrorField) {
+        setTimeout(() => {
+          const element = document.getElementById(firstErrorField)
+          if (element) {
+            element.focus()
+            element.style.borderColor = '#ef4444'
+            element.style.boxShadow = '0 0 0 1px #ef4444'
+          }
+        }, 100)
+      }
       return
     }
 
+    handleSaveInscricaoCompensar()
+  }
+
+  const handleSaveInscricaoCompensar = () => {
     const debitosValidos = inscricaoCompensarForm.debitos.filter(d =>
       d.descricao && d.valor && d.dataVencimento
     )
 
     if (debitosValidos.length === 0) {
-      toast.error('Pelo menos um débito deve ser informado')
       return
     }
 
@@ -614,9 +709,13 @@ export default function DacaoSection({
             <div className="space-y-2">
               <Label htmlFor="modal-numero-inscricao">Número da Inscrição <span className="text-red-500">*</span></Label>
               <Input
-                id="modal-numero-inscricao"
+                id="oferecidaNumero"
                 value={inscricaoOferecidaForm.numeroInscricao}
-                onChange={(e) => setInscricaoOferecidaForm({ ...inscricaoOferecidaForm, numeroInscricao: e.target.value })}
+                onChange={(e) => {
+                  setInscricaoOferecidaForm({ ...inscricaoOferecidaForm, numeroInscricao: e.target.value })
+                  clearFieldError('oferecidaNumero')
+                }}
+                onFocus={() => clearFieldError('oferecidaNumero')}
                 placeholder="Ex: IMOB-2024-001"
               />
             </div>
@@ -624,13 +723,15 @@ export default function DacaoSection({
             <div className="space-y-2">
               <Label htmlFor="modal-valor-inscricao">Valor <span className="text-red-500">*</span></Label>
               <Input
-                id="modal-valor-inscricao"
+                id="oferecidaValor"
                 type="text"
                 value={inscricaoOferecidaForm.valor}
                 onChange={(e) => {
                   const formatted = formatCurrency(e.target.value)
                   setInscricaoOferecidaForm({ ...inscricaoOferecidaForm, valor: formatted })
+                  clearFieldError('oferecidaValor')
                 }}
+                onFocus={() => clearFieldError('oferecidaValor')}
                 placeholder="Ex: 25.000,00"
               />
             </div>
@@ -640,8 +741,12 @@ export default function DacaoSection({
               <Input
                 id="modal-vencimento-inscricao"
                 type="date"
-                value={inscricaoOferecidaForm.dataVencimento}
-                onChange={(e) => setInscricaoOferecidaForm({ ...inscricaoOferecidaForm, dataVencimento: e.target.value })}
+                value={inscricaoOferecidaForm.dataVencimento ? inscricaoOferecidaForm.dataVencimento.split('T')[0] : ''}
+                onChange={(e) => {
+                  const dateValue = e.target.value
+                  const adjustedDate = dateValue ? dateValue + 'T12:00:00' : dateValue
+                  setInscricaoOferecidaForm({ ...inscricaoOferecidaForm, dataVencimento: adjustedDate })
+                }}
               />
             </div>
 
@@ -667,7 +772,7 @@ export default function DacaoSection({
               </Button>
               <Button
                 type="button"
-                onClick={handleSaveInscricaoOferecida}
+                onClick={validateAndSaveInscricaoOferecida}
                 className="cursor-pointer"
               >
                 {editingInscricaoOferecida ? 'Salvar Alterações' : 'Adicionar Bem/Imóvel'}
@@ -695,9 +800,13 @@ export default function DacaoSection({
               <div className="space-y-2">
                 <Label htmlFor="modal-inscricao-numero">Número da Inscrição <span className="text-red-500">*</span></Label>
                 <Input
-                  id="modal-inscricao-numero"
+                  id="compensarNumero"
                   value={inscricaoCompensarForm.numeroInscricao}
-                  onChange={(e) => setInscricaoCompensarForm({ ...inscricaoCompensarForm, numeroInscricao: e.target.value })}
+                  onChange={(e) => {
+                    setInscricaoCompensarForm({ ...inscricaoCompensarForm, numeroInscricao: e.target.value })
+                    clearFieldError('compensarNumero')
+                  }}
+                  onFocus={() => clearFieldError('compensarNumero')}
                   placeholder="Ex: 123.456.789"
                 />
               </div>
@@ -751,36 +860,48 @@ export default function DacaoSection({
 
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-2">
-                        <Label htmlFor={`debito-desc-${index}`}>Descrição <span className="text-red-500">*</span></Label>
+                        <Label htmlFor={`compensarDebitoDescricao-${index}`}>Descrição <span className="text-red-500">*</span></Label>
                         <Input
-                          id={`debito-desc-${index}`}
+                          id={`compensarDebitoDescricao-${index}`}
                           value={debito.descricao}
-                          onChange={(e) => updateDebito(index, 'descricao', e.target.value)}
+                          onChange={(e) => {
+                            updateDebito(index, 'descricao', e.target.value)
+                            clearFieldError(`compensarDebitoDescricao-${index}`)
+                          }}
+                          onFocus={() => clearFieldError(`compensarDebitoDescricao-${index}`)}
                           placeholder="Ex: IPTU 2024"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor={`debito-valor-${index}`}>Valor Lançado <span className="text-red-500">*</span></Label>
+                        <Label htmlFor={`compensarDebitoValor-${index}`}>Valor Lançado <span className="text-red-500">*</span></Label>
                         <Input
-                          id={`debito-valor-${index}`}
+                          id={`compensarDebitoValor-${index}`}
                           type="text"
                           value={debito.valor}
                           onChange={(e) => {
                             const formatted = formatCurrency(e.target.value)
                             updateDebito(index, 'valor', formatted)
+                            clearFieldError(`compensarDebitoValor-${index}`)
                           }}
+                          onFocus={() => clearFieldError(`compensarDebitoValor-${index}`)}
                           placeholder="Ex: 1.500,00"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor={`debito-vencimento-${index}`}>Data de Vencimento <span className="text-red-500">*</span></Label>
+                        <Label htmlFor={`compensarDebitoData-${index}`}>Data de Vencimento <span className="text-red-500">*</span></Label>
                         <Input
-                          id={`debito-vencimento-${index}`}
+                          id={`compensarDebitoData-${index}`}
                           type="date"
-                          value={debito.dataVencimento}
-                          onChange={(e) => updateDebito(index, 'dataVencimento', e.target.value)}
+                          value={debito.dataVencimento ? debito.dataVencimento.split('T')[0] : ''}
+                          onChange={(e) => {
+                            const dateValue = e.target.value
+                            const adjustedDate = dateValue ? dateValue + 'T12:00:00' : dateValue
+                            updateDebito(index, 'dataVencimento', adjustedDate)
+                            clearFieldError(`compensarDebitoData-${index}`)
+                          }}
+                          onFocus={() => clearFieldError(`compensarDebitoData-${index}`)}
                         />
                       </div>
                     </div>
@@ -809,8 +930,7 @@ export default function DacaoSection({
               </Button>
               <Button
                 type="button"
-                onClick={handleSaveInscricaoCompensar}
-                disabled={!inscricaoCompensarForm.numeroInscricao || inscricaoCompensarForm.debitos.some(d => !d.descricao || !d.valor || !d.dataVencimento)}
+                onClick={validateAndSaveInscricaoCompensar}
                 className="cursor-pointer"
               >
                 {editingInscricaoCompensar ? 'Atualizar' : 'Adicionar'}
