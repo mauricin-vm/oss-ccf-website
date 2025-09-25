@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { FiltersState } from '@/components/reports/filters-panel'
+import { toast } from 'sonner'
 
 export function useReportFilters(initialData: {
   totais: {
@@ -49,6 +50,7 @@ export function useReportFilters(initialData: {
 
   const [filteredData, setFilteredData] = useState(initialData)
   const [loading, setLoading] = useState(false)
+  const previousFiltersRef = useRef<FiltersState>(filters)
 
   const activeFiltersCount = useMemo(() => {
     let count = 0
@@ -67,7 +69,11 @@ export function useReportFilters(initialData: {
 
   // Buscar dados filtrados quando os filtros de data mudarem
   useEffect(() => {
-    if (filters.dataInicio || filters.dataFim) {
+    // Verificar se havia filtros anteriormente
+    const hadPreviousFilters = previousFiltersRef.current.dataInicio || previousFiltersRef.current.dataFim
+    const hasCurrentFilters = filters.dataInicio || filters.dataFim
+
+    if (hasCurrentFilters) {
       const fetchFilteredData = async () => {
         setLoading(true)
         try {
@@ -79,9 +85,13 @@ export function useReportFilters(initialData: {
           if (response.ok) {
             const data = await response.json()
             setFilteredData(data)
+            toast.success('Dados atualizados com sucesso!')
+          } else {
+            toast.error('Erro ao carregar dados filtrados')
           }
         } catch (error) {
           console.error('Erro ao buscar dados filtrados:', error)
+          toast.error('Erro ao carregar dados filtrados')
         } finally {
           setLoading(false)
         }
@@ -91,7 +101,14 @@ export function useReportFilters(initialData: {
     } else {
       // Se não há filtro de data ativo, usar dados iniciais
       setFilteredData(initialData)
+      // Mostrar toast de sucesso quando voltar aos dados iniciais (se havia filtros antes)
+      if (hadPreviousFilters) {
+        toast.success('Dados atualizados com sucesso!')
+      }
     }
+
+    // Atualizar a referência dos filtros anteriores
+    previousFiltersRef.current = filters
   }, [filters.dataInicio, filters.dataFim, initialData])
 
   return {

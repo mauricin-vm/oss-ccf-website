@@ -35,7 +35,8 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token }) => {
-        // Simplesmente verifica se há token
+        // Verifica apenas se há token válido
+        // A validação do usuário no banco será feita pelo SessionValidator
         return !!token
       }
     }

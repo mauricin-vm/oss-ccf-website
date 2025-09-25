@@ -445,7 +445,7 @@ async function migrarAcordos() {
         console.log(`📋 Status do acordo: ${acordoData.status}`)
 
         // Criar histórico do processo
-        let tituloHistorico = 'Acordo de Pagamento Criado (Migração)'
+        let tituloHistorico = 'Acordo de Transação Excepcional Criado (Migração)'
         if (processo.tipo === 'COMPENSACAO') {
           tituloHistorico = 'Acordo de Compensação Criado (Migração)'
         } else if (processo.tipo === 'DACAO_PAGAMENTO') {

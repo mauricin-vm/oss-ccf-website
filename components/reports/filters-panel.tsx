@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { CalendarIcon, Filter, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { toast } from 'sonner'
 
 export interface FiltersState {
   dataInicio?: Date
@@ -29,33 +30,16 @@ interface FiltersPanelProps {
 }
 
 export function FiltersPanel({ filters, onFiltersChange }: FiltersPanelProps) {
+  const [mounted, setMounted] = useState(false)
   const [showStartCalendar, setShowStartCalendar] = useState(false)
   const [showEndCalendar, setShowEndCalendar] = useState(false)
   const startCalendarRef = useRef<HTMLDivElement>(null)
   const endCalendarRef = useRef<HTMLDivElement>(null)
 
-  const handleValueChange = (key: keyof FiltersState, value: string[] | Date | number | undefined) => {
-    onFiltersChange({
-      ...filters,
-      [key]: value
-    })
-  }
-
-  // const clearAllFilters = () => {
-  //   onFiltersChange({
-  //     dataInicio: undefined,
-  //     dataFim: undefined,
-  //     tiposProcesso: [],
-  //     statusProcesso: [],
-  //     statusParcelas: [],
-  //     tiposDecisao: [],
-  //     valorMinimo: undefined,
-  //     valorMaximo: undefined
-  //   })
-  // }
-
-  const hasActiveFilters = (filters.dataInicio || filters.dataFim) ? true : false
-  const localActiveFiltersCount = (filters.dataInicio ? 1 : 0) + (filters.dataFim ? 1 : 0)
+  // Todos os hooks devem estar antes de qualquer return condicional
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -76,10 +60,60 @@ export function FiltersPanel({ filters, onFiltersChange }: FiltersPanelProps) {
     }
   }, [showStartCalendar, showEndCalendar])
 
+  const handleValueChange = (key: keyof FiltersState, value: string[] | Date | number | undefined) => {
+    const newFilters = {
+      ...filters,
+      [key]: value
+    }
+
+    // Detectar se é uma remoção de filtro (tinha valor e agora não tem)
+    const isRemoving = (key === 'dataInicio' && filters.dataInicio && !value) ||
+                      (key === 'dataFim' && filters.dataFim && !value)
+
+    if (isRemoving) {
+      // Se estava removendo o último filtro ativo, será mostrado toast no hook
+      // Se ainda restam filtros, será feita nova busca e mostrado toast de sucesso
+      // Não precisamos fazer nada aqui, o toast já será tratado pelo hook
+    }
+
+    onFiltersChange(newFilters)
+  }
+
+  // const clearAllFilters = () => {
+  //   onFiltersChange({
+  //     dataInicio: undefined,
+  //     dataFim: undefined,
+  //     tiposProcesso: [],
+  //     statusProcesso: [],
+  //     statusParcelas: [],
+  //     tiposDecisao: [],
+  //     valorMinimo: undefined,
+  //     valorMaximo: undefined
+  //   })
+  // }
+
+  const hasActiveFilters = (filters.dataInicio || filters.dataFim) ? true : false
+  const localActiveFiltersCount = (filters.dataInicio ? 1 : 0) + (filters.dataFim ? 1 : 0)
+
+  // Se não montou ainda no cliente, mostrar apenas um botão simples
+  if (!mounted) {
+    return (
+      <Button variant="outline" className="relative cursor-pointer" disabled>
+        <Filter className="mr-2 h-4 w-4" />
+        Filtros
+        {hasActiveFilters && (
+          <Badge variant="default" className="ml-2 px-1.5 py-0.5 text-xs">
+            {localActiveFiltersCount}
+          </Badge>
+        )}
+      </Button>
+    )
+  }
+
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline" className="relative">
+        <Button variant="outline" className="relative cursor-pointer">
           <Filter className="mr-2 h-4 w-4" />
           Filtros
           {hasActiveFilters && (

@@ -117,13 +117,16 @@ Assuntos administrativos diversos conforme registrado na ata original.`
         data: {
           tipoSessao: 'ADMINISTRATIVA',
           dataInicio: dataInicio,
+          dataFim: dataInicio, // Definir dataFim igual à dataInicio para sessões administrativas
           numeroAta: ata.numeroanoata,
           agenda: agenda,
           assuntosAdministrativos: 'Migrado do sistema anterior - detalhes na ata original.',
           presidenteId: presidente?.id || null,
           conselheiros: {
             connect: conselheirosEncontrados.map(c => ({ id: c.id }))
-          }
+          },
+          createdAt: dataInicio, // Definir createdAt como a data da sessão
+          updatedAt: dataInicio  // Definir updatedAt como a data da sessão também
         },
         include: {
           presidente: true,

@@ -6,20 +6,20 @@ const { Client } = require('pg')
 const prisma = new PrismaClient()
 
 // Configuração do banco antigo
-const dbAntigoConfig = {
-  host: 'localhost',
-  port: 5432,
-  database: 'sefin',
-  user: 'postgres',
-  password: 'admin'
-}
 // const dbAntigoConfig = {
-//   host: '10.20.5.196',
+//   host: 'localhost',
 //   port: 5432,
 //   database: 'sefin',
 //   user: 'postgres',
 //   password: 'admin'
 // }
+const dbAntigoConfig = {
+  host: '10.20.5.196',
+  port: 5432,
+  database: 'sefin',
+  user: 'postgres',
+  password: 'admin'
+}
 
 // Função principal de migração dos históricos
 async function migrarHistoricos() {

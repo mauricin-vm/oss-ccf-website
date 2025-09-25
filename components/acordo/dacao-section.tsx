@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Calculator, FileText, Home, Edit, Trash2, Loader2, Plus } from 'lucide-react'
+import { Calculator, FileText, Home, Edit, Trash2, Loader2, Plus, DollarSign } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface InscricaoOferecida {
@@ -65,12 +65,17 @@ export default function DacaoSection({
   const [observacoesAcordo, setObservacoesAcordo] = useState('')
   const [isLoadingData, setIsLoadingData] = useState(true)
 
+  // Estados para custas e honorários
+  const [custasAdvocaticias, setCustasAdvocaticias] = useState(0)
+  const [honorariosValor, setHonorariosValor] = useState(0)
+  const [honorariosMetodoPagamento, setHonorariosMetodoPagamento] = useState<'a_vista' | 'parcelado'>('a_vista')
+  const [honorariosParcelas, setHonorariosParcelas] = useState(1)
+
   // Estados para formulários dos modais
   const [inscricaoOferecidaForm, setInscricaoOferecidaForm] = useState({
     numeroInscricao: '',
     tipoInscricao: 'imobiliaria' as 'imobiliaria' | 'economica',
     valor: '',
-    dataVencimento: '',
     descricao: ''
   })
 
@@ -104,12 +109,16 @@ export default function DacaoSection({
       valorCompensar: valorCompensar,
       valorDacao: valorDacao,
       saldoFinal: saldoFinal,
-      observacoesAcordo: observacoesAcordo
+      observacoesAcordo: observacoesAcordo,
+      custasAdvocaticias: custasAdvocaticias,
+      honorariosValor: honorariosValor,
+      honorariosMetodoPagamento: honorariosMetodoPagamento,
+      honorariosParcelas: honorariosParcelas
     }
 
     onSelectionChange(dadosSelecionados)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inscricoesOferecidasAdicionadas, inscricoesCompensarAdicionadas, observacoesAcordo, isLoadingData])
+  }, [inscricoesOferecidasAdicionadas, inscricoesCompensarAdicionadas, observacoesAcordo, isLoadingData, custasAdvocaticias, honorariosValor, honorariosMetodoPagamento, honorariosParcelas])
 
   // Carregar dados existentes quando os valores forem recebidos
   useEffect(() => {
@@ -162,7 +171,6 @@ export default function DacaoSection({
       numeroInscricao: '',
       tipoInscricao: 'imobiliaria',
       valor: '',
-      dataVencimento: '',
       descricao: ''
     })
     setEditingInscricaoOferecida(null)
@@ -176,7 +184,6 @@ export default function DacaoSection({
       numeroInscricao: inscricao.numeroInscricao,
       tipoInscricao: inscricao.tipoInscricao as 'imobiliaria' | 'economica',
       valor: inscricao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      dataVencimento: inscricao.dataVencimento || '',
       descricao: inscricao.descricao || ''
     })
     setShowInscricaoOferecidaModal(true)
@@ -236,7 +243,6 @@ export default function DacaoSection({
       numeroInscricao: inscricaoOferecidaForm.numeroInscricao,
       tipoInscricao: inscricaoOferecidaForm.tipoInscricao,
       valor: valor,
-      dataVencimento: inscricaoOferecidaForm.dataVencimento || undefined,
       descricao: inscricaoOferecidaForm.descricao || undefined
     }
 
@@ -657,6 +663,110 @@ export default function DacaoSection({
           </CardContent>
         </Card>
 
+        {/* Custas e Honorários */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-amber-600" />
+              Custas e Honorários
+            </CardTitle>
+            <CardDescription>
+              Configure valores adicionais de custas e honorários
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="space-y-2">
+                <Label htmlFor="custasAdvocaticias">Custas</Label>
+                <Input
+                  id="custasAdvocaticias"
+                  type="text"
+                  value={custasAdvocaticias ? custasAdvocaticias.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}
+                  onChange={(e) => {
+                    const formattedValue = formatCurrency(e.target.value)
+                    const numericValue = parseCurrencyToNumber(formattedValue)
+                    setCustasAdvocaticias(numericValue)
+                  }}
+                  placeholder="Ex: 5.000,00"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="honorariosValor">Honorários</Label>
+                <Input
+                  id="honorariosValor"
+                  type="text"
+                  value={honorariosValor ? honorariosValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}
+                  onChange={(e) => {
+                    const formattedValue = formatCurrency(e.target.value)
+                    const numericValue = parseCurrencyToNumber(formattedValue)
+                    setHonorariosValor(numericValue)
+                  }}
+                  placeholder="Ex: 10.000,00"
+                />
+              </div>
+            </div>
+
+            {/* Configurações dos Honorários (só aparece se tem valor) */}
+            {honorariosValor > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+                <div className="space-y-2">
+                  <Label htmlFor="honorariosMetodoPagamento">Forma de Pagamento dos Honorários</Label>
+                  <select
+                    id="honorariosMetodoPagamento"
+                    value={honorariosMetodoPagamento}
+                    onChange={(e) => {
+                      const valor = e.target.value as 'a_vista' | 'parcelado'
+                      setHonorariosMetodoPagamento(valor)
+                      if (valor === 'a_vista') {
+                        setHonorariosParcelas(1)
+                      }
+                    }}
+                    className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    <option value="a_vista">À Vista</option>
+                    <option value="parcelado">Parcelado</option>
+                  </select>
+                </div>
+
+                {honorariosMetodoPagamento === 'parcelado' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="honorariosParcelas">Número de Parcelas</Label>
+                    <Input
+                      id="honorariosParcelas"
+                      min="1"
+                      max="12"
+                      value={honorariosParcelas}
+                      onChange={(e) => setHonorariosParcelas(parseInt(e.target.value) || 1)}
+                    />
+                  </div>
+                )}
+
+                {honorariosMetodoPagamento === 'parcelado' && honorariosParcelas >= 1 && (
+                  <div className="space-y-2">
+                    <Label>Valor por Parcela</Label>
+                    <Input
+                      value={`R$ ${(honorariosValor / honorariosParcelas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                      readOnly
+                      className="bg-gray-50 text-gray-700"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Resumo dos valores adicionais */}
+            {(custasAdvocaticias > 0 || honorariosValor > 0) && (
+              <div className="mt-4 p-3 bg-amber-50 rounded border border-amber-200">
+                <h6 className="font-medium text-amber-800 mb-2">Total de Custas e Honorários:</h6>
+                <div className="text-lg font-bold text-amber-700">
+                  R$ {(custasAdvocaticias + honorariosValor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Observações */}
         <Card>
           <CardHeader>
@@ -679,16 +789,16 @@ export default function DacaoSection({
         </Card>
       </div>
 
-      {/* Modal de Bem/Imóvel Oferecido */}
+      {/* Modal de Inscrição Oferecida */}
       <Dialog open={showInscricaoOferecidaModal} onOpenChange={setShowInscricaoOferecidaModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Home className="h-5 w-5 text-green-600" />
-              {editingInscricaoOferecida ? 'Editar Bem/Imóvel' : 'Adicionar Bem/Imóvel'}
+              {editingInscricaoOferecida ? 'Editar Inscrição' : 'Adicionar Inscrição'}
             </DialogTitle>
             <DialogDescription>
-              {editingInscricaoOferecida ? 'Edite as informações do bem/imóvel' : 'Adicione as informações do bem/imóvel'}
+              {editingInscricaoOferecida ? 'Edite as informações da inscrição' : 'Adicione as informações da inscrição'}
             </DialogDescription>
           </DialogHeader>
 
@@ -736,19 +846,6 @@ export default function DacaoSection({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="modal-vencimento-inscricao">Data de Vencimento</Label>
-              <Input
-                id="modal-vencimento-inscricao"
-                type="date"
-                value={inscricaoOferecidaForm.dataVencimento ? inscricaoOferecidaForm.dataVencimento.split('T')[0] : ''}
-                onChange={(e) => {
-                  const dateValue = e.target.value
-                  const adjustedDate = dateValue ? dateValue + 'T12:00:00' : dateValue
-                  setInscricaoOferecidaForm({ ...inscricaoOferecidaForm, dataVencimento: adjustedDate })
-                }}
-              />
-            </div>
 
             <div className="space-y-2">
               <Label htmlFor="modal-descricao-inscricao">Descrição</Label>
@@ -757,7 +854,7 @@ export default function DacaoSection({
                 rows={2}
                 value={inscricaoOferecidaForm.descricao}
                 onChange={(e) => setInscricaoOferecidaForm({ ...inscricaoOferecidaForm, descricao: e.target.value })}
-                placeholder="Informações adicionais sobre o bem/imóvel..."
+                placeholder="Informações adicionais sobre a inscrição..."
               />
             </div>
 
@@ -775,7 +872,7 @@ export default function DacaoSection({
                 onClick={validateAndSaveInscricaoOferecida}
                 className="cursor-pointer"
               >
-                {editingInscricaoOferecida ? 'Salvar Alterações' : 'Adicionar Bem/Imóvel'}
+                {editingInscricaoOferecida ? 'Salvar Alterações' : 'Adicionar Inscrição'}
               </Button>
             </div>
           </div>

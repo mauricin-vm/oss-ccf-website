@@ -88,7 +88,7 @@ export default function TransacaoExcepcionalAcordoSection({
   const [inscricaoForm, setInscricaoForm] = useState({
     numeroInscricao: '',
     tipoInscricao: 'imobiliaria' as 'imobiliaria' | 'economica',
-    debitos: [] as InscricaoDebito[]
+    debitos: [{ id: '', descricao: '', valor: 0, dataVencimento: '' }] as InscricaoDebito[]
   })
 
   // Calcular valores dinâmicos para o resumo
@@ -131,7 +131,7 @@ export default function TransacaoExcepcionalAcordoSection({
     setInscricaoForm({
       numeroInscricao: '',
       tipoInscricao: 'imobiliaria',
-      debitos: []
+      debitos: [{ id: '', descricao: '', valor: 0, dataVencimento: '' }]
     })
     setShowInscricaoModal(true)
   }
@@ -275,7 +275,10 @@ export default function TransacaoExcepcionalAcordoSection({
     })
   }
 
-  const parseCurrencyToNumber = (value: string): number => {
+  const parseCurrencyToNumber = (value: string | number): number => {
+    if (typeof value === 'number') return value
+    if (!value || typeof value !== 'string') return 0
+
     // Remove tudo que não for número ou vírgula
     const cleanValue = value.replace(/[^\d,]/g, '')
 
@@ -292,9 +295,7 @@ export default function TransacaoExcepcionalAcordoSection({
         i === index
           ? {
             ...debito,
-            [field]: field === 'valor'
-              ? parseCurrencyToNumber(value as string)
-              : value
+            [field]: value
           }
           : debito
       )
@@ -562,14 +563,7 @@ export default function TransacaoExcepcionalAcordoSection({
                           onChange={(e) => {
                             const formattedValue = formatCurrency(e.target.value)
                             const numericValue = parseCurrencyToNumber(formattedValue)
-                            updateDebito(index, 'valor', formattedValue)
-                            // Update the form state with the formatted value for display
-                            setInscricaoForm(prev => ({
-                              ...prev,
-                              debitos: prev.debitos.map((d, i) =>
-                                i === index ? { ...d, valor: numericValue } : d
-                              )
-                            }))
+                            updateDebito(index, 'valor', numericValue)
                             clearFieldError(`valor-${index}`)
                           }}
                           onFocus={() => clearFieldError(`valor-${index}`)}
@@ -596,6 +590,15 @@ export default function TransacaoExcepcionalAcordoSection({
                     </div>
                   </div>
                 ))}
+              </div>
+
+              <div className="p-3 bg-blue-50 rounded border border-blue-200">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-blue-800">Total dos Débitos:</span>
+                  <span className="text-lg font-bold text-blue-700">
+                    R$ {inscricaoForm.debitos.reduce((total, d) => total + (d.valor || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -717,12 +720,12 @@ export default function TransacaoExcepcionalAcordoSection({
             )}
           </div>
 
-          {/* Custas Advocatícias e Honorários */}
+          {/* Custas e Honorários */}
           <div className="border-t pt-4">
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2">
-                <Label htmlFor="custasAdvocaticias">Custas Advocatícias</Label>
+                <Label htmlFor="custasAdvocaticias">Custas</Label>
                 <Input
                   id="custasAdvocaticias"
                   type="text"
@@ -872,7 +875,7 @@ export default function TransacaoExcepcionalAcordoSection({
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                       {propostaFinal.custasAdvocaticias > 0 && (
                         <div>
-                          <span className="text-amber-600">Custas Advocatícias:</span>
+                          <span className="text-amber-600">Custas:</span>
                           <p className="font-medium text-amber-700">
                             R$ {propostaFinal.custasAdvocaticias.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </p>

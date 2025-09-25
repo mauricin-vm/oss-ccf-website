@@ -88,6 +88,15 @@ export async function GET(
                 pagamentos: true
               },
               orderBy: { numero: 'asc' }
+            },
+            transacao: true,
+            compensacao: true,
+            dacao: true,
+            creditos: true,
+            inscricoes: {
+              include: {
+                debitos: true
+              }
             }
           },
           orderBy: { createdAt: 'desc' }
@@ -237,19 +246,103 @@ export async function GET(
       }
     }
     // Converter campos Decimal para números antes de enviar para o cliente
+    let acordoEnriquecido = null
+    if (processo.acordos && processo.acordos[0]) {
+      const acordo = processo.acordos[0]
+
+      // Enriquecer acordo com details necessários para cálculos
+      acordoEnriquecido = {
+        ...acordo,
+        valorTotal: Number(acordo.valorTotal),
+        parcelas: acordo.parcelas.map((parcela: ParcelaPrisma) => ({
+          ...parcela,
+          valor: Number(parcela.valor)
+        }))
+      }
+
+      // Adicionar transacaoDetails se for transação excepcional
+      if (acordo.tipoProcesso === 'TRANSACAO_EXCEPCIONAL' && acordo.transacao) {
+        const transacao = acordo.transacao
+
+        // Calcular valores baseados nos dados da transação
+        const valorTotal = acordo.inscricoes.reduce((total, inscricao) => {
+          return total + inscricao.debitos.reduce((subtotal, debito) => {
+            return subtotal + Number(debito.valorLancado)
+          }, 0)
+        }, 0)
+
+        const valorProposto = Number(transacao.valorTotalProposto)
+        const valorDesconto = valorTotal - valorProposto
+        const valorEntrada = Number(transacao.valorEntrada) || 0
+        const quantidadeParcelas = transacao.quantidadeParcelas || 1
+        const metodoPagamento = transacao.metodoPagamento
+
+        const custasAdvocaticias = Number(transacao.custasAdvocaticias) || 0
+        const honorariosValor = Number(transacao.honorariosValor) || 0
+
+        acordoEnriquecido.transacaoDetails = {
+          valorTotalInscricoes: valorTotal,
+          valorTotalProposto: valorProposto,
+          desconto: valorDesconto,
+          percentualDesconto: valorTotal > 0 ? (valorDesconto / valorTotal) * 100 : 0,
+          entrada: valorEntrada,
+          custasAdvocaticias: custasAdvocaticias,
+          custasDataVencimento: transacao.custasDataVencimento ? transacao.custasDataVencimento.toISOString() : null,
+          custasDataPagamento: transacao.custasDataPagamento ? transacao.custasDataPagamento.toISOString() : null,
+          honorariosValor: honorariosValor,
+          honorariosMetodoPagamento: transacao.honorariosMetodoPagamento,
+          honorariosParcelas: transacao.honorariosParcelas,
+          totalGeral: valorProposto + custasAdvocaticias + honorariosValor
+        }
+      }
+
+      // Adicionar compensacaoDetails se for compensação
+      if (acordo.tipoProcesso === 'COMPENSACAO' && acordo.compensacao) {
+        const compensacao = acordo.compensacao
+
+        acordoEnriquecido.compensacaoDetails = {
+          valorTotalCreditos: Number(compensacao.valorTotalCreditos) || 0,
+          valorTotalDebitos: Number(compensacao.valorTotalDebitos) || 0,
+          valorLiquido: Number(compensacao.valorLiquido) || 0,
+          custasAdvocaticias: Number(compensacao.custasAdvocaticias) || 0,
+          custasDataVencimento: compensacao.custasDataVencimento ? compensacao.custasDataVencimento.toISOString() : null,
+          custasDataPagamento: compensacao.custasDataPagamento ? compensacao.custasDataPagamento.toISOString() : null,
+          honorariosValor: Number(compensacao.honorariosValor) || 0,
+          honorariosMetodoPagamento: compensacao.honorariosMetodoPagamento,
+          honorariosParcelas: compensacao.honorariosParcelas,
+          honorariosDataVencimento: compensacao.honorariosDataVencimento ? compensacao.honorariosDataVencimento.toISOString() : null,
+          honorariosDataPagamento: compensacao.honorariosDataPagamento ? compensacao.honorariosDataPagamento.toISOString() : null
+        }
+      }
+
+      // Adicionar dacaoDetails se for dação em pagamento
+      if (acordo.tipoProcesso === 'DACAO_PAGAMENTO' && acordo.dacao) {
+        const dacao = acordo.dacao
+
+        acordoEnriquecido.dacaoDetails = {
+          valorTotalOferecido: Number(dacao.valorTotalOferecido) || 0,
+          valorTotalCompensar: Number(dacao.valorTotalCompensar) || 0,
+          valorLiquido: Number(dacao.valorLiquido) || 0,
+          custasAdvocaticias: Number(dacao.custasAdvocaticias) || 0,
+          custasDataVencimento: dacao.custasDataVencimento ? dacao.custasDataVencimento.toISOString() : null,
+          custasDataPagamento: dacao.custasDataPagamento ? dacao.custasDataPagamento.toISOString() : null,
+          honorariosValor: Number(dacao.honorariosValor) || 0,
+          honorariosMetodoPagamento: dacao.honorariosMetodoPagamento,
+          honorariosParcelas: dacao.honorariosParcelas,
+          honorariosDataVencimento: dacao.honorariosDataVencimento ? dacao.honorariosDataVencimento.toISOString() : null,
+          honorariosDataPagamento: dacao.honorariosDataPagamento ? dacao.honorariosDataPagamento.toISOString() : null
+        }
+      }
+    }
+
     const processData = {
       ...processo,
       historicos,
       valoresEspecificos,
-      acordo: processo.acordos && processo.acordos[0] ? {
-        ...processo.acordos[0],
-        valorTotal: Number(processo.acordos[0].valorTotal),
-        parcelas: processo.acordos[0].parcelas.map((parcela: ParcelaPrisma) => ({
-          ...parcela,
-          valor: Number(parcela.valor)
-        }))
-      } : null
+      acordo: acordoEnriquecido
     }
+
+
     return NextResponse.json({ processo: processData })
   } catch (error) {
     console.error('Erro ao buscar processo:', error)

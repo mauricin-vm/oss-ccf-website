@@ -15,7 +15,7 @@ interface Credito {
   tipo: string
   numero: string
   valor: number
-  dataVencimento?: string
+  dataVencimento?: string // Mantido como opcional para compatibilidade
   descricao?: string
 }
 
@@ -65,12 +65,17 @@ export default function CompensacaoSection({
   const [observacoesAcordo, setObservacoesAcordo] = useState('')
   const [isLoadingData, setIsLoadingData] = useState(true)
 
+  // Estados para custas e honorários
+  const [custasAdvocaticias, setCustasAdvocaticias] = useState(0)
+  const [honorariosValor, setHonorariosValor] = useState(0)
+  const [honorariosMetodoPagamento, setHonorariosMetodoPagamento] = useState<'a_vista' | 'parcelado'>('a_vista')
+  const [honorariosParcelas, setHonorariosParcelas] = useState(1)
+
   // Estados para formulários dos modais
   const [creditoForm, setCreditoForm] = useState({
     tipo: 'precatorio' as 'precatorio' | 'credito_tributario' | 'alvara_judicial' | 'outro',
     numero: '',
     valor: '',
-    dataVencimento: '',
     descricao: ''
   })
 
@@ -98,6 +103,7 @@ export default function CompensacaoSection({
     const numericValue = cleanValue.replace(',', '.')
     return parseFloat(numericValue) || 0
   }
+
 
   const getTipoLabel = (tipo: string) => {
     switch (tipo) {
@@ -130,12 +136,17 @@ export default function CompensacaoSection({
       valorDebitos: valorDebitos,
       valorCompensacao: valorCompensacao,
       saldoFinal: saldoFinal,
-      observacoesAcordo: observacoesAcordo
+      observacoesAcordo: observacoesAcordo,
+      // Incluir custas e honorários
+      custasAdvocaticias: custasAdvocaticias,
+      honorariosValor: honorariosValor,
+      honorariosMetodoPagamento: honorariosMetodoPagamento,
+      honorariosParcelas: honorariosParcelas
     }
 
     onSelectionChange(dadosSelecionados)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [creditosAdicionados, inscricoesAdicionadas, observacoesAcordo, isLoadingData])
+  }, [creditosAdicionados, inscricoesAdicionadas, observacoesAcordo, custasAdvocaticias, honorariosValor, honorariosMetodoPagamento, honorariosParcelas, isLoadingData])
 
   // Carregar dados salvos do banco de dados
   useEffect(() => {
@@ -172,7 +183,6 @@ export default function CompensacaoSection({
       tipo: 'precatorio',
       numero: '',
       valor: '',
-      dataVencimento: '',
       descricao: ''
     })
     setShowCreditoModal(true)
@@ -184,7 +194,6 @@ export default function CompensacaoSection({
       tipo: credito.tipo as 'precatorio' | 'credito_tributario' | 'alvara_judicial' | 'outro',
       numero: credito.numero,
       valor: credito.valor ? credito.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
-      dataVencimento: credito.dataVencimento || '',
       descricao: credito.descricao || ''
     })
     setShowCreditoModal(true)
@@ -248,7 +257,6 @@ export default function CompensacaoSection({
       tipo: creditoForm.tipo,
       numero: creditoForm.numero,
       valor: valor,
-      dataVencimento: creditoForm.dataVencimento,
       descricao: creditoForm.descricao
     }
 
@@ -568,11 +576,6 @@ export default function CompensacaoSection({
                       <p className="text-lg font-bold text-green-700">
                         R$ {credito.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
-                      {credito.dataVencimento && (
-                        <p className="text-xs text-green-600">
-                          Vence: {new Date(credito.dataVencimento).toLocaleDateString('pt-BR')}
-                        </p>
-                      )}
                       {credito.descricao && (
                         <p className="text-xs text-green-600">
                           {credito.descricao}
@@ -686,6 +689,112 @@ export default function CompensacaoSection({
         </CardContent>
       </Card>
 
+      {/* Custas e Honorários */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-amber-600" />
+            Custas e Honorários
+          </CardTitle>
+          <CardDescription>
+            Configure valores adicionais de custas e honorários
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="space-y-2">
+              <Label htmlFor="custasAdvocaticias">Custas</Label>
+              <Input
+                id="custasAdvocaticias"
+                type="text"
+                value={custasAdvocaticias ? custasAdvocaticias.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}
+                onChange={(e) => {
+                  const formattedValue = formatCurrency(e.target.value)
+                  const numericValue = parseCurrencyToNumber(formattedValue)
+                  setCustasAdvocaticias(numericValue)
+                }}
+                placeholder="Ex: 5.000,00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="honorariosValor">Honorários</Label>
+              <Input
+                id="honorariosValor"
+                type="text"
+                value={honorariosValor ? honorariosValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}
+                onChange={(e) => {
+                  const formattedValue = formatCurrency(e.target.value)
+                  const numericValue = parseCurrencyToNumber(formattedValue)
+                  setHonorariosValor(numericValue)
+                }}
+                placeholder="Ex: 10.000,00"
+              />
+            </div>
+          </div>
+
+          {/* Configurações dos Honorários (só aparece se tem valor) */}
+          {honorariosValor > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+              <div className="space-y-2">
+                <Label htmlFor="honorariosMetodoPagamento">Forma de Pagamento dos Honorários</Label>
+                <select
+                  id="honorariosMetodoPagamento"
+                  value={honorariosMetodoPagamento}
+                  onChange={(e) => {
+                    const valor = e.target.value as 'a_vista' | 'parcelado'
+                    setHonorariosMetodoPagamento(valor)
+                    if (valor === 'a_vista') {
+                      setHonorariosParcelas(1)
+                    }
+                  }}
+                  className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="a_vista">À Vista</option>
+                  <option value="parcelado">Parcelado</option>
+                </select>
+              </div>
+
+              {honorariosMetodoPagamento === 'parcelado' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="honorariosParcelas">Parcelas dos Honorários</Label>
+                    <Input
+                      id="honorariosParcelas"
+                      type="text"
+                      value={honorariosParcelas}
+                      onChange={(e) => setHonorariosParcelas(parseInt(e.target.value) || 1)}
+                      placeholder="Ex: 6"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="honorariosValorParcela">Valor por Parcela</Label>
+                    <Input
+                      id="honorariosValorParcela"
+                      type="text"
+                      value={(honorariosValor / honorariosParcelas).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      disabled={true}
+                      className="bg-gray-100"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Resumo dos valores adicionais */}
+          {(custasAdvocaticias > 0 || honorariosValor > 0) && (
+            <div className="mt-4 p-3 bg-amber-50 rounded border border-amber-200">
+              <h6 className="font-medium text-amber-800 mb-2">Total de Custas e Honorários:</h6>
+              <div className="text-lg font-bold text-amber-700">
+                R$ {(custasAdvocaticias + honorariosValor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Observações do Acordo */}
       <Card>
         <CardHeader>
@@ -767,21 +876,6 @@ export default function CompensacaoSection({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="modal-vencimento">Data de Vencimento</Label>
-              <Input
-                id="creditoVencimento"
-                type="date"
-                value={creditoForm.dataVencimento ? creditoForm.dataVencimento.split('T')[0] : ''}
-                onChange={(e) => {
-                  const dateValue = e.target.value
-                  const adjustedDate = dateValue ? dateValue + 'T12:00:00' : dateValue
-                  setCreditoForm({ ...creditoForm, dataVencimento: adjustedDate })
-                  clearFieldError('creditoVencimento')
-                }}
-                onFocus={() => clearFieldError('creditoVencimento')}
-              />
-            </div>
 
             <div className="space-y-2">
               <Label htmlFor="modal-descricao">Descrição</Label>

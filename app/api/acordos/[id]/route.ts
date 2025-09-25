@@ -110,6 +110,54 @@ export async function GET(
       return NextResponse.json(acordoEnriquecido)
     }
 
+    // Processar dados específicos de compensação
+    if (acordo.tipoProcesso === 'COMPENSACAO' && acordo.compensacao) {
+      const compensacao = acordo.compensacao
+
+      const acordoEnriquecido = {
+        ...acordo,
+        compensacaoDetails: {
+          valorTotalCreditos: Number(compensacao.valorTotalCreditos) || 0,
+          valorTotalDebitos: Number(compensacao.valorTotalDebitos) || 0,
+          valorLiquido: Number(compensacao.valorLiquido) || 0,
+          custasAdvocaticias: Number(compensacao.custasAdvocaticias) || 0,
+          custasDataVencimento: compensacao.custasDataVencimento ? compensacao.custasDataVencimento.toISOString() : null,
+          custasDataPagamento: compensacao.custasDataPagamento ? compensacao.custasDataPagamento.toISOString() : null,
+          honorariosValor: Number(compensacao.honorariosValor) || 0,
+          honorariosMetodoPagamento: compensacao.honorariosMetodoPagamento,
+          honorariosParcelas: compensacao.honorariosParcelas,
+          honorariosDataVencimento: compensacao.honorariosDataVencimento ? compensacao.honorariosDataVencimento.toISOString() : null,
+          honorariosDataPagamento: compensacao.honorariosDataPagamento ? compensacao.honorariosDataPagamento.toISOString() : null
+        }
+      }
+
+      return NextResponse.json(acordoEnriquecido)
+    }
+
+    // Processar dados específicos de dação em pagamento
+    if (acordo.tipoProcesso === 'DACAO_PAGAMENTO' && acordo.dacao) {
+      const dacao = acordo.dacao
+
+      const acordoEnriquecido = {
+        ...acordo,
+        dacaoDetails: {
+          valorTotalOferecido: Number(dacao.valorTotalOferecido) || 0,
+          valorTotalCompensar: Number(dacao.valorTotalCompensar) || 0,
+          valorLiquido: Number(dacao.valorLiquido) || 0,
+          custasAdvocaticias: Number(dacao.custasAdvocaticias) || 0,
+          custasDataVencimento: dacao.custasDataVencimento ? dacao.custasDataVencimento.toISOString() : null,
+          custasDataPagamento: dacao.custasDataPagamento ? dacao.custasDataPagamento.toISOString() : null,
+          honorariosValor: Number(dacao.honorariosValor) || 0,
+          honorariosMetodoPagamento: dacao.honorariosMetodoPagamento,
+          honorariosParcelas: dacao.honorariosParcelas,
+          honorariosDataVencimento: dacao.honorariosDataVencimento ? dacao.honorariosDataVencimento.toISOString() : null,
+          honorariosDataPagamento: dacao.honorariosDataPagamento ? dacao.honorariosDataPagamento.toISOString() : null
+        }
+      }
+
+      return NextResponse.json(acordoEnriquecido)
+    }
+
     return NextResponse.json(acordo)
   } catch (error) {
     console.error('Erro ao buscar acordo:', error)
@@ -289,7 +337,7 @@ export async function DELETE(
     }
     const acordo = await prisma.acordo.findUnique({
       where: { id },
-      include: { 
+      include: {
         processo: true,
         parcelas: {
           include: {
@@ -382,7 +430,7 @@ export async function DELETE(
     descricao += ` Processo retornado ao status "Julgado".`
 
     // Definir título baseado no tipo de processo
-    let tituloHistorico = 'Acordo de Pagamento Excluído'
+    let tituloHistorico = 'Acordo de Transação Excepcional Excluído'
     if (tipoProcesso === 'COMPENSACAO') {
       tituloHistorico = 'Acordo de Compensação Excluído'
     } else if (tipoProcesso === 'DACAO_PAGAMENTO') {

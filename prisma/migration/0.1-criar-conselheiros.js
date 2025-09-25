@@ -18,6 +18,7 @@ const conselheiros = [
   { nome: 'Cláudia de Araújo Melo' },
   { nome: 'Danilo Isaias Boa Ventura' },
   { nome: 'Denir de Souza Nantes' },
+  { nome: 'Emerson Augusto Maeda Taira' },
   { nome: 'Francimar Messias Assis Júnior' },
   { nome: 'Jorge Takeshi Otubo' },
   { nome: 'Isabela Batista Machado Soares Scaramal' },
@@ -29,11 +30,13 @@ const conselheiros = [
   { nome: 'Kátia Silene Sarturi Warde' },
   { nome: 'Mariana Rodrigues Moreira' },
   { nome: 'Paulo Victor Medeiros Damasceno' },
+  { nome: 'Pedro Sol Milhomem Santos Ferreira' },
   { nome: 'Ricardo Vieira Dias' },
   { nome: 'Rosemeire Aparecida Cristaldo Palmeira' },
   { nome: 'Ronney Alencar Moreira' },
   { nome: 'Sinomar Tiago Rodrigues' },
-  { nome: 'Thales Emanoel Azevedo' }
+  { nome: 'Thales Emanoel Azevedo' },
+  { nome: 'Vitor Pereira Afonso' }
 ]
 
 async function criarConselheiros() {

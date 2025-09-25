@@ -5,15 +5,16 @@
       "processoNumero": "37436/2025-11",
       "dataAssinatura": "2024-08-15",
       "dataVencimento": "2025-08-15",
-      "modalidadePagamento": "parcelado",
+      "valorTotalProposto": 150000.00,
+      "valorEntrada": 150000.00,
+      "metodoPagamento": "parcelado", // parcelado ou avista
       "numeroParcelas": 24,
-      "valorTotal": 150000.00,
-      "valorDesconto": 30000.00,
-      "percentualDesconto": 20.0,
-      "valorFinal": 120000.00,
-      "valorEntrada": 12000.00,
+      "custas": 6250.00,
+      "honorarios": "",
+      "honorariosMetodoPagamento": "parcelado", // parcelado ou avista
+      "honorariosParcelas": 24,
       "status": "ativo",
-      "observacoes": "Acordo de transação excepcional com entrada de 10% e desconto de 20%",
+      "observacoes": "",
       "dadosEspecificos": {
         "inscricoes": [
           {

@@ -228,16 +228,21 @@ function convertResultadoToEnum(resultado) {
 // Função para converter decisão para TipoDecisao
 function convertDecisaoToEnum(decisao) {
   if (!decisao || decisao.trim() === '') {
-    return 'DEFERIDO' // Padrão para casos sem decisão especificada
+    return null // Retorna null para casos sem decisão especificada
   }
 
   const decisaoNormalizada = normalizeString(decisao)
 
-  if (decisaoNormalizada.includes('indeferido') || decisaoNormalizada.includes('negado')) {
+  // Mapear exatamente os valores possíveis do JSON
+  if (decisaoNormalizada.includes('indeferimento') || decisaoNormalizada.includes('indeferido')) {
     return 'INDEFERIDO'
-  } else if (decisaoNormalizada.includes('parcial')) {
+  } else if (decisaoNormalizada.includes('deferimento parcial') || decisaoNormalizada.includes('parcial')) {
     return 'PARCIAL'
+  } else if (decisaoNormalizada.includes('deferimento') || decisaoNormalizada.includes('deferido')) {
+    return 'DEFERIDO'
   } else {
+    // Para valores não mapeados, usar DEFERIDO como padrão
+    console.log(`⚠️  Decisão não mapeada: "${decisao}" - usando DEFERIDO como padrão`)
     return 'DEFERIDO'
   }
 }

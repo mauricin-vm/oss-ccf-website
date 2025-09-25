@@ -32,8 +32,17 @@ async function limparTabelas() {
       { nome: 'PagamentoParcela', model: 'pagamentoParcela' },
       { nome: 'Parcela', model: 'parcela' },
 
-      // Acordos
+      // Acordos - débitos e inscrições relacionadas
+      { nome: 'AcordoDebito', model: 'acordoDebito' },
       { nome: 'AcordoInscricao', model: 'acordoInscricao' },
+      { nome: 'AcordoCredito', model: 'acordoCredito' },
+
+      // Acordos - tipos específicos
+      { nome: 'AcordoTransacao', model: 'acordoTransacao' },
+      { nome: 'AcordoCompensacao', model: 'acordoCompensacao' },
+      { nome: 'AcordoDacao', model: 'acordoDacao' },
+
+      // Acordos - principal
       { nome: 'AcordoDetalhes', model: 'acordoDetalhes' },
       { nome: 'Acordo', model: 'acordo' },
 

@@ -400,22 +400,38 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
   const loadAllProcessos = async () => {
     try {
       setIsLoadingProcessos(true)
+      let allProcessos: Processo[] = []
+      let currentPage = 1
+      let hasMorePages = true
 
-      // Buscar todos os processos sem filtros (igual à página de processos)
-      const response = await fetch('/api/processos/aptos-acordo?limit=1000', {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
+      // Carregar todos os processos fazendo múltiplas requisições
+      while (hasMorePages) {
+        const response = await fetch(`/api/processos/aptos-acordo?page=${currentPage}&limit=50`, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (!response.ok) {
+          throw new Error('Erro ao carregar processos')
         }
-      })
 
-      if (!response.ok) {
-        throw new Error('Erro ao carregar processos')
+        const data = await response.json()
+        allProcessos = [...allProcessos, ...(data.processos || [])]
+
+        // Verificar se há mais páginas
+        hasMorePages = data.pagination && currentPage < data.pagination.pages
+        currentPage++
+
+        // Proteção contra loop infinito
+        if (currentPage > 100) {
+          console.warn('Limite de páginas atingido - possível loop infinito')
+          break
+        }
       }
 
-      const data = await response.json()
-      setAllProcessos(data.processos || [])
-      // Não precisa mais definir setError(null)
+      setAllProcessos(allProcessos)
     } catch (error) {
       console.error('Erro ao carregar processos:', error)
       toast.error('Erro ao carregar processos elegíveis')
@@ -542,7 +558,6 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
   calcularValores()
 
   const onSubmit = async (data: AcordoFormInput) => {
-    console.log('onSubmit chamado com dados:', data)
     setIsLoading(true)
 
     try {
@@ -610,23 +625,6 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
           valorDesconto: valores.desconto,
           dadosEspecificos
         }
-      }
-
-
-
-      console.log('ACORDO-FORM - finalData sendo enviado para API:', finalData)
-
-      // Log específico para verificar a estrutura dos arrays
-      if (selectedProcesso?.tipo === 'DACAO_PAGAMENTO') {
-        console.log('ACORDO-FORM - Detalhes dos arrays em finalData:', {
-          dadosEspecificos: finalData.dadosEspecificos,
-          inscricoesOferecidasAdicionadas: finalData.dadosEspecificos?.inscricoesOferecidasAdicionadas,
-          inscricoesCompensarAdicionadas: finalData.dadosEspecificos?.inscricoesCompensarAdicionadas,
-          jsonStringified: JSON.stringify({
-            inscricoesOferecidasAdicionadas: finalData.dadosEspecificos?.inscricoesOferecidasAdicionadas,
-            inscricoesCompensarAdicionadas: finalData.dadosEspecificos?.inscricoesCompensarAdicionadas
-          })
-        })
       }
 
       const bodyToSend = JSON.stringify(finalData)
@@ -713,8 +711,6 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
     }
   }
 
-  // Os processos são filtrados localmente
-  const processosFiltrados = paginatedProcessos
 
 
   // Função para validar dados customizados (não relacionados aos inputs do formulário)
@@ -743,7 +739,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
       }
       // 4. Se parcelado, quantidade de parcelas
       if (dadosEspecificos?.propostaFinal?.metodoPagamento === 'parcelado' &&
-          (!dadosEspecificos?.propostaFinal?.quantidadeParcelas || dadosEspecificos?.propostaFinal?.quantidadeParcelas < 1)) {
+        (!dadosEspecificos?.propostaFinal?.quantidadeParcelas || dadosEspecificos?.propostaFinal?.quantidadeParcelas < 1)) {
         toast.warning('Para parcelamento, defina uma quantidade válida de parcelas (mínimo 1)')
         return false
       }
@@ -751,13 +747,13 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
     else if (selectedProcesso.tipo === 'DACAO_PAGAMENTO') {
       // 1. Inscrições oferecidas (min 1)
       if (!dadosEspecificos?.inscricoesOferecidasAdicionadas ||
-          dadosEspecificos.inscricoesOferecidasAdicionadas.length === 0) {
+        dadosEspecificos.inscricoesOferecidasAdicionadas.length === 0) {
         toast.warning('Adicione pelo menos uma inscrição oferecida para dação em pagamento')
         return false
       }
       // 2. Inscrições a compensar (min 1)
       if (!dadosEspecificos?.inscricoesCompensarAdicionadas ||
-          dadosEspecificos.inscricoesCompensarAdicionadas.length === 0) {
+        dadosEspecificos.inscricoesCompensarAdicionadas.length === 0) {
         toast.warning('Adicione pelo menos uma inscrição a compensar')
         return false
       }
@@ -765,13 +761,13 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
     else if (selectedProcesso.tipo === 'COMPENSACAO') {
       // 1. Créditos para compensação (min 1)
       if (!dadosEspecificos?.creditosAdicionados ||
-          dadosEspecificos.creditosAdicionados.length === 0) {
+        dadosEspecificos.creditosAdicionados.length === 0) {
         toast.warning('Adicione pelo menos um crédito para compensação')
         return false
       }
       // 2. Inscrições a compensar (min 1)
       if (!dadosEspecificos?.inscricoesAdicionadas ||
-          dadosEspecificos.inscricoesAdicionadas.length === 0) {
+        dadosEspecificos.inscricoesAdicionadas.length === 0) {
         toast.warning('Adicione pelo menos uma inscrição a compensar')
         return false
       }
@@ -871,9 +867,9 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                     </div>
                   </div>
                 </div>
-              ) : processosFiltrados.length > 0 ? (
+              ) : paginatedProcessos.length > 0 ? (
                 <div className="border rounded-lg max-h-96 overflow-y-auto">
-                  {processosFiltrados.map((processo) => (
+                  {paginatedProcessos.map((processo) => (
                     <div
                       key={processo.id}
                       onClick={() => handleSelectProcesso(processo)}
@@ -916,6 +912,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                       size="sm"
                       onClick={() => setCurrentPage(currentPage - 1)}
                       disabled={currentPage <= 1}
+                      className="cursor-pointer"
                     >
                       Anterior
                     </Button>
@@ -929,6 +926,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                             variant={page === currentPage ? "default" : "outline"}
                             size="sm"
                             onClick={() => setCurrentPage(page)}
+                            className="cursor-pointer"
                           >
                             {page}
                           </Button>
@@ -941,6 +939,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
                       size="sm"
                       onClick={() => setCurrentPage(currentPage + 1)}
                       disabled={currentPage >= totalPages}
+                      className="cursor-pointer"
                     >
                       Próxima
                     </Button>

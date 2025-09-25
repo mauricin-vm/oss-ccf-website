@@ -472,6 +472,16 @@ model AcordoCompensacao {
   valorTotalDebitos  Decimal  @db.Decimal(15, 2)
   valorLiquido       Decimal  @db.Decimal(15, 2)
 
+  // Custas e honorários
+  custasAdvocaticias        Decimal?  @db.Decimal(15, 2)
+  custasDataVencimento      DateTime?
+  custasDataPagamento       DateTime?
+  honorariosValor           Decimal?  @db.Decimal(15, 2)
+  honorariosMetodoPagamento String?
+  honorariosParcelas        Int?
+  honorariosDataVencimento  DateTime?
+  honorariosDataPagamento   DateTime?
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -487,6 +497,16 @@ model AcordoDacao {
   valorTotalOferecido   Decimal   @db.Decimal(15, 2)
   valorTotalCompensar   Decimal   @db.Decimal(15, 2)
   valorLiquido          Decimal   @db.Decimal(15, 2)
+
+  // Custas e honorários
+  custasAdvocaticias        Decimal?  @db.Decimal(15, 2)
+  custasDataVencimento      DateTime?
+  custasDataPagamento       DateTime?
+  honorariosValor           Decimal?  @db.Decimal(15, 2)
+  honorariosMetodoPagamento String?
+  honorariosParcelas        Int?
+  honorariosDataVencimento  DateTime?
+  honorariosDataPagamento   DateTime?
 
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt

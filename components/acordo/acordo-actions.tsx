@@ -33,9 +33,10 @@ interface AcordoActionsProps {
     }>
     valorFinal: number
   }
+  userRole?: string
 }
 
-export default function AcordoActions({ acordo }: AcordoActionsProps) {
+export default function AcordoActions({ acordo, userRole }: AcordoActionsProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
@@ -51,8 +52,8 @@ export default function AcordoActions({ acordo }: AcordoActionsProps) {
     }, 0)
   }, 0)
 
-  const canCancel = acordo.status === 'ativo'
-  const canDelete = valorTotalPago === 0 && acordo.status !== 'cumprido'
+  const canCancel = acordo.status === 'ativo' && (userRole === 'ADMIN' || userRole === 'FUNCIONARIO')
+  const canDelete = valorTotalPago === 0 && acordo.status !== 'cumprido' && userRole === 'ADMIN'
 
   const handleCancel = async (e: React.FormEvent) => {
     e.preventDefault()

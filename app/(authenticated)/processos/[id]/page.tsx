@@ -170,6 +170,27 @@ export default function ProcessoDetalhesPage({ params }: Props) {
   const statusInfo = getStatusInfo(processo.status)
   const StatusIcon = statusInfo.icon
 
+  // Função para formatar valores em moeda
+  const formatarMoeda = (valor: number) => {
+    return valor.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2
+    })
+  }
+
+  // Função helper para formatar datas corretamente (evitando problema de timezone)
+  const formatarData = (data: string | Date) => {
+    const date = new Date(data)
+    // Para datas que vêm do backend (ISO string), usar apenas a parte da data
+    if (typeof data === 'string' && data.includes('T')) {
+      const [datePart] = data.split('T')
+      const [year, month, day] = datePart.split('-').map(Number)
+      return new Date(year, month - 1, day).toLocaleDateString('pt-BR')
+    }
+    return date.toLocaleDateString('pt-BR')
+  }
+
   const getResultadoBadge = (decisao: ProcessoDecisao) => {
     if (!decisao) return <Badge variant="outline">Aguardando</Badge>
 
@@ -1079,6 +1100,82 @@ export default function ProcessoDetalhesPage({ params }: Props) {
               ) : (
                 <div className="space-y-4">
                   {processo.acordos?.map((acordo) => {
+                    // Criar transacaoDetails no frontend usando os dados disponíveis
+                    if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && acordo.transacao && !acordo.transacaoDetails) {
+                      const transacao = acordo.transacao
+
+                      // Calcular custas e honorários dos dados existentes
+                      const custasAdvocaticias = Number(transacao.custasAdvocaticias) || 0
+                      const honorariosValor = Number(transacao.honorariosValor) || 0
+
+                      // Criar transacaoDetails no frontend
+                      acordo.transacaoDetails = {
+                        custasAdvocaticias,
+                        custasDataVencimento: transacao.custasDataVencimento,
+                        custasDataPagamento: transacao.custasDataPagamento,
+                        honorariosValor,
+                        honorariosMetodoPagamento: transacao.honorariosMetodoPagamento,
+                        honorariosParcelas: transacao.honorariosParcelas,
+                        // Outros campos para completude
+                        valorTotalProposto: Number(transacao.valorTotalProposto) || 0,
+                        entrada: Number(transacao.valorEntrada) || 0,
+                        totalGeral: Number(transacao.valorTotalProposto) + custasAdvocaticias + honorariosValor
+                      }
+
+                    }
+
+                    // Criar compensacaoDetails no frontend usando os dados disponíveis
+                    if (processo.tipo === 'COMPENSACAO' && acordo.compensacao && !acordo.compensacaoDetails) {
+                      const compensacao = acordo.compensacao
+
+                      // Calcular custas e honorários dos dados existentes
+                      const custasAdvocaticias = Number(compensacao.custasAdvocaticias) || 0
+                      const honorariosValor = Number(compensacao.honorariosValor) || 0
+                      const valorTotalCreditos = Number(compensacao.valorTotalCreditos) || 0
+                      const valorTotalDebitos = Number(compensacao.valorTotalDebitos) || 0
+
+                      // Criar compensacaoDetails no frontend
+                      acordo.compensacaoDetails = {
+                        valorTotalCreditos,
+                        valorTotalDebitos,
+                        valorLiquido: Number(compensacao.valorLiquido) || 0,
+                        custasAdvocaticias,
+                        custasDataVencimento: compensacao.custasDataVencimento,
+                        custasDataPagamento: compensacao.custasDataPagamento,
+                        honorariosValor,
+                        honorariosMetodoPagamento: compensacao.honorariosMetodoPagamento,
+                        honorariosParcelas: compensacao.honorariosParcelas,
+                        honorariosDataVencimento: compensacao.honorariosDataVencimento,
+                        honorariosDataPagamento: compensacao.honorariosDataPagamento
+                      }
+                    }
+
+                    // Criar dacaoDetails no frontend usando os dados disponíveis
+                    if (processo.tipo === 'DACAO_PAGAMENTO' && acordo.dacao && !acordo.dacaoDetails) {
+                      const dacao = acordo.dacao
+
+                      // Calcular custas e honorários dos dados existentes
+                      const custasAdvocaticias = Number(dacao.custasAdvocaticias) || 0
+                      const honorariosValor = Number(dacao.honorariosValor) || 0
+                      const valorTotalOferecido = Number(dacao.valorTotalOferecido) || 0
+                      const valorTotalCompensar = Number(dacao.valorTotalCompensar) || 0
+
+                      // Criar dacaoDetails no frontend
+                      acordo.dacaoDetails = {
+                        valorTotalOferecido,
+                        valorTotalCompensar,
+                        valorLiquido: Number(dacao.valorLiquido) || 0,
+                        custasAdvocaticias,
+                        custasDataVencimento: dacao.custasDataVencimento,
+                        custasDataPagamento: dacao.custasDataPagamento,
+                        honorariosValor,
+                        honorariosMetodoPagamento: dacao.honorariosMetodoPagamento,
+                        honorariosParcelas: dacao.honorariosParcelas,
+                        honorariosDataVencimento: dacao.honorariosDataVencimento,
+                        honorariosDataPagamento: dacao.honorariosDataPagamento
+                      }
+                    }
+
                     // Função para calcular o valor correto do acordo baseado no tipo
                     const getValorAcordo = () => {
                       const tipoProcesso = processo.tipo
@@ -1143,61 +1240,165 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     const getProgressoPagamento = () => {
                       const tipoProcesso = processo.tipo
 
-                      // Para transação excepcional, calcular progresso baseado em pagamentos
+                      // Para transação excepcional, usar a mesma lógica da página de listagem
                       if (tipoProcesso === 'TRANSACAO_EXCEPCIONAL') {
-                        const percentual = valorTotal > 0 ? Math.round((valorPago / valorTotal) * 100) : 0
+                        const parcelas = acordo.parcelas || []
+
+                        // Calcular valor total das parcelas (acordo + honorários)
+                        const valorTotalParcelas = parcelas.reduce((total: number, parcela: any) => {
+                          return total + Number(parcela.valor || 0)
+                        }, 0)
+
+                        // Adicionar custas (se existir)
+                        const custasAdvocaticias = acordo.transacaoDetails?.custasAdvocaticias || 0
+                        const valorTotalGeral = valorTotalParcelas + custasAdvocaticias
+
+                        // Calcular valor pago de todas as parcelas (acordo + honorários)
+                        let valorPago = parcelas.reduce((total: number, parcela: any) => {
+                          const pagamentos = parcela.pagamentos || []
+                          return total + pagamentos.reduce((subtotal: number, pagamento: any) => {
+                            return subtotal + Number(pagamento.valorPago || 0)
+                          }, 0)
+                        }, 0)
+
+                        // Adicionar custas se foram pagas
+                        if (acordo.transacaoDetails?.custasDataPagamento && custasAdvocaticias > 0) {
+                          valorPago += custasAdvocaticias
+                        }
+
+                        const percentual = valorTotalGeral > 0 ? Math.round((valorPago / valorTotalGeral) * 100) : 0
 
                         return {
-                          valorTotal,
+                          valorTotal: valorTotalGeral,
                           valorPago,
-                          valorPendente: valorTotal - valorPago,
+                          valorPendente: valorTotalGeral - valorPago,
                           percentual
                         }
                       }
 
-                      // Para compensação e dação, progresso baseado no status
-                      if (acordo.status === 'cumprido') {
-                        return {
-                          valorTotal,
-                          valorPago: valorTotal,
-                          valorPendente: 0,
-                          percentual: 100
-                        }
+                      // Para compensação e dação, calcular como na página de listagem
+                      let valorOfertado = 0
+                      let valorCompensado = 0
+                      let valorCustasHonorarios = 0
+                      let valorTotalCalculado = 0
+
+                      if (tipoProcesso === 'COMPENSACAO' && acordo.compensacaoDetails) {
+                        valorOfertado = Number(acordo.compensacaoDetails.valorTotalCreditos || 0)
+                        valorCompensado = Number(acordo.compensacaoDetails.valorTotalDebitos || 0)
+                        valorCustasHonorarios = Number(acordo.compensacaoDetails.custasAdvocaticias || 0) + Number(acordo.compensacaoDetails.honorariosValor || 0)
+                        valorTotalCalculado = valorCompensado + valorCustasHonorarios
+                      } else if (tipoProcesso === 'DACAO_PAGAMENTO' && acordo.dacaoDetails) {
+                        valorOfertado = Number(acordo.dacaoDetails.valorTotalOferecido || 0)
+                        valorCompensado = Number(acordo.dacaoDetails.valorTotalCompensar || 0)
+                        valorCustasHonorarios = Number(acordo.dacaoDetails.custasAdvocaticias || 0) + Number(acordo.dacaoDetails.honorariosValor || 0)
+                        valorTotalCalculado = valorOfertado + valorCustasHonorarios
+                      } else {
+                        // Fallback para casos sem detalhes
+                        valorTotalCalculado = valorTotal
                       }
 
+                      // Calcular valores pagos baseado em custas, parcelas de honorários e status
+                      let valorPago = 0
+
+                      if (acordo.status === 'cumprido') {
+                        valorPago = valorTotalCalculado
+                      } else {
+                        // Verificar se custas foram pagas
+                        const details = tipoProcesso === 'COMPENSACAO' ? acordo.compensacaoDetails : acordo.dacaoDetails
+                        if (details?.custasDataPagamento && details.custasAdvocaticias > 0) {
+                          valorPago += Number(details.custasAdvocaticias)
+                        }
+
+                        // Verificar parcelas de honorários pagas
+                        const parcelasHonorarios = acordo.parcelas?.filter((p: any) => p.tipoParcela === 'PARCELA_HONORARIOS') || []
+                        parcelasHonorarios.forEach((parcela: any) => {
+                          if (parcela.status === 'PAGO') {
+                            valorPago += Number(parcela.valor)
+                          } else {
+                            // Somar pagamentos parciais
+                            const pagamentos = parcela.pagamentos || []
+                            valorPago += pagamentos.reduce((total: number, pagamento: any) => {
+                              return total + Number(pagamento.valorPago || 0)
+                            }, 0)
+                          }
+                        })
+                      }
+
+                      const percentual = valorTotalCalculado > 0 ? Math.round((valorPago / valorTotalCalculado) * 100) : 0
+
                       return {
-                        valorTotal,
-                        valorPago: 0,
-                        valorPendente: valorTotal,
-                        percentual: 0
+                        valorOfertado,
+                        valorCompensado,
+                        valorCustasHonorarios,
+                        valorTotal: valorTotalCalculado,
+                        valorPago,
+                        valorPendente: valorTotalCalculado - valorPago,
+                        percentual
                       }
                     }
 
                     const progresso = getProgressoPagamento()
                     const vencido = new Date(String(acordo.dataVencimento)) < new Date() && acordo.status === 'ativo'
 
-                    // Função para mostrar informações das parcelas
+                    // Função para mostrar informações das parcelas (igual à página de listagem)
                     const getDisplayParcelasInfo = () => {
-                      const totalParcelas = acordo.parcelas.length
+                      const totalParcelas = (acordo.parcelas || []).length
 
-                      // Para transação excepcional parcelada, mostrar "Entrada + x parcelas"
-                      if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && acordo.modalidadePagamento === 'parcelado' && totalParcelas > 1) {
-                        const parcelasRestantes = totalParcelas - 1 // Excluir a entrada
-                        return `Entrada + ${parcelasRestantes} parcela${parcelasRestantes !== 1 ? 's' : ''}`
+                      // Para transação excepcional, mostrar formato completo
+                      if (processo.tipo === 'TRANSACAO_EXCEPCIONAL') {
+                        const parcelasRegulares = (acordo.parcelas || []).filter(p => p.tipoParcela === 'PARCELA_ACORDO').length
+                        const temEntrada = (acordo.parcelas || []).some(p => p.tipoParcela === 'ENTRADA')
+                        const temHonorarios = acordo.transacaoDetails?.honorariosValor && Number(acordo.transacaoDetails.honorariosValor) > 0
+                        const temCustas = acordo.transacaoDetails?.custasAdvocaticias && Number(acordo.transacaoDetails.custasAdvocaticias) > 0
+
+
+                        let resultado = ''
+
+                        if (temEntrada) {
+                          resultado += 'Entrada'
+                          if (parcelasRegulares > 0) {
+                            resultado += ` + ${parcelasRegulares} parcela${parcelasRegulares !== 1 ? 's' : ''}`
+                          }
+                        } else {
+                          resultado = `${parcelasRegulares} parcela${parcelasRegulares !== 1 ? 's' : ''}`
+                        }
+
+                        const extras = []
+                        if (temHonorarios) extras.push('Hon.')
+                        if (temCustas) extras.push('Cust.')
+
+                        if (extras.length > 0) {
+                          resultado += ` + ${extras.join('/')}`
+                        }
+
+                        return resultado
+                      }
+
+                      // Para compensação e dação, mostrar custas e honorários se existirem
+                      if (processo.tipo === 'COMPENSACAO' || processo.tipo === 'DACAO_PAGAMENTO') {
+                        const details = processo.tipo === 'COMPENSACAO' ? acordo.compensacaoDetails : acordo.dacaoDetails
+
+                        if (details) {
+                          const temCustas = details.custasAdvocaticias && Number(details.custasAdvocaticias) > 0
+                          const temHonorarios = details.honorariosValor && Number(details.honorariosValor) > 0
+
+                          const extras = []
+                          if (temCustas) extras.push('Custas')
+                          if (temHonorarios) extras.push('Honorários')
+
+                          if (extras.length > 0) {
+                            return extras.join(' + ')
+                          }
+                        }
+
+                        // Se não há custas nem honorários, mostrar formato padrão
+                        return totalParcelas > 0 ? `${totalParcelas} parcela${totalParcelas !== 1 ? 's' : ''}` : 'Sem parcelas'
                       }
 
                       // Para outros tipos, mostrar formato padrão
                       return `${totalParcelas} parcela${totalParcelas !== 1 ? 's' : ''}`
                     }
 
-                    // Função para formatar valores em moeda
-                    const formatarMoeda = (valor: number) => {
-                      return valor.toLocaleString('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                        minimumFractionDigits: 2
-                      })
-                    }
 
                     const getStatusColor = (status: string) => {
                       switch (status) {
@@ -1229,7 +1430,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                               {/* Cabeçalho do Acordo */}
                               <div className="flex items-center gap-3 flex-wrap">
                                 <span className="font-semibold text-lg">
-                                  {acordo.numeroTermo}
+                                  Acordo n. {acordo.numeroTermo}
                                 </span>
                                 <Badge className={getStatusColor(acordo.status)}>
                                   {getStatusLabel(acordo.status)}
@@ -1240,10 +1441,6 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                     Vencido
                                   </Badge>
                                 )}
-                                {/* Badge para tipo de processo */}
-                                <Badge variant="outline" className={getTipoProcessoInfo(processo.tipo || '').color}>
-                                  {getTipoProcessoInfo(processo.tipo || '').label}
-                                </Badge>
                               </div>
 
                               {/* Informações do Contribuinte */}
@@ -1269,12 +1466,6 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                 {processo.tipo === 'TRANSACAO_EXCEPCIONAL' ? (
                                   <div className="grid grid-cols-3 gap-2 text-xs">
                                     <div>
-                                      <span className="text-gray-500">Total:</span>
-                                      <p className="font-medium">
-                                        {formatarMoeda(progresso.valorTotal)}
-                                      </p>
-                                    </div>
-                                    <div>
                                       <span className="text-gray-500">Pago:</span>
                                       <p className="font-medium text-green-600">
                                         {formatarMoeda(progresso.valorPago)}
@@ -1282,26 +1473,44 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                     </div>
                                     <div>
                                       <span className="text-gray-500">Pendente:</span>
-                                      <p className="font-medium text-yellow-600">
+                                      <p className="font-medium text-amber-600">
                                         {formatarMoeda(progresso.valorPendente)}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <span className="text-gray-500">Total:</span>
+                                      <p className="font-medium text-blue-600">
+                                        {formatarMoeda(progresso.valorTotal)}
                                       </p>
                                     </div>
                                   </div>
                                 ) : (
-                                  <div className="grid grid-cols-2 gap-2 text-xs">
+                                  <div className="grid grid-cols-4 gap-2 text-xs">
                                     <div>
                                       <span className="text-gray-500">
-                                        {processo.tipo === 'COMPENSACAO' ? 'Valor dos Créditos:' :
-                                          processo.tipo === 'DACAO_PAGAMENTO' ? 'Valor do Imóvel:' : 'Valor Total:'}
+                                        {processo.tipo === 'COMPENSACAO' ? 'Ofertado:' :
+                                         processo.tipo === 'DACAO_PAGAMENTO' ? 'Ofertado:' : 'Total:'}
                                       </span>
-                                      <p className="font-medium">
-                                        {formatarMoeda(progresso.valorTotal)}
+                                      <p className="font-medium text-green-600">
+                                        {formatarMoeda(progresso.valorOfertado || progresso.valorTotal)}
                                       </p>
                                     </div>
                                     <div>
-                                      <span className="text-gray-500">Status:</span>
-                                      <p className={`font-medium ${acordo.status === 'cumprido' ? 'text-green-600' : acordo.status === 'ativo' ? 'text-yellow-600' : 'text-red-600'}`}>
-                                        {getStatusLabel(acordo.status)}
+                                      <span className="text-gray-500">Compensado:</span>
+                                      <p className="font-medium text-red-600">
+                                        {formatarMoeda(progresso.valorCompensado || 0)}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <span className="text-gray-500">Cust./Hon.:</span>
+                                      <p className="font-medium text-amber-600">
+                                        {formatarMoeda(progresso.valorCustasHonorarios || 0)}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <span className="text-gray-500">Total:</span>
+                                      <p className="font-medium text-blue-600">
+                                        {formatarMoeda(progresso.valorTotal)}
                                       </p>
                                     </div>
                                   </div>
@@ -1312,49 +1521,145 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
                                 <div className="flex items-center gap-2">
                                   <Calendar className="h-4 w-4" />
-                                  <span>Assinado: {new Date(String(acordo.dataAssinatura)).toLocaleDateString('pt-BR')}</span>
+                                  <span>Assinado: {formatarData(acordo.dataAssinatura)}</span>
                                 </div>
                                 {processo.tipo === 'TRANSACAO_EXCEPCIONAL' && (
                                   <>
                                     <div className="flex items-center gap-2">
                                       <Calendar className="h-4 w-4" />
-                                      <span>Vence: {new Date(String(acordo.dataVencimento)).toLocaleDateString('pt-BR')}</span>
+                                      <span>Vence: {formatarData(acordo.dataVencimento)}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <FileText className="h-4 w-4" />
                                       <span>{getDisplayParcelasInfo()}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                      <DollarSign className="h-4 w-4" />
-                                      <span>{acordo.parcelas.reduce((total, p) => total + (p.pagamentos?.length || 0), 0)} pagamento{acordo.parcelas.reduce((total, p) => total + (p.pagamentos?.length || 0), 0) !== 1 ? 's' : ''}</span>
+                                      <CreditCard className="h-4 w-4" />
+                                      {(() => {
+                                        // Função getTotalPagamentos igual à página de listagem
+                                        const getTotalPagamentos = () => {
+                                          // Contar pagamentos das parcelas - apenas de parcelas pagas
+                                          const pagamentosParcelas = (acordo.parcelas || []).reduce((total, parcela) => {
+                                            // Só contar pagamentos se a parcela estiver com status PAGO
+                                            if (parcela.status === 'PAGO') {
+                                              return total + (parcela.pagamentos?.length || 0)
+                                            }
+                                            return total
+                                          }, 0)
+
+                                          // Para transação excepcional, somar pagamentos de custas
+                                          if (processo.tipo === 'TRANSACAO_EXCEPCIONAL') {
+                                            let totalPagamentos = pagamentosParcelas
+
+                                            // Se custas foram pagas, conta como 1 pagamento
+                                            if (acordo.transacaoDetails?.custasDataPagamento) {
+                                              totalPagamentos += 1
+                                            }
+
+                                            return totalPagamentos
+                                          }
+
+                                          // Para compensação e dação, contar pagamentos de custas e honorários
+                                          if (processo.tipo === 'COMPENSACAO' || processo.tipo === 'DACAO_PAGAMENTO') {
+                                            let totalPagamentos = pagamentosParcelas
+                                            const details = processo.tipo === 'COMPENSACAO' ? acordo.compensacaoDetails : acordo.dacaoDetails
+
+                                            if (details) {
+                                              // Se custas foram pagas, conta como 1 pagamento
+                                              if (details.custasDataPagamento) {
+                                                totalPagamentos += 1
+                                              }
+
+                                              // Se honorários foram pagos (via data de pagamento), conta como 1 pagamento
+                                              if (details.honorariosDataPagamento) {
+                                                totalPagamentos += 1
+                                              }
+                                            }
+
+                                            return totalPagamentos
+                                          }
+
+                                          return pagamentosParcelas
+                                        }
+
+                                        const totalPagamentos = getTotalPagamentos()
+                                        return <span>{totalPagamentos} pagamento{totalPagamentos !== 1 ? 's' : ''}</span>
+                                      })()}
                                     </div>
+                                  </>
+                                )}
+                                {(processo.tipo === 'COMPENSACAO' || processo.tipo === 'DACAO_PAGAMENTO') && (
+                                  <>
+                                    <div className="flex items-center gap-2">
+                                      <FileText className="h-4 w-4" />
+                                      <span>{getDisplayParcelasInfo()}</span>
+                                    </div>
+{(() => {
+                                      // Função getTotalPagamentos igual à página de listagem
+                                      const getTotalPagamentos = () => {
+                                        // Contar pagamentos das parcelas - apenas de parcelas pagas
+                                        const pagamentosParcelas = (acordo.parcelas || []).reduce((total, parcela) => {
+                                          // Só contar pagamentos se a parcela estiver com status PAGO
+                                          if (parcela.status === 'PAGO') {
+                                            return total + (parcela.pagamentos?.length || 0)
+                                          }
+                                          return total
+                                        }, 0)
+
+                                        // Para compensação e dação, contar pagamentos de custas e honorários
+                                        let totalPagamentos = pagamentosParcelas
+                                        const details = processo.tipo === 'COMPENSACAO' ? acordo.compensacaoDetails : acordo.dacaoDetails
+
+                                        if (details) {
+                                          // Se custas foram pagas, conta como 1 pagamento
+                                          if (details.custasDataPagamento) {
+                                            totalPagamentos += 1
+                                          }
+
+                                          // Se honorários foram pagos (via data de pagamento), conta como 1 pagamento
+                                          if (details.honorariosDataPagamento) {
+                                            totalPagamentos += 1
+                                          }
+                                        }
+
+                                        return totalPagamentos
+                                      }
+
+                                      const totalPagamentos = getTotalPagamentos()
+                                      return totalPagamentos > 0 ? (
+                                        <div className="flex items-center gap-2">
+                                          <CreditCard className="h-4 w-4" />
+                                          <span>{totalPagamentos} pagamento{totalPagamentos !== 1 ? 's' : ''}</span>
+                                        </div>
+                                      ) : null
+                                    })()}
                                   </>
                                 )}
                               </div>
 
                               {/* Próximas Parcelas - apenas para transação excepcional */}
-                              {processo.tipo === 'TRANSACAO_EXCEPCIONAL' && acordo.parcelas.filter(p => p.status === 'PENDENTE').length > 0 && (
+                              {processo.tipo === 'TRANSACAO_EXCEPCIONAL' && (acordo.parcelas || []).filter(p => p.status === 'PENDENTE').length > 0 && (
                                 <div className="border-t pt-3">
                                   <h4 className="text-sm font-medium text-gray-900 mb-2">
                                     Próximas Parcelas:
                                   </h4>
                                   <div className="space-y-1">
-                                    {acordo.parcelas
+                                    {(acordo.parcelas || [])
                                       .filter(p => p.status === 'PENDENTE')
                                       .slice(0, 2)
                                       .map((parcela) => (
                                         <div key={parcela.id} className="text-sm flex items-center justify-between">
                                           <span>
-                                            {parcela.numero === 0 ? 'Entrada' : `Parcela ${parcela.numero}`} - {new Date(String(parcela.dataVencimento)).toLocaleDateString('pt-BR')}
+                                            {parcela.numero === 0 ? 'Entrada' : `Parcela ${parcela.numero}`} - {formatarData(parcela.dataVencimento)}
                                           </span>
                                           <span className="font-medium">
                                             {formatarMoeda(Number(parcela.valor))}
                                           </span>
                                         </div>
                                       ))}
-                                    {acordo.parcelas.filter(p => p.status === 'PENDENTE').length > 2 && (
+                                    {(acordo.parcelas || []).filter(p => p.status === 'PENDENTE').length > 2 && (
                                       <div className="text-xs text-gray-500">
-                                        ... e mais {acordo.parcelas.filter(p => p.status === 'PENDENTE').length - 2} parcela{acordo.parcelas.filter(p => p.status === 'PENDENTE').length - 2 !== 1 ? 's' : ''}
+                                        ... e mais {(acordo.parcelas || []).filter(p => p.status === 'PENDENTE').length - 2} parcela{(acordo.parcelas || []).filter(p => p.status === 'PENDENTE').length - 2 !== 1 ? 's' : ''}
                                       </div>
                                     )}
                                   </div>

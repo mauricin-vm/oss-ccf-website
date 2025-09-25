@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
         return totalPago >= Number(p.valor)
       })
 
-      // Verificar se custas advocatícias foram pagas (se existirem)
+      // Verificar se custas foram pagas (se existirem)
       let custasAdvocaticiasPagas = true
       const transacao = await tx.acordoTransacao.findUnique({
         where: { acordoId: parcela.acordo.id }
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
             processoId: parcela.acordo.processoId,
             usuarioId: user.id,
             titulo: 'Acordo de Pagamento Cumprido',
-            descricao: 'Todas as parcelas e custas advocatícias foram pagas. Acordo cumprido integralmente.',
+            descricao: 'Todas as parcelas e custas foram pagas. Acordo cumprido integralmente.',
             tipo: 'ACORDO'
           }
         })

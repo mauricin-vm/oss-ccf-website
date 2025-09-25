@@ -18,7 +18,7 @@ export async function PUT(
     // Apenas Admin e Funcionário podem editar custas
     if (user.role === 'VISUALIZADOR') {
       return NextResponse.json(
-        { error: 'Sem permissão para editar custas advocatícias' },
+        { error: 'Sem permissão para editar custas' },
         { status: 403 }
       )
     }
@@ -33,12 +33,14 @@ export async function PUT(
       )
     }
 
-    // Verificar se o acordo existe e tem transação
+    // Verificar se o acordo existe
     const acordo = await prisma.acordo.findUnique({
       where: { id },
       include: {
         processo: true,
-        transacao: true
+        transacao: true,
+        compensacao: true,
+        dacao: true
       }
     })
 
@@ -49,16 +51,24 @@ export async function PUT(
       )
     }
 
-    if (!acordo.transacao) {
-      return NextResponse.json(
-        { error: 'Apenas acordos de transação excepcional têm custas advocatícias' },
-        { status: 400 }
-      )
+    // Verificar se o acordo tem custas baseado no tipo
+    let temCustas = false
+    let valorCustas = 0
+
+    if (acordo.tipoProcesso === 'TRANSACAO_EXCEPCIONAL' && acordo.transacao) {
+      temCustas = acordo.transacao.custasAdvocaticias !== null && acordo.transacao.custasAdvocaticias > 0
+      valorCustas = Number(acordo.transacao.custasAdvocaticias) || 0
+    } else if (acordo.tipoProcesso === 'COMPENSACAO' && acordo.compensacao) {
+      temCustas = acordo.compensacao.custasAdvocaticias !== null && acordo.compensacao.custasAdvocaticias > 0
+      valorCustas = Number(acordo.compensacao.custasAdvocaticias) || 0
+    } else if (acordo.tipoProcesso === 'DACAO_PAGAMENTO' && acordo.dacao) {
+      temCustas = acordo.dacao.custasAdvocaticias !== null && acordo.dacao.custasAdvocaticias > 0
+      valorCustas = Number(acordo.dacao.custasAdvocaticias) || 0
     }
 
-    if (acordo.transacao.custasAdvocaticias === null || acordo.transacao.custasAdvocaticias <= 0) {
+    if (!temCustas) {
       return NextResponse.json(
-        { error: 'Este acordo não possui custas advocatícias' },
+        { error: 'Este acordo não possui custas' },
         { status: 400 }
       )
     }
@@ -83,57 +93,108 @@ export async function PUT(
 
     // Usar transação para atualizar custas e verificar se acordo foi cumprido
     const result = await prisma.$transaction(async (tx) => {
-      // Atualizar custas
-      await tx.acordoTransacao.update({
-        where: { acordoId: id },
-        data: {
-          custasDataVencimento: custasDataVencimento,
-          custasDataPagamento: custasDataPagamento
-        }
-      })
-
-      // Se custas foram marcadas como pagas, verificar se o acordo pode ser marcado como cumprido
-      if (custasDataPagamento && !acordo.transacao.custasDataPagamento) {
-        // Verificar se todas as parcelas foram pagas
-        const todasParcelas = await tx.parcela.findMany({
-          where: { acordoId: id }
+      // Atualizar custas baseado no tipo de processo
+      if (acordo.tipoProcesso === 'TRANSACAO_EXCEPCIONAL') {
+        await tx.acordoTransacao.update({
+          where: { acordoId: id },
+          data: {
+            custasDataVencimento: custasDataVencimento,
+            custasDataPagamento: custasDataPagamento
+          }
         })
-        const todasParcelasPagas = todasParcelas.every(p => p.status === 'PAGO')
+      } else if (acordo.tipoProcesso === 'COMPENSACAO') {
+        await tx.acordoCompensacao.update({
+          where: { acordoId: id },
+          data: {
+            custasDataVencimento: custasDataVencimento,
+            custasDataPagamento: custasDataPagamento
+          }
+        })
+      } else if (acordo.tipoProcesso === 'DACAO_PAGAMENTO') {
+        await tx.acordoDacao.update({
+          where: { acordoId: id },
+          data: {
+            custasDataVencimento: custasDataVencimento,
+            custasDataPagamento: custasDataPagamento
+          }
+        })
+      }
 
-        if (todasParcelasPagas && acordo.status === 'ativo') {
-          await tx.acordo.update({
-            where: { id },
-            data: { status: 'cumprido' }
-          })
-          await tx.processo.update({
-            where: { id: acordo.processoId },
-            data: { status: 'CONCLUIDO' }
-          })
-          // Registrar no histórico do processo
-          await tx.historicoProcesso.create({
-            data: {
-              processoId: acordo.processoId,
-              usuarioId: user.id,
-              titulo: 'Acordo de Pagamento Cumprido',
-              descricao: 'Todas as parcelas e custas advocatícias foram pagas. Acordo cumprido integralmente.',
-              tipo: 'ACORDO'
+      // Se custas foram marcadas como pagas, verificar se acordo pode ser cumprido
+      if (custasDataPagamento) {
+        const custasJaEstavasPagas = (acordo.tipoProcesso === 'TRANSACAO_EXCEPCIONAL' && acordo.transacao?.custasDataPagamento) ||
+                                     (acordo.tipoProcesso === 'COMPENSACAO' && acordo.compensacao?.custasDataPagamento) ||
+                                     (acordo.tipoProcesso === 'DACAO_PAGAMENTO' && acordo.dacao?.custasDataPagamento)
+
+        if (!custasJaEstavasPagas) {
+          if (acordo.tipoProcesso === 'TRANSACAO_EXCEPCIONAL') {
+            // Para transação, verificar se todas as parcelas foram pagas
+            const todasParcelas = await tx.parcela.findMany({
+              where: { acordoId: id }
+            })
+            const todasParcelasPagas = todasParcelas.every(p => p.status === 'PAGO')
+
+            if (todasParcelasPagas && acordo.status === 'ativo') {
+              await tx.acordo.update({
+                where: { id },
+                data: { status: 'cumprido' }
+              })
+              await tx.processo.update({
+                where: { id: acordo.processoId },
+                data: { status: 'CONCLUIDO' }
+              })
+              await tx.historicoProcesso.create({
+                data: {
+                  processoId: acordo.processoId,
+                  usuarioId: user.id,
+                  titulo: 'Acordo de Pagamento Cumprido',
+                  descricao: 'Todas as parcelas e custas foram pagas. Acordo cumprido integralmente.',
+                  tipo: 'ACORDO'
+                }
+              })
             }
-          })
+          }
+          // Para compensação e dação, não fazemos conclusão automática
+          // O usuário deve usar o botão "Concluir Acordo" quando todos os pagamentos estiverem em dia
         }
       }
     })
 
-    // Log de auditoria
+    // Log de auditoria baseado no tipo de processo
+    let entidadeNome = ''
+    let entidadeId = ''
+    let dadosAnteriores = {}
+
+    if (acordo.tipoProcesso === 'TRANSACAO_EXCEPCIONAL') {
+      entidadeNome = 'AcordoTransacao'
+      entidadeId = acordo.transacao?.id || ''
+      dadosAnteriores = {
+        custasDataVencimento: acordo.transacao?.custasDataVencimento,
+        custasDataPagamento: acordo.transacao?.custasDataPagamento
+      }
+    } else if (acordo.tipoProcesso === 'COMPENSACAO') {
+      entidadeNome = 'AcordoCompensacao'
+      entidadeId = acordo.compensacao?.id || ''
+      dadosAnteriores = {
+        custasDataVencimento: acordo.compensacao?.custasDataVencimento,
+        custasDataPagamento: acordo.compensacao?.custasDataPagamento
+      }
+    } else if (acordo.tipoProcesso === 'DACAO_PAGAMENTO') {
+      entidadeNome = 'AcordoDacao'
+      entidadeId = acordo.dacao?.id || ''
+      dadosAnteriores = {
+        custasDataVencimento: acordo.dacao?.custasDataVencimento,
+        custasDataPagamento: acordo.dacao?.custasDataPagamento
+      }
+    }
+
     await prisma.logAuditoria.create({
       data: {
         usuarioId: user.id,
         acao: 'UPDATE',
-        entidade: 'AcordoTransacao',
-        entidadeId: acordo.transacao.id,
-        dadosAnteriores: {
-          custasDataVencimento: acordo.transacao.custasDataVencimento,
-          custasDataPagamento: acordo.transacao.custasDataPagamento
-        },
+        entidade: entidadeNome,
+        entidadeId: entidadeId,
+        dadosAnteriores: dadosAnteriores,
         dadosNovos: {
           custasDataVencimento: custasDataVencimento,
           custasDataPagamento: custasDataPagamento,
@@ -193,7 +254,7 @@ export async function PUT(
       )
     }
 
-    // Processar dados específicos da transação excepcional se necessário
+    // Processar dados específicos baseado no tipo de processo
     if (acordoAtualizado.tipoProcesso === 'TRANSACAO_EXCEPCIONAL' && acordoAtualizado.transacao) {
       const transacao = acordoAtualizado.transacao
 
@@ -240,9 +301,47 @@ export async function PUT(
       return NextResponse.json(acordoEnriquecido)
     }
 
+    // Processar dados específicos de compensação
+    if (acordoAtualizado.tipoProcesso === 'COMPENSACAO' && acordoAtualizado.compensacao) {
+      const compensacao = acordoAtualizado.compensacao
+
+      const acordoEnriquecido = {
+        ...acordoAtualizado,
+        compensacaoDetails: {
+          custasAdvocaticias: Number(compensacao.custasAdvocaticias) || 0,
+          custasDataVencimento: compensacao.custasDataVencimento ? compensacao.custasDataVencimento.toISOString() : null,
+          custasDataPagamento: compensacao.custasDataPagamento ? compensacao.custasDataPagamento.toISOString() : null,
+          honorariosValor: Number(compensacao.honorariosValor) || 0,
+          honorariosMetodoPagamento: compensacao.honorariosMetodoPagamento,
+          honorariosParcelas: compensacao.honorariosParcelas
+        }
+      }
+
+      return NextResponse.json(acordoEnriquecido)
+    }
+
+    // Processar dados específicos de dação em pagamento
+    if (acordoAtualizado.tipoProcesso === 'DACAO_PAGAMENTO' && acordoAtualizado.dacao) {
+      const dacao = acordoAtualizado.dacao
+
+      const acordoEnriquecido = {
+        ...acordoAtualizado,
+        dacaoDetails: {
+          custasAdvocaticias: Number(dacao.custasAdvocaticias) || 0,
+          custasDataVencimento: dacao.custasDataVencimento ? dacao.custasDataVencimento.toISOString() : null,
+          custasDataPagamento: dacao.custasDataPagamento ? dacao.custasDataPagamento.toISOString() : null,
+          honorariosValor: Number(dacao.honorariosValor) || 0,
+          honorariosMetodoPagamento: dacao.honorariosMetodoPagamento,
+          honorariosParcelas: dacao.honorariosParcelas
+        }
+      }
+
+      return NextResponse.json(acordoEnriquecido)
+    }
+
     return NextResponse.json(acordoAtualizado)
   } catch (error) {
-    console.error('Erro ao atualizar custas advocatícias:', error)
+    console.error('Erro ao atualizar custas:', error)
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }
