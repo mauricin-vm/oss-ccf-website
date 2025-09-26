@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,16 +9,15 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { 
-  Activity, 
-  Search, 
+import {
+  Activity,
+  Search,
   Calendar,
   User,
   Database,
   Filter,
-  Download,
-  RefreshCw,
-  Eye
+  Eye,
+  X
 } from 'lucide-react'
 import { SessionUser } from '@/types'
 import { toast } from 'sonner'
@@ -60,20 +59,17 @@ interface LogsResponse {
 
 export default function LogsAdminPage() {
   const { data: session, status } = useSession()
-  const [logs, setLogs] = useState<LogEntry[]>([])
+  const [allLogs, setAllLogs] = useState<LogEntry[]>([])
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
   const [acaoFilter, setAcaoFilter] = useState('all')
   const [entidadeFilter, setEntidadeFilter] = useState('all')
   const [usuarioFilter, setUsuarioFilter] = useState('')
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null)
   const [showDetails, setShowDetails] = useState(false)
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 50,
-    total: 0,
-    pages: 0
-  })
+  const [showFilters, setShowFilters] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(50)
   const [statistics, setStatistics] = useState({
     totalLogs: 0,
     logsLast24h: 0,
@@ -95,39 +91,69 @@ export default function LogsAdminPage() {
     }
   }, [session, status])
 
-  // Carregar logs do banco de dados
-  const loadLogs = useCallback(async () => {
+  // Carregamento inicial - buscar todos os logs
+  useEffect(() => {
+    loadAllLogs()
+  }, [])
+
+  const loadAllLogs = async () => {
     try {
       setLoading(true)
-      const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString()
-      })
 
-      if (search) params.append('search', search)
-      if (acaoFilter && acaoFilter !== 'all') params.append('acao', acaoFilter)
-      if (entidadeFilter && entidadeFilter !== 'all') params.append('entidade', entidadeFilter)
+      // Buscar todos os logs sem filtros
+      const response = await fetch('/api/logs?limit=10000')
 
-      const response = await fetch(`/api/logs?${params}`)
       if (!response.ok) {
         throw new Error('Erro ao carregar logs')
       }
 
       const data: LogsResponse = await response.json()
-      setLogs(data.logs)
-      setPagination(data.pagination)
+      setAllLogs(data.logs)
       setStatistics(data.statistics)
     } catch (error) {
-      toast.error('Erro ao carregar logs')
       console.error('Erro ao carregar logs:', error)
+      toast.error('Erro ao carregar a lista de logs')
+      setAllLogs([])
     } finally {
       setLoading(false)
     }
-  }, [pagination.page, pagination.limit, search, acaoFilter, entidadeFilter])
+  }
 
+  // Filtragem local (client-side)
+  const filteredLogs = allLogs.filter((log) => {
+    // Filtro por texto de busca
+    const searchMatch = !searchTerm ||
+      log.acao.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.entidade.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.entidadeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.usuario.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.usuario.email.toLowerCase().includes(searchTerm.toLowerCase())
+
+    // Filtro por ação
+    const acaoMatch = acaoFilter === 'all' || log.acao === acaoFilter
+
+    // Filtro por entidade
+    const entidadeMatch = entidadeFilter === 'all' || log.entidade === entidadeFilter
+
+    // Filtro por usuário
+    const usuarioMatch = !usuarioFilter ||
+      log.usuario.name.toLowerCase().includes(usuarioFilter.toLowerCase()) ||
+      log.usuario.email.toLowerCase().includes(usuarioFilter.toLowerCase())
+
+    return searchMatch && acaoMatch && entidadeMatch && usuarioMatch
+  })
+
+  // Paginação local
+  const totalFilteredLogs = filteredLogs.length
+  const totalPages = Math.ceil(totalFilteredLogs / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedLogs = filteredLogs.slice(startIndex, endIndex)
+
+  // Reset para primeira página quando filtros mudarem
   useEffect(() => {
-    loadLogs()
-  }, [loadLogs])
+    setCurrentPage(1)
+  }, [searchTerm, acaoFilter, entidadeFilter, usuarioFilter])
 
   const getActionLabel = (acao: string) => {
     const labels: Record<string, string> = {
@@ -137,7 +163,10 @@ export default function LogsAdminPage() {
       LOGIN: 'Login',
       LOGOUT: 'Logout',
       VIEW: 'Visualização',
-      EXPORT: 'Exportação'
+      EXPORT: 'Exportação',
+      DOWNLOAD: 'Download',
+      MIGRATE: 'Migração',
+      MIGRATE_HISTORY: 'Migração'
     }
     return labels[acao] || acao
   }
@@ -150,7 +179,10 @@ export default function LogsAdminPage() {
       LOGIN: 'bg-purple-100 text-purple-800',
       LOGOUT: 'bg-gray-100 text-gray-800',
       VIEW: 'bg-cyan-100 text-cyan-800',
-      EXPORT: 'bg-orange-100 text-orange-800'
+      EXPORT: 'bg-orange-100 text-orange-800',
+      DOWNLOAD: 'bg-indigo-100 text-indigo-800',
+      MIGRATE: 'bg-yellow-100 text-yellow-800',
+      MIGRATE_HISTORY: 'bg-yellow-100 text-yellow-800'
     }
     return colors[acao] || 'bg-gray-100 text-gray-800'
   }
@@ -193,16 +225,6 @@ export default function LogsAdminPage() {
           <p className="text-gray-600">
             Registro de todas as atividades do sistema
           </p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={loadLogs} variant="outline" className="cursor-pointer">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Atualizar
-          </Button>
-          <Button variant="outline" className="cursor-pointer">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
-          </Button>
         </div>
       </div>
 
@@ -248,58 +270,98 @@ export default function LogsAdminPage() {
         </Card>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros e Busca */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros
-          </CardTitle>
+          <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Buscar..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                />
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Buscar por ação, entidade, usuário..."
+                    className="pl-10"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
               </div>
+              <Button
+                variant="outline"
+                size="icon"
+                className="cursor-pointer"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
             </div>
-            <Select value={acaoFilter || 'all'} onValueChange={setAcaoFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todas as ações" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as ações</SelectItem>
-                {statistics.uniqueActions.map(action => (
-                  <SelectItem key={action} value={action}>
-                    {getActionLabel(action)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={entidadeFilter || 'all'} onValueChange={setEntidadeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todas as entidades" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as entidades</SelectItem>
-                {statistics.uniqueEntities.map(entity => (
-                  <SelectItem key={entity} value={entity}>
-                    {getEntityLabel(entity)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input
-              placeholder="Filtrar por usuário..."
-              value={usuarioFilter}
-              onChange={(e) => setUsuarioFilter(e.target.value)}
-            />
+
+            {showFilters && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Ação</label>
+                  <Select value={acaoFilter} onValueChange={setAcaoFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todas as ações" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as ações</SelectItem>
+                      {statistics.uniqueActions.map((acao) => (
+                        <SelectItem key={acao} value={acao}>
+                          {getActionLabel(acao)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Entidade</label>
+                  <Select value={entidadeFilter} onValueChange={setEntidadeFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todas as entidades" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as entidades</SelectItem>
+                      {statistics.uniqueEntities.map((entidade) => (
+                        <SelectItem key={entidade} value={entidade}>
+                          {getEntityLabel(entidade)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Usuário</label>
+                  <Input
+                    placeholder="Filtrar por usuário..."
+                    value={usuarioFilter}
+                    onChange={(e) => setUsuarioFilter(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearchTerm('')
+                      setAcaoFilter('all')
+                      setEntidadeFilter('all')
+                      setUsuarioFilter('')
+                      toast.info('Filtros limpos')
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Limpar Filtros
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -309,12 +371,12 @@ export default function LogsAdminPage() {
         <CardHeader>
           <CardTitle>Registros de Atividade</CardTitle>
           <CardDescription>
-            Mostrando {logs.length} de {pagination.total} registros (Página {pagination.page} de {pagination.pages})
+            Mostrando {paginatedLogs.length} de {totalFilteredLogs} registros (Página {currentPage} de {totalPages})
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {logs.map((log) => (
+            {paginatedLogs.map((log) => (
               <div key={log.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                 <div className="flex items-center space-x-4">
                   <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
@@ -359,29 +421,29 @@ export default function LogsAdminPage() {
           </div>
 
           {/* Paginação */}
-          {pagination.pages > 1 && (
+          {totalPages > 1 && (
             <div className="flex items-center justify-between pt-4 border-t">
               <p className="text-sm text-gray-600">
-                Mostrando {((pagination.page - 1) * pagination.limit) + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} logs
+                Mostrando {startIndex + 1} a {Math.min(endIndex, totalFilteredLogs)} de {totalFilteredLogs} logs
               </p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                  disabled={pagination.page <= 1}
+                  onClick={() => setCurrentPage(prev => prev - 1)}
+                  disabled={currentPage <= 1}
                   className="cursor-pointer"
                 >
                   Anterior
                 </Button>
                 <span className="flex items-center px-3 text-sm">
-                  Página {pagination.page} de {pagination.pages}
+                  Página {currentPage} de {totalPages}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                  disabled={pagination.page >= pagination.pages}
+                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  disabled={currentPage >= totalPages}
                   className="cursor-pointer"
                 >
                   Próximo

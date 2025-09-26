@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm, Resolver } from 'react-hook-form'
+import { useForm, Resolver, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { tramitacaoSchema } from '@/lib/validations/processo'
 import { Button } from '@/components/ui/button'
@@ -11,9 +11,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Pagination } from '@/components/ui/pagination'
-import { Loader2, AlertCircle, Search, Calendar } from 'lucide-react'
+import { Loader2, Search, Calendar } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { getStatusInfo } from '@/lib/constants/status'
 import { getTipoProcessoInfo } from '@/lib/constants/tipos-processo'
@@ -176,40 +175,66 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
   }, [processoId, setValue])
 
   // Função para lidar com erros de validação do formulário
-  const onInvalid = (errors: any) => {
-    // Ordem lógica dos campos no formulário
-    const fieldOrder = [
-      'processoId',
-      'setorOrigem',
-      'setorDestino',
-      'prazoResposta',
-      'observacoes'
-    ]
-
-    // Procurar pelo primeiro erro na ordem dos campos
-    for (const field of fieldOrder) {
-      const fieldError = errors[field]
-
-      if (fieldError?.message) {
-        toast.warning(fieldError.message)
-
-        // Focar no campo com erro após um pequeno delay
-        setTimeout(() => {
-          // Para processoId, mostrar mensagem mas não focar pois não é input direto
-          if (field === 'processoId') {
-            // Processo deve ser selecionado, não há campo para focar
-            return
-          }
-
-          const element = document.getElementById(field)
-          if (element) {
-            element.focus()
-            element.style.borderColor = '#ef4444'
-            element.style.boxShadow = '0 0 0 1px #ef4444'
-          }
-        }, 100)
-        break
-      }
+  const onInvalid = (errors: FieldErrors<{
+    processoId: string
+    setorOrigem: string
+    setorDestino: string
+    prazoResposta?: string
+    observacoes?: string
+  }>) => {
+    // Verificar erros de forma type-safe
+    if (errors.processoId?.message) {
+      toast.warning(errors.processoId.message)
+      // Para processoId, mostrar mensagem mas não focar pois não é input direto
+      return
+    }
+    if (errors.setorOrigem?.message) {
+      toast.warning(errors.setorOrigem.message)
+      setTimeout(() => {
+        const element = document.getElementById('setorOrigem')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.setorDestino?.message) {
+      toast.warning(errors.setorDestino.message)
+      setTimeout(() => {
+        const element = document.getElementById('setorDestino')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.prazoResposta?.message) {
+      toast.warning(errors.prazoResposta.message)
+      setTimeout(() => {
+        const element = document.getElementById('prazoResposta')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.observacoes?.message) {
+      toast.warning(errors.observacoes.message)
+      setTimeout(() => {
+        const element = document.getElementById('observacoes')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
     }
   }
 
@@ -357,7 +382,7 @@ export default function TramitacaoForm({ onSuccess, processoId }: TramitacaoForm
 
               {!isLoadingProcessos && paginatedProcessos.length === 0 && processos.length > 0 && searchProcess && (
                 <div className="text-center py-6 text-gray-500">
-                  <p>Nenhum processo encontrado para "{searchProcess}"</p>
+                  <p>Nenhum processo encontrado para &ldquo;{searchProcess}&rdquo;</p>
                 </div>
               )}
 

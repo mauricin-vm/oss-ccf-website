@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { processoSchema, type ProcessoInput } from '@/lib/validations/processo'
 import { Button } from '@/components/ui/button'
@@ -37,40 +37,62 @@ export default function ProcessoForm({ onSuccess }: ProcessoFormProps) {
   })
 
   // Função para lidar com erros de validação do formulário
-  const onInvalid = (errors: any) => {
-    // Ordem lógica dos campos no formulário
-    const fieldOrder = [
-      'numero',
-      'tipo',
-      'observacoes',
-      'contribuinte.cpfCnpj',
-      'contribuinte.nome',
-      'contribuinte.email',
-      'contribuinte.telefone',
-      'contribuinte.endereco',
-      'contribuinte.cidade',
-      'contribuinte.estado',
-      'contribuinte.cep'
-    ]
-
-    // Procurar pelo primeiro erro na ordem dos campos
-    for (const field of fieldOrder) {
-      const fieldError = field.includes('.')
-        ? errors[field.split('.')[0]]?.[field.split('.')[1]]
-        : errors[field]
-
-      if (fieldError?.message) {
-        toast.warning(fieldError.message)
-
-        // Focar no campo com erro após um pequeno delay para sobrescrever o comportamento padrão do React Hook Form
-        setTimeout(() => {
-          const element = document.getElementById(field)
-          if (element) {
-            element.focus()
-          }
-        }, 100)
-        break
-      }
+  const onInvalid = (errors: FieldErrors<ProcessoInput>) => {
+    // Verificar erros de forma type-safe
+    if (errors.numero?.message) {
+      toast.warning(errors.numero.message)
+      setTimeout(() => document.getElementById('numero')?.focus(), 100)
+      return
+    }
+    if (errors.tipo?.message) {
+      toast.warning(errors.tipo.message)
+      setTimeout(() => document.getElementById('tipo')?.focus(), 100)
+      return
+    }
+    if (errors.observacoes?.message) {
+      toast.warning(errors.observacoes.message)
+      setTimeout(() => document.getElementById('observacoes')?.focus(), 100)
+      return
+    }
+    if (errors.contribuinte?.cpfCnpj?.message) {
+      toast.warning(errors.contribuinte.cpfCnpj.message)
+      setTimeout(() => document.getElementById('contribuinte.cpfCnpj')?.focus(), 100)
+      return
+    }
+    if (errors.contribuinte?.nome?.message) {
+      toast.warning(errors.contribuinte.nome.message)
+      setTimeout(() => document.getElementById('contribuinte.nome')?.focus(), 100)
+      return
+    }
+    if (errors.contribuinte?.email?.message) {
+      toast.warning(errors.contribuinte.email.message)
+      setTimeout(() => document.getElementById('contribuinte.email')?.focus(), 100)
+      return
+    }
+    if (errors.contribuinte?.telefone?.message) {
+      toast.warning(errors.contribuinte.telefone.message)
+      setTimeout(() => document.getElementById('contribuinte.telefone')?.focus(), 100)
+      return
+    }
+    if (errors.contribuinte?.endereco?.message) {
+      toast.warning(errors.contribuinte.endereco.message)
+      setTimeout(() => document.getElementById('contribuinte.endereco')?.focus(), 100)
+      return
+    }
+    if (errors.contribuinte?.cidade?.message) {
+      toast.warning(errors.contribuinte.cidade.message)
+      setTimeout(() => document.getElementById('contribuinte.cidade')?.focus(), 100)
+      return
+    }
+    if (errors.contribuinte?.estado?.message) {
+      toast.warning(errors.contribuinte.estado.message)
+      setTimeout(() => document.getElementById('contribuinte.estado')?.focus(), 100)
+      return
+    }
+    if (errors.contribuinte?.cep?.message) {
+      toast.warning(errors.contribuinte.cep.message)
+      setTimeout(() => document.getElementById('contribuinte.cep')?.focus(), 100)
+      return
     }
   }
 

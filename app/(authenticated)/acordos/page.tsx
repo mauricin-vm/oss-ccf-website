@@ -148,7 +148,7 @@ export default function AcordosPage() {
 
       const data = await response.json()
       setAcordos(data.acordos || [])
-    } catch (error) {
+    } catch {
       toast.error('Erro ao carregar acordos')
       setAcordos([])
     } finally {

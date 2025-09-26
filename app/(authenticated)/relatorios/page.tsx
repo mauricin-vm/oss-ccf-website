@@ -52,7 +52,6 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
     valorAcordosCompDacao,
     valorAcordosTransacao,
     valorRecebidoParcelas,
-    valorAcordosCumpridos,
     decisoesPorTipo,
     valoresPorTipoProcesso,
     valoresPorResultado,
@@ -219,14 +218,20 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
       by: ['tipo'],
       _count: { id: true },
       where: dateFilter
-    }),
+    }).then(grupos => grupos.map(grupo => ({
+      tipo: grupo.tipo,
+      _count: grupo._count.id
+    }))),
 
     // Processos por status (para pipeline)
     prisma.processo.groupBy({
       by: ['status'],
       _count: { id: true },
       where: dateFilter
-    }),
+    }).then(grupos => grupos.map(grupo => ({
+      status: grupo.status,
+      _count: grupo._count.id
+    }))),
 
     // Sessões ativas
     prisma.sessaoJulgamento.count({
@@ -275,7 +280,7 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
           const valorHonorarios = Number(acordo.dacao.honorariosValor || 0)
           valorAcordo = valorOferecido + valorCustas + valorHonorarios
         } else {
-          valorAcordo = Number(acordo.valorTotal) || 0
+          valorAcordo = Number((acordo as { valorFinal?: number }).valorFinal) || 0
         }
 
         return total + valorAcordo
@@ -440,9 +445,6 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
       return { _sum: { valor: valorTotalRecebido } }
     })(),
 
-    // Placeholder para manter compatibilidade (não usado mais)
-    Promise.resolve({ _sum: { valorTotal: 0 } }),
-
     // Decisões por tipo (para gráfico de resultados)
     prisma.decisao.groupBy({
       by: ['tipoDecisao'],
@@ -451,7 +453,10 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
         tipoDecisao: { not: null },
         ...dateFilter
       }
-    }),
+    }).then(grupos => grupos.map(grupo => ({
+      tipoDecisao: grupo.tipoDecisao,
+      _count: { id: grupo._count.id }
+    }))),
 
     // Valores por tipo de processo usando nova estrutura
     Promise.all([
@@ -507,7 +512,7 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
           }
           return total
         } else {
-          return total + Number(acordo.valorTotal || acordo.valorFinal || 0)
+          return total + Number((acordo as { valorFinal?: number }).valorFinal || 0)
         }
       }, 0)
 
@@ -575,10 +580,8 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
               let valorProcesso = 0
 
               if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && processo.transacao) {
-                // Para transação: Valor Total Proposto - Valor de Entrada
-                const valorTotalProposto = Number(processo.transacao.valorTotalProposto || 0)
-                const valorEntrada = Number(processo.transacao.proposta?.valorEntrada || 0)
-                valorProcesso = valorTotalProposto - valorEntrada
+                // Para transação: Valor Total Proposto (sem reduzir entrada, pois foi indeferido)
+                valorProcesso = Number(processo.transacao.valorTotalProposto || 0)
               } else if (processo.tipo === 'COMPENSACAO' && processo.acordos) {
                 // Para compensação: somar valores das inscrições oferecidas para compensação
                 valorProcesso = processo.acordos.reduce((totalAcordos, acordo) => {
@@ -893,32 +896,9 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
       recebido: Number(valorRecebidoTotal)
     },
     decisoesPorTipo,
-    valoresPorTipoProcesso: valoresPorTipoProcesso.map(item => ({
-      ...item,
-      _sum: {
-        valorTotal: Number(item._sum.valorTotal)
-      }
-    })),
-    valoresPorResultado: valoresPorResultado.map(item => ({
-      ...item,
-      valorTotal: Number(item.valorTotal)
-    })),
-    evolucaoMensal: evolucaoMensal.map(item => ({
-      ...item,
-      valor: Number(item.valor),
-      acordos: {
-        valor: Number(item.acordos.valor),
-        quantidade: item.acordos.quantidade
-      },
-      parcelas: {
-        valor: Number(item.parcelas.valor),
-        quantidade: item.parcelas.quantidade
-      },
-      total: {
-        valor: Number(item.total.valor),
-        quantidade: item.total.quantidade
-      }
-    }))
+    valoresPorTipoProcesso,
+    valoresPorResultado,
+    evolucaoMensal
   }
 }
 

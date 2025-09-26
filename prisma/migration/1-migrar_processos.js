@@ -1,7 +1,7 @@
 // node prisma/migration/1-migrar_processos.js
 
-const { PrismaClient } = require('@prisma/client')
-const { Client } = require('pg')
+import { PrismaClient } from '@prisma/client'
+import { Client } from 'pg'
 
 const prisma = new PrismaClient()
 
@@ -226,7 +226,7 @@ async function migrarProcessos() {
           titulo: 'Processo Migrado',
           descricao: `Processo ${processo.numero} migrado do sistema antigo CCF.`,
           tipo: 'SISTEMA',
-          createdAt: (() => { const d = processo.createdAt; d.setHours(12, 0, 0, 0); return d; })()
+          createdAt: (() => { const d = new Date(processo.createdAt); d.setHours(12, 0, 0, 0); return d; })()
         }
       })
 
@@ -262,7 +262,7 @@ async function migrarProcessos() {
             tipo: dadosProcesso.tipo,
             status: dadosProcesso.status
           },
-          createdAt: (() => { const d = new Date(); d.setHours(12, 0, 0, 0); return d; })()
+          createdAt: (() => { const d = new Date(processo.createdAt); d.setHours(12, 0, 0, 0); return d; })()
         }
       })
 

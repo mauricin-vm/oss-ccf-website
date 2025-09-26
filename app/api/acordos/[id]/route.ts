@@ -425,7 +425,9 @@ export async function DELETE(
 
     let descricao = `Termo ${acordo.numeroTermo} foi excluído.`
     if (incluirValor) {
-      descricao += ` Valor: R$ ${Number(acordo.valorFinal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`
+      // TODO: Calcular valor baseado no tipo de acordo
+      // const valorAcordo = calcularValorAcordo(acordo)
+      // descricao += ` Valor: R$ ${valorAcordo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`
     }
     descricao += ` Processo retornado ao status "Julgado".`
 
@@ -455,9 +457,8 @@ export async function DELETE(
         entidadeId: id,
         dadosAnteriores: {
           processoNumero: acordo.processo.numero,
-          valorTotal: acordo.valorTotal,
-          valorFinal: acordo.valorFinal,
-          modalidadePagamento: acordo.modalidadePagamento,
+          tipoProcesso: acordo.tipoProcesso,
+          numeroTermo: acordo.numeroTermo,
           status: acordo.status
         }
       }

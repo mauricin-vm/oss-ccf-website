@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
-import { pagamentoSchema } from '@/lib/validations/acordo'
+import { pagamentoParcelaSchema } from '@/lib/validations/acordo'
 import { SessionUser } from '@/types'
 export async function GET(
   request: NextRequest,
@@ -56,7 +56,7 @@ export async function POST(
     if (body.dataPagamento) {
       body.dataPagamento = new Date(body.dataPagamento)
     }
-    const validationResult = pagamentoSchema.safeParse(body)
+    const validationResult = pagamentoParcelaSchema.safeParse(body)
     if (!validationResult.success) {
       return NextResponse.json(
         { 

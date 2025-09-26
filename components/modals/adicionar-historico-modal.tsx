@@ -7,8 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, AlertCircle, History } from 'lucide-react'
+import { Loader2, History } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface AdicionarHistoricoModalProps {
@@ -45,14 +44,12 @@ export default function AdicionarHistoricoModal({
     tipo: 'EVENTO'
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const handleInputChange = (field: keyof HistoricoForm, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
-    setError(null)
     // Limpar erro visual do campo quando o usuário começar a digitar
     if (field === 'titulo') clearFieldError('titulo')
     if (field === 'descricao') clearFieldError('descricao')
@@ -108,7 +105,6 @@ export default function AdicionarHistoricoModal({
     }
 
     setIsSubmitting(true)
-    setError(null)
 
     try {
       const response = await fetch(`/api/processos/${processoId}/historico`, {
@@ -141,7 +137,6 @@ export default function AdicionarHistoricoModal({
       descricao: '',
       tipo: 'EVENTO'
     })
-    setError(null)
     // Limpar erros visuais
     clearFieldError('titulo')
     clearFieldError('descricao')

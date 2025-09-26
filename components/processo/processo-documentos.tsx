@@ -6,6 +6,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { FileText, Plus, Download, Calendar, Trash2 } from 'lucide-react'
 import AnexarDocumentoModal from '@/components/modals/anexar-documento-modal'
 import { toast } from 'sonner'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {
+  faFilePdf,
+  faFileWord,
+  faFileExcel,
+  faFilePowerpoint,
+  faFileAlt,
+  faFileImage,
+  faFileVideo,
+  faFileAudio,
+  faFileArchive,
+  faFile
+} from '@fortawesome/free-regular-svg-icons'
 
 interface Documento {
   id: string
@@ -111,13 +124,17 @@ export default function ProcessoDocumentos({ processo, canEdit }: ProcessoDocume
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
   }
 
-  const getFileTypeIcon = (tipo: string) => {
-    if (tipo.includes('pdf')) return '📄'
-    if (tipo.includes('word') || tipo.includes('document')) return '📝'
-    if (tipo.includes('excel') || tipo.includes('sheet')) return '📊'
-    if (tipo.includes('image')) return '🖼️'
-    if (tipo.includes('text')) return '📃'
-    return '📎'
+  const getFileTypeInfo = (mime: string) => {
+    if (mime.includes('pdf')) return { type: 'PDF', icon: faFilePdf, color: 'bg-red-500', badgeColor: 'bg-red-50 text-red-700 border-red-200' }
+    if (mime.includes('word') || mime.includes('msword')) return { type: 'Word', icon: faFileWord, color: 'bg-blue-500', badgeColor: 'bg-blue-50 text-blue-700 border-blue-200' }
+    if (mime.includes('excel') || mime.includes('spreadsheet')) return { type: 'Excel', icon: faFileExcel, color: 'bg-green-500', badgeColor: 'bg-green-50 text-green-700 border-green-200' }
+    if (mime.includes('powerpoint') || mime.includes('presentation')) return { type: 'PowerPoint', icon: faFilePowerpoint, color: 'bg-orange-500', badgeColor: 'bg-orange-50 text-orange-700 border-orange-200' }
+    if (mime.includes('text')) return { type: 'Texto', icon: faFileAlt, color: 'bg-gray-500', badgeColor: 'bg-gray-50 text-gray-700 border-gray-200' }
+    if (mime.includes('image')) return { type: 'Imagem', icon: faFileImage, color: 'bg-purple-500', badgeColor: 'bg-purple-50 text-purple-700 border-purple-200' }
+    if (mime.includes('video')) return { type: 'Vídeo', icon: faFileVideo, color: 'bg-pink-500', badgeColor: 'bg-pink-50 text-pink-700 border-pink-200' }
+    if (mime.includes('audio')) return { type: 'Áudio', icon: faFileAudio, color: 'bg-yellow-500', badgeColor: 'bg-yellow-50 text-yellow-700 border-yellow-200' }
+    if (mime.includes('zip') || mime.includes('rar') || mime.includes('archive')) return { type: 'Arquivo', icon: faFileArchive, color: 'bg-indigo-500', badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200' }
+    return { type: 'Documento', icon: faFile, color: 'bg-gray-500', badgeColor: 'bg-gray-50 text-gray-700 border-gray-200' }
   }
 
   return (
@@ -157,57 +174,65 @@ export default function ProcessoDocumentos({ processo, canEdit }: ProcessoDocume
             </div>
           ) : (
             <div className="space-y-3">
-              {documentos.map((documento) => (
-                <div key={documento.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <span className="text-lg">
-                          {getFileTypeIcon(documento.tipo)}
-                        </span>
+              {documentos.map((documento) => {
+                const fileInfo = getFileTypeInfo(documento.tipo)
+
+                return (
+                  <div key={documento.id} className="group flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 hover:shadow-sm">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-shrink-0">
+                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${fileInfo.color} text-white shadow-sm`}>
+                          <FontAwesomeIcon
+                            icon={fileInfo.icon}
+                            className="text-lg"
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium text-gray-900">
-                          {documento.nome}
-                        </h4>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                        <span>{formatFileSize(documento.tamanho)}</span>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(documento.createdAt).toLocaleDateString('pt-BR')}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-gray-900">
+                            {documento.nome}
+                          </h4>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full border ${fileInfo.badgeColor}`}>
+                            {fileInfo.type}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                          <span className="font-medium">{formatFileSize(documento.tamanho)}</span>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(documento.createdAt).toLocaleDateString('pt-BR')}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownload(documento)}
-                      disabled={isLoading}
-                      className="cursor-pointer"
-                    >
-                      <Download className="h-4 w-4 mr-1" />
-                      Baixar
-                    </Button>
-                    {canEdit && (
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDelete(documento)}
+                        onClick={() => handleDownload(documento)}
                         disabled={isLoading}
-                        className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="cursor-pointer hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600"
                       >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Deletar
+                        <Download className="h-4 w-4 mr-1" />
+                        Baixar
                       </Button>
-                    )}
+                      {canEdit && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(documento)}
+                          disabled={isLoading}
+                          className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300"
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Deletar
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>

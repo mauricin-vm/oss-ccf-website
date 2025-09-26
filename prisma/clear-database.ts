@@ -19,8 +19,6 @@ async function clearDatabase() {
     await prisma.acordoInscricao.deleteMany()
     console.log('✅ AcordoInscricao')
 
-    await prisma.acordoDetalhes.deleteMany()
-    console.log('✅ AcordoDetalhes')
 
     await prisma.acordo.deleteMany()
     console.log('✅ Acordo')

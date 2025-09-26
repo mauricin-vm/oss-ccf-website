@@ -11,6 +11,7 @@ export type ProcessoWithRelations = Processo & {
     parcelas: Parcela[]
     detalhes?: Record<string, unknown>[]
   }
+  acordao?: ProcessoAcordao
   decisoes?: ProcessoDecisao[]
   acordos?: ProcessoAcordo[]
   documentos?: ProcessoDocumento[]
@@ -261,6 +262,94 @@ export interface ProcessoAcordo {
   numeroParcelas: number
   valorFinal: number
   parcelas: ProcessoParcela[]
+  transacao?: boolean | {
+    custasAdvocaticias: number
+    custasDataVencimento: string
+    custasDataPagamento: string
+    honorariosValor: number
+    honorariosMetodoPagamento: string
+    honorariosParcelas: number
+    valorTotalProposto: number
+    valorEntrada: number
+  }
+  transacaoDetails?: {
+    tipoTransacao: string
+    valorTransacao: number
+    percentualDesconto: number
+    modalidadePagamento: string
+    numeroParcelas: number
+    valorParcela: number
+    custasAdvocaticias?: number
+    custasDataVencimento?: string
+    custasDataPagamento?: string
+    honorariosValor?: number
+    honorariosMetodoPagamento?: string
+    honorariosParcelas?: number
+    valorTotalProposto?: number
+    entrada?: number
+    totalGeral?: number
+  }
+  compensacao?: boolean | {
+    custasAdvocaticias: number
+    honorariosValor: number
+    valorTotalCreditos: number
+    valorTotalDebitos: number
+    valorLiquido: number
+    custasDataVencimento: string
+    custasDataPagamento: string
+    honorariosMetodoPagamento: string
+    honorariosParcelas: number
+    honorariosDataVencimento: string
+    honorariosDataPagamento: string
+  }
+  compensacaoDetails?: {
+    tipoCompensacao: string
+    valorCompensacao: number
+    numeroCredito: string
+    valorCredito: number
+    valorTotalCreditos?: number
+    valorTotalDebitos?: number
+    valorLiquido?: number
+    custasAdvocaticias?: number
+    honorariosValor?: number
+    custasDataVencimento?: string
+    custasDataPagamento?: string
+    honorariosMetodoPagamento?: string
+    honorariosParcelas?: number
+    honorariosDataVencimento?: string
+    honorariosDataPagamento?: string
+  }
+  dacao?: boolean | {
+    custasAdvocaticias: number
+    honorariosValor: number
+    valorAvaliado: number
+    valorLiquido: number
+    valorTotalOferecido: number
+    valorTotalCompensar: number
+    custasDataVencimento: string
+    custasDataPagamento: string
+    honorariosMetodoPagamento: string
+    honorariosParcelas: number
+    honorariosDataVencimento: string
+    honorariosDataPagamento: string
+  }
+  dacaoDetails?: {
+    tipoDacao: string
+    valorDacao: number
+    descricaoBem: string
+    valorAvaliado: number
+    valorLiquido?: number
+    custasAdvocaticias?: number
+    honorariosValor?: number
+    valorTotalOferecido?: number
+    valorTotalCompensar?: number
+    custasDataVencimento?: string
+    custasDataPagamento?: string
+    honorariosMetodoPagamento?: string
+    honorariosParcelas?: number
+    honorariosDataVencimento?: string
+    honorariosDataPagamento?: string
+  }
   detalhes?: {
     id: string
     tipo: string
@@ -279,6 +368,7 @@ export interface ProcessoParcela {
   valor: number
   dataVencimento: string
   status: 'PENDENTE' | 'PAGA' | 'VENCIDA' | 'CANCELADA'
+  tipoParcela?: string
   pagamentos?: ProcessoPagamento[]
 }
 
@@ -286,6 +376,38 @@ export interface ProcessoPagamento {
   id: string
   valorPago: number
   dataPagamento: string
+}
+
+// Interfaces para Relatórios
+export interface EvolucaoMensalItem {
+  mes: number
+  ano: number
+  valor: number
+  acordos: {
+    valor: number
+    quantidade: number
+  }
+  parcelas: {
+    valor: number
+    quantidade: number
+  }
+  total: {
+    valor: number
+    quantidade: number
+  }
+}
+
+export interface ValorPorTipoProcesso {
+  tipo: 'COMPENSACAO' | 'DACAO_PAGAMENTO' | 'TRANSACAO_EXCEPCIONAL'
+  _count: number
+  _sum: {
+    valorTotal: number
+  }
+}
+
+export interface ValorPorResultado {
+  tipoDecisao: 'DEFERIDO' | 'INDEFERIDO' | 'PARCIAL'
+  valorTotal: number
 }
 
 export interface ProcessoDocumento {
@@ -345,4 +467,11 @@ export interface AcordoDetalhe {
     valorAbatido: number
     situacao: string
   }>
+}
+
+export interface ProcessoAcordao {
+  id: string
+  numeroAcordao?: string | null
+  dataPublicacao?: string | null
+  numeroPublicacao?: string | null
 }

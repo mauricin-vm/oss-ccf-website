@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useForm, FieldErrors } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -20,7 +23,8 @@ import {
   Briefcase,
   GraduationCap,
   Check,
-  X
+  X,
+  Filter
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -36,22 +40,69 @@ interface Conselheiro {
   updatedAt: string
 }
 
+// Schemas de validação
+const createConselheiroSchema = z.object({
+  nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  email: z.string().email('Email inválido').optional().or(z.literal('')),
+  telefone: z.string().optional(),
+  cargo: z.string().optional(),
+  origem: z.string().optional(),
+  ativo: z.boolean()
+})
+
+const editConselheiroSchema = z.object({
+  nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  email: z.string().email('Email inválido').optional().or(z.literal('')),
+  telefone: z.string().optional(),
+  cargo: z.string().optional(),
+  origem: z.string().optional(),
+  ativo: z.boolean()
+})
+
+type CreateConselheiroInput = z.infer<typeof createConselheiroSchema>
+type EditConselheiroInput = z.infer<typeof editConselheiroSchema>
+
 export default function ConselheirosTab() {
   const [conselheiros, setConselheiros] = useState<Conselheiro[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [selectedConselheiro, setSelectedConselheiro] = useState<Conselheiro | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(15)
-  const [formData, setFormData] = useState({
-    nome: '',
-    email: '',
-    telefone: '',
-    cargo: '',
-    origem: '',
-    ativo: true
+  const [isCreating, setIsCreating] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+
+  // Form para criar conselheiro
+  const {
+    register: createRegister,
+    handleSubmit: handleCreateSubmit,
+    formState: { errors: createErrors },
+    reset: resetCreateForm,
+    setValue: setCreateValue
+  } = useForm<CreateConselheiroInput>({
+    resolver: zodResolver(createConselheiroSchema),
+    defaultValues: {
+      nome: '',
+      email: '',
+      telefone: '',
+      cargo: '',
+      origem: '',
+      ativo: true
+    }
+  })
+
+  // Form para editar conselheiro
+  const {
+    register: editRegister,
+    handleSubmit: handleEditSubmit,
+    formState: { errors: editErrors },
+    reset: resetEditForm,
+    setValue: setEditValue
+  } = useForm<EditConselheiroInput>({
+    resolver: zodResolver(editConselheiroSchema)
   })
 
   // Carregar conselheiros
@@ -76,16 +127,28 @@ export default function ConselheirosTab() {
     loadConselheiros()
   }, [])
 
+  // Função para lidar com erros de validação do formulário de criar conselheiro
+  const onCreateInvalid = (errors: FieldErrors<z.infer<typeof createConselheiroSchema>>) => {
+    if (errors.nome?.message) {
+      toast.warning(errors.nome.message)
+      return
+    }
+    if (errors.email?.message) {
+      toast.warning(errors.email.message)
+      return
+    }
+  }
+
   // Criar conselheiro
-  const handleCreateConselheiro = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleCreateConselheiro = async (data: CreateConselheiroInput) => {
+    setIsCreating(true)
     try {
       const response = await fetch('/api/conselheiros', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(data)
       })
 
       if (!response.ok) {
@@ -95,33 +158,40 @@ export default function ConselheirosTab() {
 
       toast.success('Conselheiro criado com sucesso')
       setShowCreateDialog(false)
-      setFormData({
-        nome: '',
-        email: '',
-        telefone: '',
-        cargo: '',
-        origem: '',
-        ativo: true
-      })
+      resetCreateForm()
       loadConselheiros()
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao criar conselheiro'
       toast.error(errorMessage)
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  // Função para lidar com erros de validação do formulário de editar conselheiro
+  const onEditInvalid = (errors: FieldErrors<z.infer<typeof editConselheiroSchema>>) => {
+    if (errors.nome?.message) {
+      toast.warning(errors.nome.message)
+      return
+    }
+    if (errors.email?.message) {
+      toast.warning(errors.email.message)
+      return
     }
   }
 
   // Editar conselheiro
-  const handleEditConselheiro = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleEditConselheiro = async (data: EditConselheiroInput) => {
     if (!selectedConselheiro) return
 
+    setIsEditing(true)
     try {
       const response = await fetch(`/api/conselheiros/${selectedConselheiro.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(data)
       })
 
       if (!response.ok) {
@@ -136,6 +206,8 @@ export default function ConselheirosTab() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar conselheiro'
       toast.error(errorMessage)
+    } finally {
+      setIsEditing(false)
     }
   }
 
@@ -166,14 +238,13 @@ export default function ConselheirosTab() {
   // Abrir dialog de edição
   const openEditDialog = (conselheiro: Conselheiro) => {
     setSelectedConselheiro(conselheiro)
-    setFormData({
-      nome: conselheiro.nome,
-      email: conselheiro.email || '',
-      telefone: conselheiro.telefone || '',
-      cargo: conselheiro.cargo || '',
-      origem: conselheiro.origem || '',
-      ativo: conselheiro.ativo
-    })
+    resetEditForm()
+    setEditValue('nome', conselheiro.nome)
+    setEditValue('email', conselheiro.email || '')
+    setEditValue('telefone', conselheiro.telefone || '')
+    setEditValue('cargo', conselheiro.cargo || '')
+    setEditValue('origem', conselheiro.origem || '')
+    setEditValue('ativo', conselheiro.ativo)
     setShowEditDialog(true)
   }
 
@@ -215,19 +286,7 @@ export default function ConselheirosTab() {
             Administre os conselheiros que fazem análise dos processos
           </p>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={(open) => {
-          setShowCreateDialog(open)
-          if (!open) {
-            setFormData({
-              nome: '',
-              email: '',
-              telefone: '',
-              cargo: '',
-              origem: '',
-              ativo: true
-            })
-          }
-        }}>
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
             <Button className="cursor-pointer">
               <Plus className="h-4 w-4 mr-2" />
@@ -241,66 +300,82 @@ export default function ConselheirosTab() {
                 Preencha os dados do novo conselheiro
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleCreateConselheiro} className="space-y-4">
+            <form onSubmit={handleCreateSubmit(handleCreateConselheiro, onCreateInvalid)} className="space-y-4" noValidate>
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome do Conselheiro <span className="text-red-500">*</span></Label>
+                <Label htmlFor="create-nome">
+                  Nome do Conselheiro <span className="text-red-500">*</span>
+                </Label>
                 <Input
-                  id="nome"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  required
+                  id="create-nome"
+                  {...createRegister('nome')}
+                  disabled={isCreating}
+                  placeholder="Nome completo do conselheiro"
+                  className={createErrors.nome ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="create-email">Email</Label>
                 <Input
-                  id="email"
+                  id="create-email"
                   type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  {...createRegister('email')}
+                  disabled={isCreating}
+                  placeholder="email@exemplo.com"
+                  className={createErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="telefone">Telefone</Label>
+                <Label htmlFor="create-telefone">Telefone</Label>
                 <Input
-                  id="telefone"
-                  value={formData.telefone}
-                  onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                  id="create-telefone"
+                  {...createRegister('telefone')}
+                  disabled={isCreating}
                   placeholder="(00) 00000-0000"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cargo">Cargo</Label>
+                <Label htmlFor="create-cargo">Cargo</Label>
                 <Input
-                  id="cargo"
-                  value={formData.cargo}
-                  onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
+                  id="create-cargo"
+                  {...createRegister('cargo')}
+                  disabled={isCreating}
                   placeholder="Ex: Conselheiro Titular, Conselheiro Suplente"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="origem">Origem (Setor/Órgão/Entidade)</Label>
+                <Label htmlFor="create-origem">Origem (Setor/Órgão/Entidade)</Label>
                 <Input
-                  id="origem"
-                  value={formData.origem}
-                  onChange={(e) => setFormData({ ...formData, origem: e.target.value })}
+                  id="create-origem"
+                  {...createRegister('origem')}
+                  disabled={isCreating}
                   placeholder="Ex: Secretaria da Fazenda, OAB, Sindicato dos Contadores"
                 />
               </div>
               <div className="flex items-center space-x-2">
                 <Switch
-                  id="ativo"
-                  checked={formData.ativo}
-                  onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })}
+                  id="create-ativo"
+                  onCheckedChange={(checked) => setCreateValue('ativo', checked)}
+                  defaultChecked={true}
+                  disabled={isCreating}
                 />
-                <Label htmlFor="ativo">Conselheiro ativo</Label>
+                <Label htmlFor="create-ativo">Conselheiro ativo</Label>
               </div>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)} className="cursor-pointer">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCreateDialog(false)}
+                  disabled={isCreating}
+                  className="cursor-pointer"
+                >
                   Cancelar
                 </Button>
-                <Button type="submit" className="cursor-pointer">
-                  Criar Conselheiro
+                <Button
+                  type="submit"
+                  disabled={isCreating}
+                  className="cursor-pointer"
+                >
+                  {isCreating ? 'Criando...' : 'Criar Conselheiro'}
                 </Button>
               </div>
             </form>
@@ -339,20 +414,52 @@ export default function ConselheirosTab() {
         </Card>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros e Busca */}
       <Card>
         <CardHeader>
-          <CardTitle>Buscar Conselheiros</CardTitle>
+          <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Buscar por nome, email, cargo ou origem..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
-            />
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Buscar por nome, email, cargo ou origem..."
+                    className="pl-10"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                className="cursor-pointer"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {showFilters && (
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4 pt-4 border-t">
+                <div className="flex items-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearch('')
+                      toast.info('Filtros limpos')
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Limpar Filtros
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -450,20 +557,7 @@ export default function ConselheirosTab() {
       </Card>
 
       {/* Dialog de Edição */}
-      <Dialog open={showEditDialog} onOpenChange={(open) => {
-        setShowEditDialog(open)
-        if (!open) {
-          setSelectedConselheiro(null)
-          setFormData({
-            nome: '',
-            email: '',
-            telefone: '',
-            cargo: '',
-            origem: '',
-            ativo: true
-          })
-        }
-      }}>
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar Conselheiro</DialogTitle>
@@ -471,14 +565,17 @@ export default function ConselheirosTab() {
               Altere os dados do conselheiro
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleEditConselheiro} className="space-y-4">
+          <form onSubmit={handleEditSubmit(handleEditConselheiro, onEditInvalid)} className="space-y-4" noValidate>
             <div className="space-y-2">
-              <Label htmlFor="edit-nome">Nome do Conselheiro <span className="text-red-500">*</span></Label>
+              <Label htmlFor="edit-nome">
+                Nome do Conselheiro <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="edit-nome"
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                required
+                {...editRegister('nome')}
+                disabled={isEditing}
+                placeholder="Nome completo do conselheiro"
+                className={editErrors.nome ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
             </div>
             <div className="space-y-2">
@@ -486,16 +583,18 @@ export default function ConselheirosTab() {
               <Input
                 id="edit-email"
                 type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                {...editRegister('email')}
+                disabled={isEditing}
+                placeholder="email@exemplo.com"
+                className={editErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-telefone">Telefone</Label>
               <Input
                 id="edit-telefone"
-                value={formData.telefone}
-                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                {...editRegister('telefone')}
+                disabled={isEditing}
                 placeholder="(00) 00000-0000"
               />
             </div>
@@ -503,8 +602,8 @@ export default function ConselheirosTab() {
               <Label htmlFor="edit-cargo">Cargo</Label>
               <Input
                 id="edit-cargo"
-                value={formData.cargo}
-                onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
+                {...editRegister('cargo')}
+                disabled={isEditing}
                 placeholder="Ex: Conselheiro Titular, Conselheiro Suplente"
               />
             </div>
@@ -512,25 +611,35 @@ export default function ConselheirosTab() {
               <Label htmlFor="edit-origem">Origem (Setor/Órgão/Entidade)</Label>
               <Input
                 id="edit-origem"
-                value={formData.origem}
-                onChange={(e) => setFormData({ ...formData, origem: e.target.value })}
+                {...editRegister('origem')}
+                disabled={isEditing}
                 placeholder="Ex: Secretaria da Fazenda, OAB, Sindicato dos Contadores"
               />
             </div>
             <div className="flex items-center space-x-2">
               <Switch
                 id="edit-ativo"
-                checked={formData.ativo}
-                onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })}
+                onCheckedChange={(checked) => setEditValue('ativo', checked)}
+                disabled={isEditing}
               />
               <Label htmlFor="edit-ativo">Conselheiro ativo</Label>
             </div>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)} className="cursor-pointer">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowEditDialog(false)}
+                disabled={isEditing}
+                className="cursor-pointer"
+              >
                 Cancelar
               </Button>
-              <Button type="submit" className="cursor-pointer">
-                Atualizar Conselheiro
+              <Button
+                type="submit"
+                disabled={isEditing}
+                className="cursor-pointer"
+              >
+                {isEditing ? 'Atualizando...' : 'Atualizar Conselheiro'}
               </Button>
             </div>
           </form>

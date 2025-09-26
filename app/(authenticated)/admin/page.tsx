@@ -5,15 +5,12 @@ import { prisma } from '@/lib/db'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Users, 
-  Settings, 
-  Activity, 
-  Database,
+import {
+  Users,
+  Activity,
   Shield,
   CheckCircle,
   FileText,
-  BarChart3,
   UserCheck,
   Building2,
   Gavel,
@@ -112,27 +109,6 @@ export default async function AdminDashboard() {
       href: '/admin/logs',
       icon: Activity,
       stats: `${stats.recentLogs.length} recentes`
-    },
-    {
-      title: 'Configurações do Sistema',
-      description: 'Configurações gerais e parâmetros',
-      href: '/admin/configuracoes',
-      icon: Settings,
-      stats: 'Sistema'
-    },
-    {
-      title: 'Backup e Manutenção',
-      description: 'Backup de dados e manutenção do sistema',
-      href: '/admin/backup',
-      icon: Database,
-      stats: 'Ferramentas'
-    },
-    {
-      title: 'Relatórios Avançados',
-      description: 'Relatórios detalhados e análises',
-      href: '/admin/relatorios',
-      icon: BarChart3,
-      stats: 'Analytics'
     }
   ]
 
@@ -142,7 +118,12 @@ export default async function AdminDashboard() {
       UPDATE: 'Atualização',
       DELETE: 'Exclusão',
       LOGIN: 'Login',
-      LOGOUT: 'Logout'
+      LOGOUT: 'Logout',
+      VIEW: 'Visualização',
+      EXPORT: 'Exportação',
+      DOWNLOAD: 'Download',
+      MIGRATE: 'Migração',
+      MIGRATE_HISTORY: 'Migração'
     }
     return labels[acao] || acao
   }
@@ -153,9 +134,33 @@ export default async function AdminDashboard() {
       UPDATE: 'bg-blue-100 text-blue-800',
       DELETE: 'bg-red-100 text-red-800',
       LOGIN: 'bg-purple-100 text-purple-800',
-      LOGOUT: 'bg-gray-100 text-gray-800'
+      LOGOUT: 'bg-gray-100 text-gray-800',
+      VIEW: 'bg-cyan-100 text-cyan-800',
+      EXPORT: 'bg-orange-100 text-orange-800',
+      DOWNLOAD: 'bg-indigo-100 text-indigo-800',
+      MIGRATE: 'bg-yellow-100 text-yellow-800',
+      MIGRATE_HISTORY: 'bg-yellow-100 text-yellow-800'
     }
     return colors[acao] || 'bg-gray-100 text-gray-800'
+  }
+
+  const getEntityLabel = (entidade: string) => {
+    const labels: Record<string, string> = {
+      User: 'Usuário',
+      Processo: 'Processo',
+      Acordo: 'Acordo',
+      Acordao: 'Acórdão',
+      Sessao: 'Sessão',
+      Documento: 'Documento',
+      Tramitacao: 'Tramitação',
+      Pauta: 'Pauta',
+      Parcela: 'Parcela',
+      Pagamento: 'Pagamento',
+      PagamentoParcela: 'Pagamento de Parcela',
+      AcordoDetalhes: 'Detalhes do Acordo',
+      HistoricoProcesso: 'Histórico do Processo'
+    }
+    return labels[entidade] || entidade
   }
 
   return (
@@ -272,17 +277,16 @@ export default async function AdminDashboard() {
                   <Activity className="h-4 w-4 text-gray-400" />
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{log.usuario.name}</span>
                       <Badge className={getActionColor(log.acao)}>
                         {getActionLabel(log.acao)}
                       </Badge>
-                      <span className="text-sm text-gray-600">
-                        {log.entidade}
-                      </span>
+                      <span className="font-medium">{getEntityLabel(log.entidade)}</span>
+                      <span className="text-sm text-gray-500">#{log.entidadeId.slice(-6)}</span>
                     </div>
-                    <p className="text-sm text-gray-600">
-                      {new Date(log.createdAt).toLocaleString()}
-                    </p>
+                    <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                      <span>{log.usuario.name}</span>
+                      <span>{new Date(log.createdAt).toLocaleString('pt-BR')}</span>
+                    </div>
                   </div>
                 </div>
               </div>

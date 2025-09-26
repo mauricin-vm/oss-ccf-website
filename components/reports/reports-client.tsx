@@ -33,8 +33,8 @@ interface ReportsClientProps {
       vencidas: number
       pagas: number
     }
-    processosPorTipo: Array<{ tipo: string; _count: { id: number } }>
-    processosPorStatus: Array<{ status: string; _count: { id: number } }>
+    processosPorTipo: Array<{ tipo: string; _count: number }>
+    processosPorStatus: Array<{ status: string; _count: number }>
     sessoesAtivas: number
     acordosVencidos: number
     valores: {
@@ -263,8 +263,8 @@ export function ReportsClient({ initialData, relatóriosRecentes }: ReportsClien
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {(dashboardData.valoresPorTipoProcesso || []).map((item: { tipo: string; _count: number; _sum: { valorTotal: number } }) => (
-                <div key={item.tipo} className="flex items-center justify-between">
+              {(dashboardData.valoresPorTipoProcesso || []).map((item: { tipo: string; _count: number; _sum: { valorTotal: number } }, index: number) => (
+                <div key={`${item.tipo}-${index}`} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Badge className={getTipoProcessoColor(item.tipo)}>
                       {getTipoProcessoLabel(item.tipo)}
@@ -272,7 +272,7 @@ export function ReportsClient({ initialData, relatóriosRecentes }: ReportsClien
                   </div>
                   <div className="text-right">
                     <span className="font-medium">
-                      R$ {Number(item._sum.valorTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {Number(item._sum?.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                     <p className="text-xs text-gray-500">{item._count} processos</p>
                   </div>
@@ -339,12 +339,15 @@ export function ReportsClient({ initialData, relatóriosRecentes }: ReportsClien
 
       {/* Gráficos */}
       <ChartsSection
-        decisoesPorTipo={dashboardData.decisoesPorTipo || initialData.decisoesPorTipo || []}
+        decisoesPorTipo={(() => {
+          const decisoes = dashboardData.decisoesPorTipo || initialData.decisoesPorTipo || []
+          return decisoes
+        })()}
         valoresPorTipoProcesso={(dashboardData.valoresPorTipoProcesso || initialData.valoresPorTipoProcesso || []).map((item: { tipo: string; _count: number; _sum: { valorTotal: number } }) => ({
           tipo: item.tipo as 'COMPENSACAO' | 'DACAO_PAGAMENTO' | 'TRANSACAO_EXCEPCIONAL',
           _count: item._count,
           _sum: {
-            valorTotal: Number(item._sum.valorTotal)
+            valorTotal: Number(item._sum?.valorTotal || 0)
           }
         }))}
         valoresPorResultado={(dashboardData.valoresPorResultado || initialData.valoresPorResultado || []).map((item: { tipoDecisao: string | null; valorTotal: number }) => ({
@@ -422,8 +425,8 @@ export function ReportsClient({ initialData, relatóriosRecentes }: ReportsClien
               ].map((stage, index) => {
                 const count = stage.statuses.reduce((total, status) => {
                   const processoData = (dashboardData.processosPorStatus || initialData.processosPorStatus || [])
-                    .find((p: { status: string; _count: { id: number } }) => p.status === status)
-                  return total + (processoData?._count.id || 0)
+                    .find((p: { status: string; _count: number }) => p.status === status)
+                  return total + (processoData?._count || 0)
                 }, 0)
 
                 return (

@@ -1,6 +1,6 @@
 // node prisma/migration/0-limpar_tabelas.js
 
-const { PrismaClient } = require('@prisma/client')
+import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -90,8 +90,8 @@ async function limparTabelas() {
         if (count > 0) {
           console.log(`  • ${tabela.nome}: ${count} registros`)
         }
-      } catch (error) {
-        console.log(`  • ${tabela.nome}: Erro ao contar (${error.message})`)
+      } catch (err) {
+        console.log(`  • ${tabela.nome}: Erro ao contar (${err.message})`)
         contagemAntes[tabela.nome] = 'erro'
       }
     }
@@ -144,7 +144,7 @@ async function limparTabelas() {
         } else {
           console.log(`  ✅ ${tabela.nome}: Vazia`)
         }
-      } catch (error) {
+      } catch {
         console.log(`  ❌ ${tabela.nome}: Erro ao verificar`)
       }
     }
@@ -156,7 +156,7 @@ async function limparTabelas() {
       const countConselheiros = await prisma.conselheiro.count()
       console.log(`  • User: ${countUsers} registros`)
       console.log(`  • Conselheiro: ${countConselheiros} registros`)
-    } catch (error) {
+    } catch {
       console.log('  ❌ Erro ao verificar tabelas preservadas')
     }
 

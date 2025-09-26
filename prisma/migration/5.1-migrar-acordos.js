@@ -1,8 +1,8 @@
 // node prisma/migration/5.1-migrar-acordos.js
 
-const { PrismaClient } = require('@prisma/client')
-const fs = require('fs')
-const path = require('path')
+import { PrismaClient } from '@prisma/client'
+import fs from 'fs'
+import path from 'path'
 
 const prisma = new PrismaClient()
 
@@ -201,7 +201,7 @@ async function criarDetalhesEspecificos(acordoId, tipoProcesso, dadosEspecificos
 }
 
 // Função para criar parcelas (apenas para TRANSACAO_EXCEPCIONAL)
-async function criarParcelas(acordo, dadosEspecificos) {
+async function criarParcelas(acordo) {
   const { modalidadePagamento, numeroParcelas, valorFinal, valorEntrada, dataAssinatura, dataVencimento } = acordo
 
   if (modalidadePagamento === 'parcelado' && numeroParcelas && numeroParcelas > 1) {
@@ -424,7 +424,7 @@ async function migrarAcordos() {
 
         // Criar parcelas (apenas para TRANSACAO_EXCEPCIONAL)
         if (processo.tipo === 'TRANSACAO_EXCEPCIONAL') {
-          await criarParcelas(acordo, acordoData.dadosEspecificos)
+          await criarParcelas(acordo)
           console.log(`✅ Parcelas criadas: ${acordoData.numeroParcelas || 1}`)
         }
 
@@ -480,7 +480,7 @@ async function migrarAcordos() {
         await prisma.logAuditoria.create({
           data: {
             usuarioId: usuarioSistema.id,
-            acao: 'CREATE',
+            acao: 'MIGRATE',
             entidade: 'Acordo',
             entidadeId: acordo.id,
             dadosNovos: {
@@ -630,6 +630,6 @@ if (require.main === module) {
     })
 }
 
-module.exports = {
+export {
   migrarAcordos
 }

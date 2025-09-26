@@ -27,10 +27,10 @@ export function BarChartResultados({ data }: BarChartResultadosProps) {
     }
     return labels[tipo] || tipo
   }
-  const chartData = data.map(item => ({
+  const chartData = Array.isArray(data) ? data.map(item => ({
     resultado: getTipoDecisaoLabel(item.tipoDecisao || ''),
     valor: Number(item.valorTotal)
-  }))
+  })) : []
 
   return (
     <div className="h-80">

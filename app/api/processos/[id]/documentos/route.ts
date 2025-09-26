@@ -6,8 +6,20 @@ import { SessionUser } from '@/types'
 import { writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
-import { v4 as uuidv4 } from 'uuid'
-const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads/documentos'
+import dayjs from 'dayjs'
+const CCF_FILES = process.env.CCF_FILES || 'S:\\JURFIS\\Programa\\CCF\\Arquivos'
+
+// Função para extrair o ano do número do processo
+// Padrão: 1 a 6 dígitos + '/' + 4 dígitos fixos + '-' + 2 dígitos fixos
+// Exemplo: 265/2020-35 -> ano = 2020
+function extrairAnoProcesso(numeroProcesso: string): number {
+  const match = numeroProcesso.match(/\/(\d{4})-/)
+  if (match && match[1]) {
+    return parseInt(match[1], 10)
+  }
+  // Fallback para o ano atual se o padrão não for encontrado
+  return new Date().getFullYear()
+}
 const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
 // Tipos de arquivo permitidos
 const ALLOWED_TYPES = [
@@ -73,16 +85,26 @@ export async function POST(
         { status: 400 }
       )
     }
-    // Criar diretório se não existir (substituir '/' por '-' no nome da pasta)
+    // Estrutura do projeto anterior: CCF_FILES\\ANO\\NUMERO-PROCESSO
+    const processoYear = extrairAnoProcesso(processo.numero)
     const processoDirName = processo.numero.replace(/\//g, '-')
-    const processoDir = join(UPLOAD_DIR, processoDirName)
+    const processoDir = join(CCF_FILES, processoYear.toString(), processoDirName)
+
     if (!existsSync(processoDir)) {
       await mkdir(processoDir, { recursive: true })
     }
-    // Gerar nome único para o arquivo
-    const fileExtension = file.name.split('.').pop()
-    const uniqueFileName = `${uuidv4()}.${fileExtension}`
-    const filePath = join(processoDir, uniqueFileName)
+
+    // Usar o nome original, mas verificar duplicatas como no projeto anterior
+    let fileName = file.name
+    let filePath = join(processoDir, fileName)
+
+    if (existsSync(filePath)) {
+      const date = dayjs().format('DD-MM-YYYY-HH-mm-ss')
+      const nameWithoutExt = file.name.split('.')[0]
+      const extension = file.name.split('.').pop()
+      fileName = `${nameWithoutExt}-${date}.${extension}`
+      filePath = join(processoDir, fileName)
+    }
     // Salvar arquivo no sistema de arquivos
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
@@ -93,9 +115,9 @@ export async function POST(
       const documento = await tx.documento.create({
         data: {
           processoId: processoId,
-          nome: nomePersonalizado || file.name,
+          nome: nomePersonalizado || fileName,
           tipo: file.type,
-          url: `/uploads/documentos/${processoDirName}/${uniqueFileName}`,
+          url: filePath, // Caminho completo para compatibilidade
           tamanho: file.size
         }
       })

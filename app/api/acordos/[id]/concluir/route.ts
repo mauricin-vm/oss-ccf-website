@@ -63,7 +63,7 @@ export async function PATCH(
         processoId: acordo.processoId,
         titulo: 'Acordo Concluído',
         descricao: `Acordo ${tipoProcesso === 'COMPENSACAO' ? 'de compensação' : 'de dação em pagamento'} concluído`,
-        tipo: 'ACORDO_CONCLUIDO',
+        tipo: 'ACORDO',
         usuarioId: user.id
       }
     })
@@ -81,7 +81,7 @@ export async function PATCH(
     // Registrar log da atividade
     await prisma.logAuditoria.create({
       data: {
-        acao: 'ACORDO_CONCLUIDO',
+        acao: 'UPDATE',
         entidade: 'Acordo',
         entidadeId: acordo.id,
         dadosAnteriores: {
@@ -92,7 +92,7 @@ export async function PATCH(
           dataConclusao: agora,
           processoNumero: acordo.processo.numero,
           tipoProcesso: tipoProcesso,
-          valorFinal: acordo.valorFinal,
+          valorFinal: (acordo as { valorFinal?: number }).valorFinal || 0,
           atualizouProcesso: atualizarProcesso
         },
         usuarioId: user.id

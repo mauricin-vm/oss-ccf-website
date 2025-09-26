@@ -10,7 +10,6 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { CalendarIcon, Filter, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { toast } from 'sonner'
 
 export interface FiltersState {
   dataInicio?: Date

@@ -25,7 +25,6 @@ import {
   AlertCircle,
   Trash2,
   Plus,
-  Check,
   X
 } from 'lucide-react'
 import Link from 'next/link'
@@ -996,8 +995,7 @@ export default function PautaDetalhesPage({
                     <div
                       key={processo.id}
                       onClick={() => handleSelectProcess(processo)}
-                      className={`p-3 cursor-pointer border-b last:border-b-0 hover:bg-gray-50 ${selectedProcess?.id === processo.id ? 'bg-blue-50 border-blue-200' : ''
-                        }`}
+                      className="p-3 cursor-pointer border-b last:border-b-0 hover:bg-gray-50"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -1033,9 +1031,6 @@ export default function PautaDetalhesPage({
                           })()}
                         </div>
                         <div className="flex items-center gap-2 ml-4">
-                          {selectedProcess?.id === processo.id && (
-                            <Check className="h-4 w-4 text-blue-600" />
-                          )}
                         </div>
                       </div>
                     </div>

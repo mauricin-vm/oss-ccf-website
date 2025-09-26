@@ -135,6 +135,7 @@ model Processo {
   inscricoes        ProcessoInscricao[] @relation("ProcessoInscricoes")
   historicos        HistoricoProcesso[]
   transacao         TransacaoExcepcional?
+  acordao           Acordao?
   
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -248,6 +249,22 @@ model Documento {
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   
+  @@index([processoId])
+}
+
+model Acordao {
+  id                String          @id @default(cuid())
+
+  processoId        String          @unique
+  processo          Processo        @relation(fields: [processoId], references: [id], onDelete: Cascade)
+
+  numeroAcordao     String?
+  dataPublicacao    DateTime?
+  numeroPublicacao  String?
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
   @@index([processoId])
 }
 

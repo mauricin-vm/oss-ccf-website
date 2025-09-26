@@ -35,13 +35,13 @@ export function PieChartResults({ data, values }: PieChartResultsProps) {
     return Number(valueItem?.valorTotal || 0)
   }
 
-  const chartData = data.map(item => ({
+  const chartData = Array.isArray(data) ? data.map(item => ({
     name: item.tipoDecisao,
     value: item._count.id,
     valorTotal: getValueForTipo(item.tipoDecisao),
     fill: item.tipoDecisao === 'DEFERIDO' ? '#10b981' :
           item.tipoDecisao === 'INDEFERIDO' ? '#ef4444' : '#f59e0b'
-  }))
+  })) : []
 
   return (
     <div className="h-80">

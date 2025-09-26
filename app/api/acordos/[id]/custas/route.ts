@@ -53,17 +53,13 @@ export async function PUT(
 
     // Verificar se o acordo tem custas baseado no tipo
     let temCustas = false
-    let valorCustas = 0
 
     if (acordo.tipoProcesso === 'TRANSACAO_EXCEPCIONAL' && acordo.transacao) {
-      temCustas = acordo.transacao.custasAdvocaticias !== null && acordo.transacao.custasAdvocaticias > 0
-      valorCustas = Number(acordo.transacao.custasAdvocaticias) || 0
+      temCustas = acordo.transacao.custasAdvocaticias !== null && Number(acordo.transacao.custasAdvocaticias) > 0
     } else if (acordo.tipoProcesso === 'COMPENSACAO' && acordo.compensacao) {
-      temCustas = acordo.compensacao.custasAdvocaticias !== null && acordo.compensacao.custasAdvocaticias > 0
-      valorCustas = Number(acordo.compensacao.custasAdvocaticias) || 0
+      temCustas = acordo.compensacao.custasAdvocaticias !== null && Number(acordo.compensacao.custasAdvocaticias) > 0
     } else if (acordo.tipoProcesso === 'DACAO_PAGAMENTO' && acordo.dacao) {
-      temCustas = acordo.dacao.custasAdvocaticias !== null && acordo.dacao.custasAdvocaticias > 0
-      valorCustas = Number(acordo.dacao.custasAdvocaticias) || 0
+      temCustas = acordo.dacao.custasAdvocaticias !== null && Number(acordo.dacao.custasAdvocaticias) > 0
     }
 
     if (!temCustas) {
@@ -92,7 +88,7 @@ export async function PUT(
     }
 
     // Usar transação para atualizar custas e verificar se acordo foi cumprido
-    const result = await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       // Atualizar custas baseado no tipo de processo
       if (acordo.tipoProcesso === 'TRANSACAO_EXCEPCIONAL') {
         await tx.acordoTransacao.update({

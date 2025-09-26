@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { pautaSchema, type PautaInput } from '@/lib/validations/pauta'
 import { Button } from '@/components/ui/button'
@@ -141,30 +141,43 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
   }, [selectedProcessos, setValue])
 
   // Função para lidar com erros de validação do formulário
-  const onInvalid = (errors: any) => {
+  const onInvalid = (errors: FieldErrors<PautaInput>) => {
     // Verificar primeiro os campos básicos da pauta
-    const fieldOrder = [
-      'numero',
-      'dataPauta',
-      'observacoes'
-    ]
-
-    // Procurar pelo primeiro erro nos campos básicos
-    for (const field of fieldOrder) {
-      if (errors[field]?.message) {
-        toast.warning(errors[field].message)
-
-        // Focar no campo com erro após um pequeno delay
-        setTimeout(() => {
-          const element = document.getElementById(field)
-          if (element) {
-            element.focus()
-            element.style.borderColor = '#ef4444'
-            element.style.boxShadow = '0 0 0 1px #ef4444'
-          }
-        }, 100)
-        return
-      }
+    if (errors.numero?.message) {
+      toast.warning(errors.numero.message)
+      setTimeout(() => {
+        const element = document.getElementById('numero')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.dataPauta?.message) {
+      toast.warning(errors.dataPauta.message)
+      setTimeout(() => {
+        const element = document.getElementById('dataPauta')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.observacoes?.message) {
+      toast.warning(errors.observacoes.message)
+      setTimeout(() => {
+        const element = document.getElementById('observacoes')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
     }
 
     // Verificar erros no array de processos
@@ -358,8 +371,7 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                       return new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
                     }
                   })}
-                  onChange={(e) => {
-                    const value = e.target.value
+                  onChange={() => {
                     // Para inputs do tipo date, devemos deixar o React Hook Form lidar com a conversão
                     // O setValue não é necessário aqui pois o register já cuida da sincronização
                     clearFieldError('dataPauta')

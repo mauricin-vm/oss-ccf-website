@@ -2468,8 +2468,8 @@
           "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Julgado",
-          "decisao": "Deferimento Parcial",
-          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido parcialmente."
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido."
         }
       ]
     },
@@ -2533,8 +2533,8 @@
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
-          "decisao": "Indeferimento",
-          "textoata": "Por unanimidade de votos, a contraproposta de transação foi indeferida;"
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, a contraproposta de transação foi deferida;"
         },
         {
           "numeroprocesso": "76527/2023-93",
@@ -3570,7 +3570,7 @@
         },
         {
           "numeroprocesso": "58107/2024-05",
-          "relator": "Vitor Pereira Afonso",
+          "relator": "Victor Pereira Afonso",
           "revisor": "",
           "resultado": "Em Negociação",
           "decisao": "",

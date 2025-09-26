@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { signIn, useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { loginSchema, type LoginInput } from '@/lib/validations/auth'
 import { Button } from '@/components/ui/button'
@@ -65,16 +65,12 @@ function LoginContent() {
   })
 
   // Função para lidar com erros de validação do formulário de login
-  const onLoginInvalid = (errors: any) => {
+  const onLoginInvalid = (errors: FieldErrors<LoginInput>) => {
     // Mostrar erros na ordem dos campos: email primeiro, depois senha
-    const fieldOrder = ['email', 'password']
-
-    for (const field of fieldOrder) {
-      if (errors[field]?.message) {
-        // Usar toast.warning para erros de validação (são avisos, não erros críticos)
-        toast.warning(errors[field].message)
-        break // Mostrar apenas o primeiro erro
-      }
+    if (errors.email?.message) {
+      toast.warning(errors.email.message)
+    } else if (errors.password?.message) {
+      toast.warning(errors.password.message)
     }
   }
 
@@ -105,16 +101,16 @@ function LoginContent() {
   }
 
   // Função para lidar com erros de validação do formulário de registro
-  const onRegisterInvalid = (errors: any) => {
+  const onRegisterInvalid = (errors: FieldErrors<RegisterInput>) => {
     // Mostrar erros na ordem dos campos: name, email, password, accessCode
-    const fieldOrder = ['name', 'email', 'password', 'accessCode']
-
-    for (const field of fieldOrder) {
-      if (errors[field]?.message) {
-        // Usar toast.warning para erros de validação (são avisos, não erros críticos)
-        toast.warning(errors[field].message)
-        break // Mostrar apenas o primeiro erro
-      }
+    if (errors.name?.message) {
+      toast.warning(errors.name.message)
+    } else if (errors.email?.message) {
+      toast.warning(errors.email.message)
+    } else if (errors.password?.message) {
+      toast.warning(errors.password.message)
+    } else if (errors.accessCode?.message) {
+      toast.warning(errors.accessCode.message)
     }
   }
 

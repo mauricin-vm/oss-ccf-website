@@ -5,8 +5,6 @@ import { prisma } from '@/lib/db'
 import { SessionUser } from '@/types'
 import { readFile } from 'fs/promises'
 import { existsSync } from 'fs'
-import { join } from 'path'
-const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads/documentos'
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; documentoId: string }> }
@@ -38,9 +36,8 @@ export async function GET(
         { status: 404 }
       )
     }
-    // Montar caminho do arquivo (substituir '/' por '-' no nome da pasta)
-    const processoDirName = documento.processo.numero.replace(/\//g, '-')
-    const filePath = join(process.cwd(), UPLOAD_DIR, processoDirName, documento.url.split('/').pop()!)
+    // Usar o caminho direto salvo no banco (compatibilidade com projeto anterior)
+    const filePath = documento.url
     // Verificar se arquivo existe
     if (!existsSync(filePath)) {
       return NextResponse.json(

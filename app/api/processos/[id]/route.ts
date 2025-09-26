@@ -120,7 +120,8 @@ export async function GET(
           include: {
             proposta: true
           }
-        }
+        },
+        acordao: true
       }
     })
     if (!processo) {
@@ -251,9 +252,19 @@ export async function GET(
       const acordo = processo.acordos[0]
 
       // Enriquecer acordo com details necessários para cálculos
+      // Calcular valor total baseado no tipo de processo
+      let valorTotal = 0
+      if (acordo.tipoProcesso === 'TRANSACAO_EXCEPCIONAL' && acordo.transacao) {
+        valorTotal = Number(acordo.transacao.valorTotalProposto || 0)
+      } else if (acordo.tipoProcesso === 'COMPENSACAO' && acordo.compensacao) {
+        valorTotal = Number(acordo.compensacao.valorTotalDebitos || 0)
+      } else if (acordo.tipoProcesso === 'DACAO_PAGAMENTO' && acordo.dacao) {
+        valorTotal = Number(acordo.dacao.valorTotalCompensar || 0)
+      }
+
       acordoEnriquecido = {
         ...acordo,
-        valorTotal: Number(acordo.valorTotal),
+        valorTotal: valorTotal,
         parcelas: acordo.parcelas.map((parcela: ParcelaPrisma) => ({
           ...parcela,
           valor: Number(parcela.valor)
@@ -274,33 +285,56 @@ export async function GET(
         const valorProposto = Number(transacao.valorTotalProposto)
         const valorDesconto = valorTotal - valorProposto
         const valorEntrada = Number(transacao.valorEntrada) || 0
-        const quantidadeParcelas = transacao.quantidadeParcelas || 1
-        const metodoPagamento = transacao.metodoPagamento
 
         const custasAdvocaticias = Number(transacao.custasAdvocaticias) || 0
         const honorariosValor = Number(transacao.honorariosValor) || 0
 
-        acordoEnriquecido.transacaoDetails = {
+        const acordoComDetalhes = acordoEnriquecido as typeof acordoEnriquecido & {
+          transacaoDetails: {
+            valorTotalInscricoes: number
+            valorTotalProposto: number
+            valorDesconto: number
+            percentualDesconto: number
+            valorEntrada: number
+            custasAdvocaticias: number
+            honorariosValor: number
+          }
+        }
+
+        acordoComDetalhes.transacaoDetails = {
           valorTotalInscricoes: valorTotal,
           valorTotalProposto: valorProposto,
-          desconto: valorDesconto,
+          valorDesconto: valorDesconto,
           percentualDesconto: valorTotal > 0 ? (valorDesconto / valorTotal) * 100 : 0,
-          entrada: valorEntrada,
+          valorEntrada: valorEntrada,
           custasAdvocaticias: custasAdvocaticias,
-          custasDataVencimento: transacao.custasDataVencimento ? transacao.custasDataVencimento.toISOString() : null,
-          custasDataPagamento: transacao.custasDataPagamento ? transacao.custasDataPagamento.toISOString() : null,
-          honorariosValor: honorariosValor,
-          honorariosMetodoPagamento: transacao.honorariosMetodoPagamento,
-          honorariosParcelas: transacao.honorariosParcelas,
-          totalGeral: valorProposto + custasAdvocaticias + honorariosValor
+          honorariosValor: honorariosValor
         }
+
+        acordoEnriquecido = acordoComDetalhes
       }
 
       // Adicionar compensacaoDetails se for compensação
       if (acordo.tipoProcesso === 'COMPENSACAO' && acordo.compensacao) {
         const compensacao = acordo.compensacao
 
-        acordoEnriquecido.compensacaoDetails = {
+        const acordoComCompensacao = acordoEnriquecido as typeof acordoEnriquecido & {
+          compensacaoDetails: {
+            valorTotalCreditos: number
+            valorTotalDebitos: number
+            valorLiquido: number
+            custasAdvocaticias: number
+            custasDataVencimento: string | null
+            custasDataPagamento: string | null
+            honorariosValor: number
+            honorariosMetodoPagamento: string | null
+            honorariosParcelas: number | null
+            honorariosDataVencimento: string | null
+            honorariosDataPagamento: string | null
+          }
+        }
+
+        acordoComCompensacao.compensacaoDetails = {
           valorTotalCreditos: Number(compensacao.valorTotalCreditos) || 0,
           valorTotalDebitos: Number(compensacao.valorTotalDebitos) || 0,
           valorLiquido: Number(compensacao.valorLiquido) || 0,
@@ -313,13 +347,31 @@ export async function GET(
           honorariosDataVencimento: compensacao.honorariosDataVencimento ? compensacao.honorariosDataVencimento.toISOString() : null,
           honorariosDataPagamento: compensacao.honorariosDataPagamento ? compensacao.honorariosDataPagamento.toISOString() : null
         }
+
+        acordoEnriquecido = acordoComCompensacao
       }
 
       // Adicionar dacaoDetails se for dação em pagamento
       if (acordo.tipoProcesso === 'DACAO_PAGAMENTO' && acordo.dacao) {
         const dacao = acordo.dacao
 
-        acordoEnriquecido.dacaoDetails = {
+        const acordoComDacao = acordoEnriquecido as typeof acordoEnriquecido & {
+          dacaoDetails: {
+            valorTotalOferecido: number
+            valorTotalCompensar: number
+            valorLiquido: number
+            custasAdvocaticias: number
+            custasDataVencimento: string | null
+            custasDataPagamento: string | null
+            honorariosValor: number
+            honorariosMetodoPagamento: string | null
+            honorariosParcelas: number | null
+            honorariosDataVencimento: string | null
+            honorariosDataPagamento: string | null
+          }
+        }
+
+        acordoComDacao.dacaoDetails = {
           valorTotalOferecido: Number(dacao.valorTotalOferecido) || 0,
           valorTotalCompensar: Number(dacao.valorTotalCompensar) || 0,
           valorLiquido: Number(dacao.valorLiquido) || 0,
@@ -332,6 +384,8 @@ export async function GET(
           honorariosDataVencimento: dacao.honorariosDataVencimento ? dacao.honorariosDataVencimento.toISOString() : null,
           honorariosDataPagamento: dacao.honorariosDataPagamento ? dacao.honorariosDataPagamento.toISOString() : null
         }
+
+        acordoEnriquecido = acordoComDacao
       }
     }
 
@@ -508,6 +562,95 @@ export async function DELETE(
         { status: 400 }
       )
     }
+
+    // Verificar se existe tramitação
+    const tramitacoes = await prisma.tramitacao.count({
+      where: { processoId: id }
+    })
+    if (tramitacoes > 0) {
+      return NextResponse.json(
+        { error: 'Não é possível deletar processo que possui tramitações' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar se existe documento
+    const documentos = await prisma.documento.count({
+      where: { processoId: id }
+    })
+    if (documentos > 0) {
+      return NextResponse.json(
+        { error: 'Não é possível deletar processo que possui documentos' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar se foi incluído em pauta
+    const pautas = await prisma.processoPauta.count({
+      where: { processoId: id }
+    })
+    if (pautas > 0) {
+      return NextResponse.json(
+        { error: 'Não é possível deletar processo que foi incluído em pauta' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar se possui decisão
+    const decisoes = await prisma.decisao.count({
+      where: { processoId: id }
+    })
+    if (decisoes > 0) {
+      return NextResponse.json(
+        { error: 'Não é possível deletar processo que possui decisões' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar se possui acórdão
+    const acordao = await prisma.acordao.count({
+      where: { processoId: id }
+    })
+    if (acordao > 0) {
+      return NextResponse.json(
+        { error: 'Não é possível deletar processo que possui acórdão' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar se possui acordos
+    const acordos = await prisma.acordo.count({
+      where: { processoId: id }
+    })
+    if (acordos > 0) {
+      return NextResponse.json(
+        { error: 'Não é possível deletar processo que possui acordos' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar se possui relação com imóveis
+    const processoImoveis = await prisma.processoImovel.count({
+      where: { processoId: id }
+    })
+    if (processoImoveis > 0) {
+      return NextResponse.json(
+        { error: 'Não é possível deletar processo que possui imóveis vinculados' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar se possui relação com créditos
+    const processoCreditos = await prisma.processoCredito.count({
+      where: { processoId: id }
+    })
+    if (processoCreditos > 0) {
+      return NextResponse.json(
+        { error: 'Não é possível deletar processo que possui créditos vinculados' },
+        { status: 400 }
+      )
+    }
+
     await prisma.processo.delete({
       where: { id }
     })

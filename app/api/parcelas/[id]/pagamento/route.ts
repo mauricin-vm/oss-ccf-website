@@ -141,7 +141,7 @@ export async function POST(
           })
 
           const custasForamPagas = !transacao?.custasAdvocaticias ||
-                                  transacao?.custasAdvocaticias <= 0 ||
+                                  Number(transacao?.custasAdvocaticias) <= 0 ||
                                   transacao?.custasDataPagamento
 
           if (custasForamPagas && parcela.acordo.status === 'ativo') {

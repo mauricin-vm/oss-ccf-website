@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -17,8 +17,7 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from '@/components/ui/dialog'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, AlertCircle, FileText, Users } from 'lucide-react'
+import { Loader2, FileText, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
 const assuntosAdministrativosSchema = z.object({
@@ -38,7 +37,6 @@ export default function AssuntosAdministrativosForm({
 }: AssuntosAdministrativosFormProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   const {
@@ -57,7 +55,7 @@ export default function AssuntosAdministrativosForm({
   })
 
   // Função para lidar com erros de validação do formulário
-  const onInvalid = (errors: any) => {
+  const onInvalid = (errors: FieldErrors<AssuntosAdministrativosInput>) => {
     if (errors.assuntosAdministrativos?.message) {
       toast.warning(errors.assuntosAdministrativos.message)
 
@@ -85,7 +83,6 @@ export default function AssuntosAdministrativosForm({
 
   const onSubmit = async (data: AssuntosAdministrativosInput) => {
     setIsLoading(true)
-    setError(null)
 
     try {
       const response = await fetch(`/api/sessoes/${sessaoId}`, {
@@ -108,7 +105,6 @@ export default function AssuntosAdministrativosForm({
       router.refresh()
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro inesperado'
-      setError(errorMessage)
       toast.error(errorMessage)
     } finally {
       setIsLoading(false)
@@ -119,7 +115,6 @@ export default function AssuntosAdministrativosForm({
     setOpen(newOpen)
     if (!newOpen) {
       reset({ assuntosAdministrativos: currentText })
-      setError(null)
     }
   }
 

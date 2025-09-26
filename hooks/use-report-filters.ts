@@ -17,8 +17,8 @@ export function useReportFilters(initialData: {
     vencidas: number
     pagas: number
   }
-  processosPorTipo: Array<{ tipo: string; _count: { id: number } }>
-  processosPorStatus: Array<{ status: string; _count: { id: number } }>
+  processosPorTipo: Array<{ tipo: string; _count: number }>
+  processosPorStatus: Array<{ status: string; _count: number }>
   sessoesAtivas: number
   acordosVencidos: number
   valores: {
@@ -109,7 +109,7 @@ export function useReportFilters(initialData: {
 
     // Atualizar a referência dos filtros anteriores
     previousFiltersRef.current = filters
-  }, [filters.dataInicio, filters.dataFim, initialData])
+  }, [filters, initialData])
 
   return {
     filters,

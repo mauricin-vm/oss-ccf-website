@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
@@ -74,30 +74,43 @@ export default function EditPautaModal({
   }, [pauta, reset])
 
   // Função para lidar com erros de validação do formulário
-  const onInvalid = (errors: any) => {
-    // Ordem lógica dos campos no formulário
-    const fieldOrder = [
-      'numero',
-      'dataPauta',
-      'observacoes'
-    ]
-
-    // Procurar pelo primeiro erro na ordem dos campos
-    for (const field of fieldOrder) {
-      if (errors[field]?.message) {
-        toast.warning(errors[field].message)
-
-        // Focar no campo com erro após um pequeno delay
-        setTimeout(() => {
-          const element = document.getElementById(field)
-          if (element) {
-            element.focus()
-            element.style.borderColor = '#ef4444'
-            element.style.boxShadow = '0 0 0 1px #ef4444'
-          }
-        }, 100)
-        break
-      }
+  const onInvalid = (errors: FieldErrors<EditPautaInput>) => {
+    // Verificar erros de forma type-safe
+    if (errors.numero?.message) {
+      toast.warning(errors.numero.message)
+      setTimeout(() => {
+        const element = document.getElementById('numero')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.dataPauta?.message) {
+      toast.warning(errors.dataPauta.message)
+      setTimeout(() => {
+        const element = document.getElementById('dataPauta')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.observacoes?.message) {
+      toast.warning(errors.observacoes.message)
+      setTimeout(() => {
+        const element = document.getElementById('observacoes')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
     }
   }
 

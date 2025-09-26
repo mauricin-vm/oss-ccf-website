@@ -1,7 +1,7 @@
 // node prisma/migration/2-migrar_historicos.js
 
-const { PrismaClient } = require('@prisma/client')
-const { Client } = require('pg')
+import { PrismaClient } from '@prisma/client'
+import { Client } from 'pg'
 
 const prisma = new PrismaClient()
 
@@ -131,7 +131,7 @@ async function migrarHistoricos() {
             titulo: situation.titulo,
             descricao: situation.situacao,
             tipo: 'SISTEMA',
-            createdAt: new Date(situation.data_criacao)
+            createdAt: (() => { const d = new Date(situation.data_criacao); d.setHours(12, 0, 0, 0); return d; })()
           }
         })
 
@@ -158,7 +158,7 @@ async function migrarHistoricos() {
 
     const historicosMigrados = await prisma.historicoProcesso.findMany({
       where: { id: { startsWith: 'hist_sit_' } },
-      select: { id: true, titulo: true, tipo: true, usuarioId: true }
+      select: { id: true, titulo: true, tipo: true, usuarioId: true, createdAt: true }
     })
 
     let logsCriados = 0
@@ -169,7 +169,7 @@ async function migrarHistoricos() {
           data: {
             id: `log_hist_mig_${historico.id}`,
             usuarioId: historico.usuarioId,
-            acao: 'MIGRATE_HISTORY',
+            acao: 'MIGRATE',
             entidade: 'HistoricoProcesso',
             entidadeId: historico.id,
             dadosNovos: {
@@ -177,7 +177,8 @@ async function migrarHistoricos() {
               tipo: historico.tipo,
               origem: 'situations_sistema_antigo',
               data_migracao: new Date().toISOString()
-            }
+            },
+            createdAt: (() => { const d = new Date(historico.createdAt); d.setHours(12, 0, 0, 0); return d; })()
           }
         })
 
@@ -291,4 +292,4 @@ if (require.main === module) {
     })
 }
 
-module.exports = { migrarHistoricos }
+export { migrarHistoricos }

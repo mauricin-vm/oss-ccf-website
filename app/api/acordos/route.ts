@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
-import { acordoSchema } from '@/lib/validations/acordo'
-import { SessionUser, AcordoWhereFilter } from '@/types'
-import { TipoProcesso, StatusPagamento } from '@prisma/client'
+import { SessionUser } from '@/types'
+import { TipoProcesso, TipoInscricao, Prisma } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,17 +16,16 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search')
     const status = searchParams.get('status')
     const tipo = searchParams.get('tipo')
-    const modalidade = searchParams.get('modalidade')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
 
-    const where: AcordoWhereFilter = {}
+    const where: Prisma.AcordoWhereInput = {}
+    const andConditions: Prisma.AcordoWhereInput[] = []
 
     if (search) {
       where.OR = [
         { processo: { numero: { contains: search, mode: 'insensitive' } } },
-        { processo: { contribuinte: { nome: { contains: search, mode: 'insensitive' } } } },
-        { numeroTermo: { contains: search, mode: 'insensitive' } }
+        { processo: { contribuinte: { nome: { contains: search, mode: 'insensitive' } } } }
       ]
     }
 
@@ -36,7 +34,16 @@ export async function GET(request: NextRequest) {
     }
 
     if (tipo) {
-      where.tipoProcesso = tipo as TipoProcesso
+      andConditions.push({
+        processo: {
+          tipo: tipo as TipoProcesso
+        }
+      })
+    }
+
+    // Adicionar condições AND se existirem
+    if (andConditions.length > 0) {
+      where.AND = andConditions
     }
 
     const [acordos, total] = await Promise.all([
@@ -183,8 +190,20 @@ export async function GET(request: NextRequest) {
 }
 
 // Interfaces para dados específicos (baseado na API antiga)
+interface InscricaoAcordo {
+  id: string
+  numeroInscricao: string
+  tipoInscricao: string
+  valorDebito: number
+  descricaoDebitos: Array<{
+    id: string
+    descricao: string
+    valorLancado: number
+  }>
+}
+
 interface DadosEspecificos {
-  inscricoesAcordo?: any[]
+  inscricoesAcordo?: InscricaoAcordo[]
   valorInscricoes?: number
   observacoesAcordo?: string
   propostaFinal?: {
@@ -199,15 +218,19 @@ interface DadosEspecificos {
     honorariosParcelas?: number
   }
   // Para compensação
-  creditosAdicionados?: any[]
-  inscricoesAdicionadas?: any[]
+  creditosAdicionados?: Array<{ id: string; numero: string; tipo: string; valor: number; dataVencimento?: string }>
+  inscricoesAdicionadas?: InscricaoAcordo[]
   valorCreditos?: number
   valorDebitos?: number
   valorTotal?: number
   valorFinal?: number
+  custasAdvocaticias?: number
+  honorariosValor?: number
+  honorariosMetodoPagamento?: string
+  honorariosParcelas?: number
   // Para dação
-  inscricoesOferecidasAdicionadas?: any[]
-  inscricoesCompensarAdicionadas?: any[]
+  inscricoesOferecidasAdicionadas?: InscricaoAcordo[]
+  inscricoesCompensarAdicionadas?: InscricaoAcordo[]
   valorOferecido?: number
   valorCompensar?: number
   valorDacao?: number
@@ -250,13 +273,13 @@ export async function POST(request: NextRequest) {
 
       // Converter datas nas inscrições de transação
       if (dadosEsp.inscricoesAcordo) {
-        dadosEsp.inscricoesAcordo.forEach((inscricao: any) => {
-          if (inscricao.debitos) {
-            inscricao.debitos.forEach((debito: any) => {
+        dadosEsp.inscricoesAcordo.forEach((inscricao: InscricaoAcordo) => {
+          if (inscricao.descricaoDebitos) {
+            inscricao.descricaoDebitos.forEach((debito: { id: string; descricao: string; valorLancado: number; dataVencimento?: string | Date }) => {
               if (debito.dataVencimento) {
                 const dataVenc = new Date(debito.dataVencimento)
                 dataVenc.setHours(12, 0, 0, 0)
-                debito.dataVencimento = dataVenc
+                debito.dataVencimento = dataVenc.toISOString()
               }
             })
           }
@@ -265,24 +288,24 @@ export async function POST(request: NextRequest) {
 
       // Converter datas nos créditos de compensação
       if (dadosEsp.creditosAdicionados) {
-        dadosEsp.creditosAdicionados.forEach((credito: any) => {
+        dadosEsp.creditosAdicionados.forEach((credito: { id: string; numero: string; tipo: string; valor: number; dataVencimento?: string | Date }) => {
           if (credito.dataVencimento) {
             const dataVenc = new Date(credito.dataVencimento)
             dataVenc.setHours(12, 0, 0, 0)
-            credito.dataVencimento = dataVenc
+            credito.dataVencimento = dataVenc.toISOString()
           }
         })
       }
 
       // Converter datas nas inscrições de dação
       if (dadosEsp.inscricoesCompensarAdicionadas) {
-        dadosEsp.inscricoesCompensarAdicionadas.forEach((inscricao: any) => {
-          if (inscricao.debitos) {
-            inscricao.debitos.forEach((debito: any) => {
+        dadosEsp.inscricoesCompensarAdicionadas.forEach((inscricao: InscricaoAcordo) => {
+          if (inscricao.descricaoDebitos) {
+            inscricao.descricaoDebitos.forEach((debito: { id: string; descricao: string; valorLancado: number; dataVencimento?: string | Date }) => {
               if (debito.dataVencimento) {
                 const dataVenc = new Date(debito.dataVencimento)
                 dataVenc.setHours(12, 0, 0, 0)
-                debito.dataVencimento = dataVenc
+                debito.dataVencimento = dataVenc.toISOString()
               }
             })
           }
@@ -381,29 +404,6 @@ export async function POST(request: NextRequest) {
     // Extrair dados específicos
     const dadosEspecificos = data.dadosEspecificos as DadosEspecificos
 
-    // Calcular valores corretos para o acordo (restaurado do backup)
-    let valorOriginal = data.valorTotal
-    let valorDesconto = data.valorDesconto || 0
-    let percentualDesconto = data.percentualDesconto || 0
-
-    // Para transação excepcional, usar valor das inscrições como valor original (valor fixo no momento da criação)
-    if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && dadosEspecificos?.valorInscricoes) {
-      // IMPORTANTE: Este valor é "congelado" no momento da criação do acordo
-      // para manter a integridade histórica, mesmo se as inscrições forem alteradas depois
-      valorOriginal = dadosEspecificos.valorInscricoes
-      valorDesconto = valorOriginal - data.valorFinal
-      percentualDesconto = valorOriginal > 0 ? (valorDesconto / valorOriginal) * 100 : 0
-    }
-
-    // Para compensação, usar valor dos créditos como valor original
-    if (processo.tipo === 'COMPENSACAO' && dadosEspecificos?.valorCreditos) {
-      valorOriginal = dadosEspecificos.valorCreditos
-    }
-
-    // Para dação em pagamento, usar valor das inscrições oferecidas como valor original
-    if (processo.tipo === 'DACAO_PAGAMENTO' && dadosEspecificos?.valorOferecido) {
-      valorOriginal = dadosEspecificos.valorOferecido
-    }
 
     // Validações específicas por tipo de processo (baseado na API antiga)
     if (processo.tipo === 'TRANSACAO_EXCEPCIONAL') {
@@ -466,10 +466,6 @@ export async function POST(request: NextRequest) {
     const numeroTermo = `${proximoNumero.toString().padStart(4, '0')}/${ano}`
 
     // Calcular valores baseado no tipo de processo e dados específicos
-    let valorEntrada = 0
-    if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && dadosEspecificos?.propostaFinal?.valorEntrada) {
-      valorEntrada = dadosEspecificos.propostaFinal.valorEntrada
-    }
 
     // Separar observações do usuário das observações técnicas (restaurado do backup)
     // Observações do usuário vão para a tabela Acordo
@@ -503,7 +499,7 @@ export async function POST(request: NextRequest) {
               ? (dadosEspecificos.propostaFinal!.valorTotalProposto - (dadosEspecificos.propostaFinal!.valorEntrada || 0)) / dadosEspecificos.propostaFinal!.quantidadeParcelas
               : null,
             custasAdvocaticias: dadosEspecificos.propostaFinal!.custasAdvocaticias || null,
-            custasDataVencimento: dadosEspecificos.propostaFinal!.custasAdvocaticias > 0
+            custasDataVencimento: (dadosEspecificos.propostaFinal!.custasAdvocaticias || 0) > 0
               ? (dadosEspecificos.propostaFinal!.custasDataVencimento
                 ? new Date(dadosEspecificos.propostaFinal!.custasDataVencimento + 'T12:00:00')
                 : data.dataVencimento)
@@ -518,20 +514,20 @@ export async function POST(request: NextRequest) {
         })
 
         // Criar parcelas para transação excepcional
-        await criarParcelasTransacao(tx, acordo.id, dadosEspecificos.propostaFinal!, data.dataVencimento, data.dataAssinatura)
+        await criarParcelasTransacao(tx, acordo.id, dadosEspecificos.propostaFinal!, data.dataVencimento)
 
         // Criar inscrições da transação
         if (dadosEspecificos.inscricoesAcordo) {
           for (const inscricao of dadosEspecificos.inscricoesAcordo) {
-            const valorDebitos = inscricao.debitos?.reduce(
-              (total: number, debito: any) => total + (Number(debito?.valor) || 0), 0
+            const valorDebitos = inscricao.descricaoDebitos?.reduce(
+              (total: number, debito: { valorLancado?: number }) => total + (Number(debito?.valorLancado) || 0), 0
             ) || 0
 
             const inscricaoCriada = await tx.acordoInscricao.create({
               data: {
                 acordoId: acordo.id,
                 numeroInscricao: inscricao.numeroInscricao,
-                tipoInscricao: inscricao.tipoInscricao.toUpperCase() as any,
+                tipoInscricao: inscricao.tipoInscricao.toUpperCase() as TipoInscricao,
                 finalidade: 'INCLUIDA_ACORDO',
                 valorTotal: valorDebitos,
                 descricao: null,
@@ -540,10 +536,11 @@ export async function POST(request: NextRequest) {
             })
 
             // Criar débitos da inscrição
-            if (inscricao.debitos) {
-              for (const debito of inscricao.debitos) {
+            if (inscricao.descricaoDebitos) {
+              for (const debito of inscricao.descricaoDebitos) {
                 // Converter dataVencimento para Date se for string
-                let dataVencimento = debito.dataVencimento
+                const debitoCompleto = debito as { id: string; descricao: string; valorLancado: number; dataVencimento?: string | Date }
+                let dataVencimento = debitoCompleto.dataVencimento
                 if (typeof dataVencimento === 'string') {
                   dataVencimento = new Date(dataVencimento)
                   dataVencimento.setHours(12, 0, 0, 0) // Ajustar timezone
@@ -553,8 +550,8 @@ export async function POST(request: NextRequest) {
                   data: {
                     inscricaoId: inscricaoCriada.id,
                     descricao: debito.descricao,
-                    valorLancado: Number(debito.valor),
-                    dataVencimento: dataVencimento
+                    valorLancado: Number(debito.valorLancado || 0),
+                    dataVencimento: dataVencimento || new Date()
                   }
                 })
               }
@@ -570,14 +567,14 @@ export async function POST(request: NextRequest) {
             valorTotalCreditos: dadosEspecificos.valorCreditos || 0,
             valorTotalDebitos: dadosEspecificos.valorDebitos || 0,
             valorLiquido: (dadosEspecificos.valorCreditos || 0) - (dadosEspecificos.valorDebitos || 0),
-            custasAdvocaticias: Number(dadosEspecificos.custasAdvocaticias) || null,
-            custasDataVencimento: dadosEspecificos.custasAdvocaticias > 0
+            custasAdvocaticias: Number(dadosEspecificos.custasAdvocaticias || 0) || null,
+            custasDataVencimento: (dadosEspecificos.custasAdvocaticias || 0) > 0
               ? data.dataVencimento
               : null,
-            honorariosValor: Number(dadosEspecificos.honorariosValor) || null,
+            honorariosValor: Number(dadosEspecificos.honorariosValor || 0) || null,
             honorariosMetodoPagamento: dadosEspecificos.honorariosMetodoPagamento || null,
             honorariosParcelas: dadosEspecificos.honorariosParcelas || null,
-            honorariosDataVencimento: dadosEspecificos.honorariosValor > 0
+            honorariosDataVencimento: (dadosEspecificos.honorariosValor || 0) > 0
               ? data.dataVencimento
               : null
           }
@@ -626,10 +623,14 @@ export async function POST(request: NextRequest) {
         if (dadosEspecificos.creditosAdicionados) {
           for (const credito of dadosEspecificos.creditosAdicionados) {
             // Converter dataVencimento para Date se for string
-            let dataVencimento = credito.dataVencimento
-            if (typeof dataVencimento === 'string' && dataVencimento) {
-              dataVencimento = new Date(dataVencimento)
-              dataVencimento.setHours(12, 0, 0, 0) // Ajustar timezone
+            let dataVencimento: Date | null = null
+            if (credito.dataVencimento) {
+              if (typeof credito.dataVencimento === 'string') {
+                dataVencimento = new Date(credito.dataVencimento)
+                dataVencimento.setHours(12, 0, 0, 0) // Ajustar timezone
+              } else {
+                dataVencimento = credito.dataVencimento as Date
+              }
             }
 
             await tx.acordoCredito.create({
@@ -638,7 +639,7 @@ export async function POST(request: NextRequest) {
                 tipoCredito: credito.tipo,
                 numeroCredito: credito.numero,
                 valor: Number(credito.valor),
-                descricao: credito.descricao,
+                descricao: (credito as { descricao?: string }).descricao || null,
                 dataVencimento: dataVencimento || null
               }
             })
@@ -648,15 +649,15 @@ export async function POST(request: NextRequest) {
         // Criar inscrições a compensar
         if (dadosEspecificos.inscricoesAdicionadas) {
           for (const inscricao of dadosEspecificos.inscricoesAdicionadas) {
-            const valorDebitos = inscricao.debitos?.reduce(
-              (total: number, debito: any) => total + (Number(debito?.valor) || 0), 0
+            const valorDebitos = inscricao.descricaoDebitos?.reduce(
+              (total: number, debito: { valorLancado?: number }) => total + (Number(debito?.valorLancado) || 0), 0
             ) || 0
 
             const inscricaoCriada = await tx.acordoInscricao.create({
               data: {
                 acordoId: acordo.id,
                 numeroInscricao: inscricao.numeroInscricao,
-                tipoInscricao: inscricao.tipoInscricao.toUpperCase() as any,
+                tipoInscricao: inscricao.tipoInscricao.toUpperCase() as TipoInscricao,
                 finalidade: 'INCLUIDA_ACORDO',
                 valorTotal: valorDebitos,
                 descricao: null,
@@ -665,10 +666,11 @@ export async function POST(request: NextRequest) {
             })
 
             // Criar débitos da inscrição
-            if (inscricao.debitos) {
-              for (const debito of inscricao.debitos) {
+            if (inscricao.descricaoDebitos) {
+              for (const debito of inscricao.descricaoDebitos) {
                 // Converter dataVencimento para Date se for string
-                let dataVencimento = debito.dataVencimento
+                const debitoCompleto = debito as { id: string; descricao: string; valorLancado: number; dataVencimento?: string | Date }
+                let dataVencimento = debitoCompleto.dataVencimento
                 if (typeof dataVencimento === 'string') {
                   dataVencimento = new Date(dataVencimento)
                   dataVencimento.setHours(12, 0, 0, 0) // Ajustar timezone
@@ -678,8 +680,8 @@ export async function POST(request: NextRequest) {
                   data: {
                     inscricaoId: inscricaoCriada.id,
                     descricao: debito.descricao,
-                    valorLancado: Number(debito.valor),
-                    dataVencimento: dataVencimento
+                    valorLancado: Number(debito.valorLancado || 0),
+                    dataVencimento: dataVencimento || new Date()
                   }
                 })
               }
@@ -695,14 +697,14 @@ export async function POST(request: NextRequest) {
             valorTotalOferecido: dadosEspecificos.valorOferecido || 0,
             valorTotalCompensar: dadosEspecificos.valorCompensar || 0,
             valorLiquido: (dadosEspecificos.valorOferecido || 0) - (dadosEspecificos.valorCompensar || 0),
-            custasAdvocaticias: Number(dadosEspecificos.custasAdvocaticias) || null,
-            custasDataVencimento: dadosEspecificos.custasAdvocaticias > 0
+            custasAdvocaticias: Number(dadosEspecificos.custasAdvocaticias || 0) || null,
+            custasDataVencimento: (dadosEspecificos.custasAdvocaticias || 0) > 0
               ? data.dataVencimento
               : null,
-            honorariosValor: Number(dadosEspecificos.honorariosValor) || null,
+            honorariosValor: Number(dadosEspecificos.honorariosValor || 0) || null,
             honorariosMetodoPagamento: dadosEspecificos.honorariosMetodoPagamento || null,
             honorariosParcelas: dadosEspecificos.honorariosParcelas || null,
-            honorariosDataVencimento: dadosEspecificos.honorariosValor > 0
+            honorariosDataVencimento: (dadosEspecificos.honorariosValor || 0) > 0
               ? data.dataVencimento
               : null
           }
@@ -750,8 +752,16 @@ export async function POST(request: NextRequest) {
         // Para dação, criar inscrições oferecidas como créditos
         if (dadosEspecificos.inscricoesOferecidasAdicionadas) {
           for (const inscricao of dadosEspecificos.inscricoesOferecidasAdicionadas) {
+            // Expandir tipo da inscrição
+            const inscricaoCompleta = inscricao as InscricaoAcordo & {
+              dataVencimento?: string | Date
+              valor?: number
+              descricao?: string
+              valorTotal?: number
+            }
+
             // Converter dataVencimento para Date se for string
-            let dataVencimento = inscricao.dataVencimento
+            let dataVencimento = inscricaoCompleta.dataVencimento
             if (typeof dataVencimento === 'string' && dataVencimento) {
               dataVencimento = new Date(dataVencimento)
               dataVencimento.setHours(12, 0, 0, 0) // Ajustar timezone
@@ -761,9 +771,9 @@ export async function POST(request: NextRequest) {
               data: {
                 acordoId: acordo.id,
                 tipoCredito: 'DACAO_IMOVEL',
-                numeroCredito: inscricao.numeroInscricao,
-                valor: Number(inscricao.valor),
-                descricao: inscricao.descricao,
+                numeroCredito: inscricaoCompleta.numeroInscricao,
+                valor: Number(inscricaoCompleta.valor || inscricaoCompleta.valorTotal || 0),
+                descricao: inscricaoCompleta.descricao || null,
                 dataVencimento: dataVencimento || null
               }
             })
@@ -773,15 +783,15 @@ export async function POST(request: NextRequest) {
         // Criar inscrições a compensar
         if (dadosEspecificos.inscricoesCompensarAdicionadas) {
           for (const inscricao of dadosEspecificos.inscricoesCompensarAdicionadas) {
-            const valorDebitos = inscricao.debitos?.reduce(
-              (total: number, debito: any) => total + (Number(debito?.valor) || 0), 0
+            const valorDebitos = inscricao.descricaoDebitos?.reduce(
+              (total: number, debito: { valorLancado?: number }) => total + (Number(debito?.valorLancado) || 0), 0
             ) || 0
 
             const inscricaoCriada = await tx.acordoInscricao.create({
               data: {
                 acordoId: acordo.id,
                 numeroInscricao: inscricao.numeroInscricao,
-                tipoInscricao: inscricao.tipoInscricao.toUpperCase() as any,
+                tipoInscricao: inscricao.tipoInscricao.toUpperCase() as TipoInscricao,
                 finalidade: 'INCLUIDA_ACORDO',
                 valorTotal: valorDebitos,
                 descricao: null,
@@ -790,10 +800,11 @@ export async function POST(request: NextRequest) {
             })
 
             // Criar débitos da inscrição
-            if (inscricao.debitos) {
-              for (const debito of inscricao.debitos) {
+            if (inscricao.descricaoDebitos) {
+              for (const debito of inscricao.descricaoDebitos) {
                 // Converter dataVencimento para Date se for string
-                let dataVencimento = debito.dataVencimento
+                const debitoCompleto = debito as { id: string; descricao: string; valorLancado: number; dataVencimento?: string | Date }
+                let dataVencimento = debitoCompleto.dataVencimento
                 if (typeof dataVencimento === 'string') {
                   dataVencimento = new Date(dataVencimento)
                   dataVencimento.setHours(12, 0, 0, 0) // Ajustar timezone
@@ -803,8 +814,8 @@ export async function POST(request: NextRequest) {
                   data: {
                     inscricaoId: inscricaoCriada.id,
                     descricao: debito.descricao,
-                    valorLancado: Number(debito.valor),
-                    dataVencimento: dataVencimento
+                    valorLancado: Number(debito.valorLancado || 0),
+                    dataVencimento: dataVencimento || new Date()
                   }
                 })
               }
@@ -829,18 +840,12 @@ export async function POST(request: NextRequest) {
 
       // Montar descrição detalhada para o histórico
       let valorParaHistorico = 0
-      let descricaoAdicional = ''
-
       if (processo.tipo === 'COMPENSACAO' && dadosEspecificos?.valorCreditos) {
         valorParaHistorico = Number(dadosEspecificos.valorCreditos)
       } else if (processo.tipo === 'DACAO_PAGAMENTO' && dadosEspecificos?.valorOferecido) {
         valorParaHistorico = Number(dadosEspecificos.valorOferecido)
       } else if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && dadosEspecificos?.propostaFinal) {
         valorParaHistorico = Number(dadosEspecificos.propostaFinal.valorTotalProposto)
-        const proposta = dadosEspecificos.propostaFinal
-        descricaoAdicional = proposta.metodoPagamento === 'a_vista'
-          ? ' - Pagamento à vista'
-          : ` - Parcelamento em ${proposta.quantidadeParcelas}x`
       }
 
       // Criar histórico do processo
@@ -905,7 +910,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Função auxiliar para criar parcelas de transação (baseado na API antiga)
-async function criarParcelasTransacao(tx: any, acordoId: string, propostaFinal: any, dataVencimento: Date, dataAssinatura: Date) {
+async function criarParcelasTransacao(tx: Prisma.TransactionClient, acordoId: string, propostaFinal: { valorTotalProposto: number; metodoPagamento: string; valorEntrada: number; quantidadeParcelas: number }, dataVencimento: Date) {
   const parcelas = []
 
   if (propostaFinal.metodoPagamento === 'parcelado' && propostaFinal.quantidadeParcelas > 1) {
@@ -959,11 +964,17 @@ async function criarParcelasTransacao(tx: any, acordoId: string, propostaFinal: 
   }
 
   // Criar parcelas de honorários se existirem
-  if (propostaFinal.honorariosValor && propostaFinal.honorariosValor > 0) {
-    if (propostaFinal.honorariosMetodoPagamento === 'parcelado' && propostaFinal.honorariosParcelas && propostaFinal.honorariosParcelas > 1) {
-      const valorParcelaHonorarios = propostaFinal.honorariosValor / propostaFinal.honorariosParcelas
+  const propostaCompleta = propostaFinal as typeof propostaFinal & {
+    honorariosValor?: number
+    honorariosMetodoPagamento?: string
+    honorariosParcelas?: number
+  }
 
-      for (let i = 1; i <= propostaFinal.honorariosParcelas; i++) {
+  if (propostaCompleta.honorariosValor && propostaCompleta.honorariosValor > 0) {
+    if (propostaCompleta.honorariosMetodoPagamento === 'parcelado' && propostaCompleta.honorariosParcelas && propostaCompleta.honorariosParcelas > 1) {
+      const valorParcelaHonorarios = propostaCompleta.honorariosValor / propostaCompleta.honorariosParcelas
+
+      for (let i = 1; i <= propostaCompleta.honorariosParcelas; i++) {
         // Primeira parcela de honorário vence na data de vencimento, demais seguem mensalmente
         const dataVencimentoHonorarios = new Date(dataVencimento)
         dataVencimentoHonorarios.setMonth(dataVencimentoHonorarios.getMonth() + (i - 1)) // Primeira parcela vence na data de vencimento
@@ -987,7 +998,7 @@ async function criarParcelasTransacao(tx: any, acordoId: string, propostaFinal: 
         acordoId: acordoId,
         tipoParcela: 'PARCELA_HONORARIOS' as const,
         numero: 1,
-        valor: propostaFinal.honorariosValor,
+        valor: propostaCompleta.honorariosValor,
         dataVencimento: dataVencimentoHonorariosVista,
         status: 'PENDENTE' as const
       })

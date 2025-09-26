@@ -8,19 +8,27 @@ export async function GET(request: NextRequest) {
 
   // Criar filtro de período baseado nas datas
   const dateFilter: { createdAt?: { gte?: Date; lte?: Date } } = {}
+  const acordoDateFilter: { dataAssinatura?: { gte?: Date; lte?: Date } } = {}
+
   if (dataInicio && dataFim) {
-    dateFilter.createdAt = {
+    const dateRange = {
       gte: new Date(dataInicio),
       lte: new Date(dataFim)
     }
+    dateFilter.createdAt = dateRange
+    acordoDateFilter.dataAssinatura = dateRange
   } else if (dataInicio) {
-    dateFilter.createdAt = {
+    const dateRange = {
       gte: new Date(dataInicio)
     }
+    dateFilter.createdAt = dateRange
+    acordoDateFilter.dataAssinatura = dateRange
   } else if (dataFim) {
-    dateFilter.createdAt = {
+    const dateRange = {
       lte: new Date(dataFim)
     }
+    dateFilter.createdAt = dateRange
+    acordoDateFilter.dataAssinatura = dateRange
   }
 
   try {
@@ -40,7 +48,7 @@ export async function GET(request: NextRequest) {
       valorAcordosCompDacao,
       valorAcordosTransacao,
       valorRecebidoParcelas,
-      valorAcordosCumpridos,
+      // valorAcordosCumpridos,
       decisoesPorTipo,
       valoresPorTipoProcesso,
       valoresPorResultado,
@@ -64,13 +72,12 @@ export async function GET(request: NextRequest) {
       // Total de acordos
       prisma.acordo.count({
         where: {
-          dataAssinatura: dateFilter.createdAt
+          ...acordoDateFilter
         }
       }),
 
       // Total de parcelas (incluindo custas como 1 parcela adicional)
       (async () => {
-        const acordoDateFilter = dateFilter.createdAt ? { dataAssinatura: dateFilter.createdAt } : {}
         const [totalParcelas, totalCustas] = await Promise.all([
           prisma.parcela.count({ where: dateFilter }),
           prisma.acordo.count({
@@ -89,7 +96,6 @@ export async function GET(request: NextRequest) {
 
       // Parcelas abertas (status PENDENTE + custas não pagas)
       (async () => {
-        const acordoDateFilter = dateFilter.createdAt ? { dataAssinatura: dateFilter.createdAt } : {}
         const [parcelasPendentes, custasAbertas] = await Promise.all([
           prisma.parcela.count({
             where: {
@@ -128,7 +134,6 @@ export async function GET(request: NextRequest) {
 
       // Parcelas vencidas (data vencimento passou e não está pago + custas vencidas)
       (async () => {
-        const acordoDateFilter = dateFilter.createdAt ? { dataAssinatura: dateFilter.createdAt } : {}
         const [parcelasVencidas, custasVencidas] = await Promise.all([
           prisma.parcela.count({
             where: {
@@ -171,7 +176,6 @@ export async function GET(request: NextRequest) {
 
       // Parcelas pagas (status PAGO + custas pagas)
       (async () => {
-        const acordoDateFilter = dateFilter.createdAt ? { dataAssinatura: dateFilter.createdAt } : {}
         const [parcelasPagas, custasPagas] = await Promise.all([
           prisma.parcela.count({
             where: {
@@ -213,14 +217,20 @@ export async function GET(request: NextRequest) {
         by: ['tipo'],
         _count: { id: true },
         where: dateFilter
-      }),
+      }).then(grupos => grupos.map(grupo => ({
+        tipo: grupo.tipo,
+        _count: grupo._count.id
+      }))),
 
       // Processos por status
       prisma.processo.groupBy({
         by: ['status'],
         _count: { id: true },
         where: dateFilter
-      }),
+      }).then(grupos => grupos.map(grupo => ({
+        status: grupo.status,
+        _count: grupo._count.id
+      }))),
 
       // Sessões ativas
       prisma.sessaoJulgamento.count({
@@ -234,7 +244,7 @@ export async function GET(request: NextRequest) {
       prisma.acordo.count({
         where: {
           dataVencimento: { lt: new Date() },
-          dataAssinatura: dateFilter.createdAt
+          ...acordoDateFilter
         }
       }),
 
@@ -245,7 +255,7 @@ export async function GET(request: NextRequest) {
             processo: {
               tipo: { in: ['COMPENSACAO', 'DACAO_PAGAMENTO'] }
             },
-            dataAssinatura: dateFilter.createdAt
+            ...acordoDateFilter
           },
           include: {
             processo: { select: { tipo: true } },
@@ -285,7 +295,7 @@ export async function GET(request: NextRequest) {
             processo: {
               tipo: 'TRANSACAO_EXCEPCIONAL'
             },
-            dataAssinatura: dateFilter.createdAt
+            ...acordoDateFilter
           },
           include: {
             transacao: true,
@@ -312,13 +322,40 @@ export async function GET(request: NextRequest) {
 
       // Valor recebido - nova lógica: parcelas + custas + honorários pagos + acordos cumpridos sem duplicação
       (async () => {
-        const acordoDateFilter = dateFilter.createdAt ? { dataAssinatura: dateFilter.createdAt } : {}
+        // Criar filtros de data para pagamentos baseados nos parâmetros da API
+        const parcelaDateFilter: { dataPagamento?: { gte?: Date; lte?: Date } } = {}
+        const custasDateFilter: { custasDataPagamento?: { gte?: Date; lte?: Date } } = {}
+        const honorariosDateFilter: { honorariosDataPagamento?: { gte?: Date; lte?: Date } } = {}
+
+        if (dataInicio && dataFim) {
+          const dateRange = {
+            gte: new Date(dataInicio),
+            lte: new Date(dataFim)
+          }
+          parcelaDateFilter.dataPagamento = dateRange
+          custasDateFilter.custasDataPagamento = dateRange
+          honorariosDateFilter.honorariosDataPagamento = dateRange
+        } else if (dataInicio) {
+          const dateRange = {
+            gte: new Date(dataInicio)
+          }
+          parcelaDateFilter.dataPagamento = dateRange
+          custasDateFilter.custasDataPagamento = dateRange
+          honorariosDateFilter.honorariosDataPagamento = dateRange
+        } else if (dataFim) {
+          const dateRange = {
+            lte: new Date(dataFim)
+          }
+          parcelaDateFilter.dataPagamento = dateRange
+          custasDateFilter.custasDataPagamento = dateRange
+          honorariosDateFilter.honorariosDataPagamento = dateRange
+        }
 
         // 1. PARCELAS PAGAS (por data de pagamento) - TODAS as parcelas
         const parcelasPagas = await prisma.parcela.aggregate({
           where: {
             status: 'PAGO',
-            ...dateFilter
+            ...parcelaDateFilter
           },
           _sum: { valor: true }
         })
@@ -330,9 +367,9 @@ export async function GET(request: NextRequest) {
               processo: { tipo: 'COMPENSACAO' },
               compensacao: {
                 custasAdvocaticias: { gt: 0 },
-                custasDataPagamento: { not: null }
-              },
-              ...acordoDateFilter
+                custasDataPagamento: { not: null },
+                ...custasDateFilter
+              }
             },
             include: { compensacao: { select: { custasAdvocaticias: true } } }
           }),
@@ -341,9 +378,9 @@ export async function GET(request: NextRequest) {
               processo: { tipo: 'DACAO_PAGAMENTO' },
               dacao: {
                 custasAdvocaticias: { gt: 0 },
-                custasDataPagamento: { not: null }
-              },
-              ...acordoDateFilter
+                custasDataPagamento: { not: null },
+                ...custasDateFilter
+              }
             },
             include: { dacao: { select: { custasAdvocaticias: true } } }
           }),
@@ -352,9 +389,9 @@ export async function GET(request: NextRequest) {
               processo: { tipo: 'TRANSACAO_EXCEPCIONAL' },
               transacao: {
                 custasAdvocaticias: { gt: 0 },
-                custasDataPagamento: { not: null }
-              },
-              ...acordoDateFilter
+                custasDataPagamento: { not: null },
+                ...custasDateFilter
+              }
             },
             include: { transacao: { select: { custasAdvocaticias: true } } }
           })
@@ -367,9 +404,9 @@ export async function GET(request: NextRequest) {
               processo: { tipo: 'COMPENSACAO' },
               compensacao: {
                 honorariosValor: { gt: 0 },
-                honorariosDataPagamento: { not: null }
-              },
-              ...acordoDateFilter
+                honorariosDataPagamento: { not: null },
+                ...honorariosDateFilter
+              }
             },
             include: { compensacao: { select: { honorariosValor: true } } }
           }),
@@ -378,9 +415,9 @@ export async function GET(request: NextRequest) {
               processo: { tipo: 'DACAO_PAGAMENTO' },
               dacao: {
                 honorariosValor: { gt: 0 },
-                honorariosDataPagamento: { not: null }
-              },
-              ...acordoDateFilter
+                honorariosDataPagamento: { not: null },
+                ...honorariosDateFilter
+              }
             },
             include: { dacao: { select: { honorariosValor: true } } }
           })
@@ -436,46 +473,46 @@ export async function GET(request: NextRequest) {
         return { _sum: { valor: valorTotalRecebido } }
       })(),
 
-      // Valor dos acordos cumpridos com nova estrutura
-      (async () => {
-        const acordosCumpridos = await prisma.acordo.findMany({
-          where: {
-            status: 'cumprido',
-            processo: {
-              tipo: { in: ['COMPENSACAO', 'DACAO_PAGAMENTO'] }
-            },
-            dataAssinatura: dateFilter.createdAt
-          },
-          include: {
-            processo: { select: { tipo: true } },
-            compensacao: true,
-            dacao: true
-          }
-        })
+      // // Valor dos acordos cumpridos com nova estrutura
+      // (async () => {
+      //   const acordosCumpridos = await prisma.acordo.findMany({
+      //     where: {
+      //       status: 'cumprido',
+      //       processo: {
+      //         tipo: { in: ['COMPENSACAO', 'DACAO_PAGAMENTO'] }
+      //       },
+      //       ...acordoDateFilter
+      //     },
+      //     include: {
+      //       processo: { select: { tipo: true } },
+      //       compensacao: true,
+      //       dacao: true
+      //     }
+      //   })
 
-        return {
-          _sum: {
-            valorTotal: acordosCumpridos.reduce((total, acordo) => {
-              const tipoProcesso = acordo.processo?.tipo
-              let valorAcordo = 0
+      //   return {
+      //     _sum: {
+      //       valorTotal: acordosCumpridos.reduce((total, acordo) => {
+      //         const tipoProcesso = acordo.processo?.tipo
+      //         let valorAcordo = 0
 
-              if (tipoProcesso === 'COMPENSACAO' && acordo.compensacao) {
-                const valorCompensado = Number(acordo.compensacao.valorTotalDebitos || 0)
-                const valorCustas = Number(acordo.compensacao.custasAdvocaticias || 0)
-                const valorHonorarios = Number(acordo.compensacao.honorariosValor || 0)
-                valorAcordo = valorCompensado + valorCustas + valorHonorarios
-              } else if (tipoProcesso === 'DACAO_PAGAMENTO' && acordo.dacao) {
-                const valorOferecido = Number(acordo.dacao.valorTotalOferecido || 0)
-                const valorCustas = Number(acordo.dacao.custasAdvocaticias || 0)
-                const valorHonorarios = Number(acordo.dacao.honorariosValor || 0)
-                valorAcordo = valorOferecido + valorCustas + valorHonorarios
-              }
+      //         if (tipoProcesso === 'COMPENSACAO' && acordo.compensacao) {
+      //           const valorCompensado = Number(acordo.compensacao.valorTotalDebitos || 0)
+      //           const valorCustas = Number(acordo.compensacao.custasAdvocaticias || 0)
+      //           const valorHonorarios = Number(acordo.compensacao.honorariosValor || 0)
+      //           valorAcordo = valorCompensado + valorCustas + valorHonorarios
+      //         } else if (tipoProcesso === 'DACAO_PAGAMENTO' && acordo.dacao) {
+      //           const valorOferecido = Number(acordo.dacao.valorTotalOferecido || 0)
+      //           const valorCustas = Number(acordo.dacao.custasAdvocaticias || 0)
+      //           const valorHonorarios = Number(acordo.dacao.honorariosValor || 0)
+      //           valorAcordo = valorOferecido + valorCustas + valorHonorarios
+      //         }
 
-              return total + valorAcordo
-            }, 0)
-          }
-        }
-      })(),
+      //         return total + valorAcordo
+      //       }, 0)
+      //     }
+      //   }
+      // })(),
 
       // Decisões por tipo
       prisma.decisao.groupBy({
@@ -485,7 +522,10 @@ export async function GET(request: NextRequest) {
           tipoDecisao: { not: null },
           ...dateFilter
         }
-      }),
+      }).then(grupos => grupos.map(grupo => ({
+        tipoDecisao: grupo.tipoDecisao,
+        _count: { id: grupo._count.id }
+      }))),
 
       // Valores por tipo de processo
       Promise.all([
@@ -504,7 +544,7 @@ export async function GET(request: NextRequest) {
             const acordos = await prisma.acordo.findMany({
               where: {
                 processo: { tipo },
-                dataAssinatura: dateFilter.createdAt
+                ...acordoDateFilter
               },
               include: {
                 processo: { select: { tipo: true } },
@@ -538,17 +578,16 @@ export async function GET(request: NextRequest) {
             }, 0)
 
             return {
-              _sum: tipo === 'TRANSACAO_EXCEPCIONAL'
-                ? { valorFinal: valorTotal }
-                : { valorTotal: valorTotal }
+              _sum: { valorTotal: valorTotal }
             }
           })()
         ])
-        return {
+        const result = {
           tipo,
           _count: count,
-          _sum: { valorTotal: tipo === 'TRANSACAO_EXCEPCIONAL' ? ('valorFinal' in valueSum._sum ? (valueSum._sum.valorFinal || 0) : 0) : ('valorTotal' in valueSum._sum ? (valueSum._sum.valorTotal || 0) : 0) }
+          _sum: { valorTotal: Number(valueSum._sum?.valorTotal || 0) }
         }
+        return result
       })),
 
       // Valores por resultado
@@ -570,21 +609,31 @@ export async function GET(request: NextRequest) {
                   decisoes: {
                     some: { tipoDecisao: 'INDEFERIDO' }
                   },
-                  createdAt: dateFilter.createdAt
+                  ...dateFilter
                 },
                 select: {
                   tipo: true,
                   transacao: {
                     select: {
                       valorTotalProposto: true,
-                      valorEntrada: true
+                      proposta: {
+                        select: {
+                          valorEntrada: true
+                        }
+                      }
                     }
                   },
-                  inscricoes: {
+                  acordos: {
                     select: {
-                      debitos: {
+                      inscricoes: {
                         select: {
-                          valor: true
+                          finalidade: true,
+                          valorTotal: true,
+                          debitos: {
+                            select: {
+                              valorLancado: true
+                            }
+                          }
                         }
                       }
                     }
@@ -596,16 +645,27 @@ export async function GET(request: NextRequest) {
                 let valorProcesso = 0
 
                 if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && processo.transacao) {
-                  // Para transação: Valor Total Proposto - Valor de Entrada
-                  const valorTotalProposto = Number(processo.transacao.valorTotalProposto || 0)
-                  const valorEntrada = Number(processo.transacao.valorEntrada || 0)
-                  valorProcesso = valorTotalProposto - valorEntrada
-                } else if ((processo.tipo === 'COMPENSACAO' || processo.tipo === 'DACAO_PAGAMENTO') && processo.inscricoes) {
-                  // Para compensação e dação: total de valores das inscrições a compensar
-                  valorProcesso = processo.inscricoes.reduce((totalInscricoes, inscricao) => {
-                    return totalInscricoes + (inscricao.debitos?.reduce((totalDebitos, debito) => {
-                      return totalDebitos + Number(debito.valor || 0)
-                    }, 0) || 0)
+                  // Para transação: Valor Total Proposto (sem reduzir entrada, pois foi indeferido)
+                  valorProcesso = Number(processo.transacao.valorTotalProposto || 0)
+                } else if (processo.tipo === 'COMPENSACAO' && processo.acordos) {
+                  // Para compensação: somar valores das inscrições oferecidas para compensação
+                  valorProcesso = processo.acordos.reduce((totalAcordos, acordo) => {
+                    const inscricoesCompensacao = acordo.inscricoes?.filter(ins => ins.finalidade === 'OFERECIDA_COMPENSACAO') || []
+                    return totalAcordos + inscricoesCompensacao.reduce((totalInscricoes, inscricao) => {
+                      return totalInscricoes + inscricao.debitos.reduce((totalDebitos, debito) => {
+                        return totalDebitos + Number(debito.valorLancado || 0)
+                      }, 0)
+                    }, 0)
+                  }, 0)
+                } else if (processo.tipo === 'DACAO_PAGAMENTO' && processo.acordos) {
+                  // Para dação: somar valores das inscrições oferecidas como dação
+                  valorProcesso = processo.acordos.reduce((totalAcordos, acordo) => {
+                    const inscricoesDacao = acordo.inscricoes?.filter(ins => ins.finalidade === 'OFERECIDA_DACAO') || []
+                    return totalAcordos + inscricoesDacao.reduce((totalInscricoes, inscricao) => {
+                      return totalInscricoes + inscricao.debitos.reduce((totalDebitos, debito) => {
+                        return totalDebitos + Number(debito.valorLancado || 0)
+                      }, 0)
+                    }, 0)
                   }, 0)
                 }
 
@@ -621,7 +681,7 @@ export async function GET(request: NextRequest) {
                       some: { tipoDecisao: grupo.tipoDecisao }
                     }
                   },
-                  dataAssinatura: dateFilter.createdAt
+                  ...acordoDateFilter
                 },
                 include: {
                   processo: { select: { tipo: true } },
@@ -658,7 +718,7 @@ export async function GET(request: NextRequest) {
                       some: { tipoDecisao: grupo.tipoDecisao }
                     }
                   },
-                  dataAssinatura: dateFilter.createdAt
+                  ...acordoDateFilter
                 },
                 include: {
                   transacao: true,
@@ -690,35 +750,14 @@ export async function GET(request: NextRequest) {
         return resultados
       }),
 
-      // Evolução mensal
+      // Evolução mensal da arrecadação - nova lógica
       (async () => {
         const evolucaoMensal = []
+        const dataAtual = new Date()
 
-        let endDate
-
-        if (dataInicio || dataFim) {
-          // Com filtros: último mês do filtro será a base
-          endDate = dataFim ? new Date(dataFim) : new Date()
-
-          // Garantir que endDate não seja maior que hoje
-          const hoje = new Date()
-          if (endDate > hoje) {
-            endDate = hoje
-          }
-        } else {
-          // Sem filtros: mês atual
-          endDate = new Date()
-        }
-
-        // Sempre pegar os últimos 12 meses a partir do endDate
-        const ultimoMes = new Date(endDate.getFullYear(), endDate.getMonth(), 1)
-        const primeiroMes = new Date(ultimoMes.getFullYear(), ultimoMes.getMonth() - 11, 1)
-
-        const mesAtual = new Date(primeiroMes)
-
-        while (mesAtual <= ultimoMes) {
-          const inicioMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1)
-          const fimMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0, 23, 59, 59)
+        for (let i = 11; i >= 0; i--) {
+          const inicioMes = new Date(dataAtual.getFullYear(), dataAtual.getMonth() - i, 1)
+          const fimMes = new Date(dataAtual.getFullYear(), dataAtual.getMonth() - i + 1, 0, 23, 59, 59)
 
           // 1. PARCELAS PAGAS (por data de pagamento) - TODAS as parcelas de TODOS os tipos
           const parcelasPagas = await prisma.parcela.findMany({
@@ -883,11 +922,7 @@ export async function GET(request: NextRequest) {
               quantidade: acordosCumpridos.length + parcelasPagas.length + custasCompensacao.length + custasDacao.length + custasTransacao.length + honorariosCompensacao.length + honorariosDacao.length
             }
           })
-
-          // Avançar para o próximo mês
-          mesAtual.setMonth(mesAtual.getMonth() + 1)
         }
-
 
         return evolucaoMensal
       })()
@@ -920,33 +955,11 @@ export async function GET(request: NextRequest) {
         recebido: Number(valorRecebidoTotal)
       },
       decisoesPorTipo,
-      valoresPorTipoProcesso: valoresPorTipoProcesso.map(item => ({
-        ...item,
-        _sum: {
-          valorTotal: Number(item._sum.valorTotal)
-        }
-      })),
-      valoresPorResultado: valoresPorResultado.map(item => ({
-        ...item,
-        valorTotal: Number(item.valorTotal)
-      })),
-      evolucaoMensal: evolucaoMensal.map(item => ({
-        ...item,
-        valor: Number(item.valor),
-        acordos: {
-          valor: Number(item.acordos.valor),
-          quantidade: item.acordos.quantidade
-        },
-        parcelas: {
-          valor: Number(item.parcelas.valor),
-          quantidade: item.parcelas.quantidade
-        },
-        total: {
-          valor: Number(item.total.valor),
-          quantidade: item.total.quantidade
-        }
-      }))
+      valoresPorTipoProcesso,
+      valoresPorResultado,
+      evolucaoMensal
     }
+
 
     return NextResponse.json(data)
   } catch (error) {

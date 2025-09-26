@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
+import { useForm, FieldErrors } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,18 +14,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { 
-  Plus, 
-  Search, 
-  Users, 
-  UserCheck, 
+import {
+  Plus,
+  Search,
+  Users,
+  UserCheck,
   UserX,
   Edit,
   Trash2,
   Calendar,
   Mail,
   Shield,
-  Activity
+  Activity,
+  Filter,
+  X
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { SessionUser } from '@/types'
@@ -64,6 +69,26 @@ const roleColors = {
   VISUALIZADOR: 'bg-gray-100 text-gray-800'
 }
 
+// Schemas de validação
+const createUserSchema = z.object({
+  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  email: z.string().email('Email inválido'),
+  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+  role: z.enum(['ADMIN', 'FUNCIONARIO', 'VISUALIZADOR']),
+  active: z.boolean()
+})
+
+const editUserSchema = z.object({
+  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  email: z.string().email('Email inválido'),
+  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres').optional().or(z.literal('')),
+  role: z.enum(['ADMIN', 'FUNCIONARIO', 'VISUALIZADOR']),
+  active: z.boolean()
+})
+
+type CreateUserInput = z.infer<typeof createUserSchema>
+type EditUserInput = z.infer<typeof editUserSchema>
+
 export default function UsuariosAdminPage() {
   const { data: session, status } = useSession()
   const [allUsers, setAllUsers] = useState<User[]>([])
@@ -77,15 +102,40 @@ export default function UsuariosAdminPage() {
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<string>('all')
   const [activeFilter, setActiveFilter] = useState<string>('all')
+  const [showFilters, setShowFilters] = useState(false)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'FUNCIONARIO' as 'ADMIN' | 'FUNCIONARIO' | 'VISUALIZADOR',
-    active: true
+  const [isCreating, setIsCreating] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+
+  // Form para criar usuário
+  const {
+    register: createRegister,
+    handleSubmit: handleCreateSubmit,
+    formState: { errors: createErrors },
+    reset: resetCreateForm,
+    setValue: setCreateValue
+  } = useForm<CreateUserInput>({
+    resolver: zodResolver(createUserSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      role: 'FUNCIONARIO',
+      active: true
+    }
+  })
+
+  // Form para editar usuário
+  const {
+    register: editRegister,
+    handleSubmit: handleEditSubmit,
+    formState: { errors: editErrors },
+    reset: resetEditForm,
+    setValue: setEditValue
+  } = useForm<EditUserInput>({
+    resolver: zodResolver(editUserSchema)
   })
 
   // Verificar se é admin
@@ -160,16 +210,36 @@ export default function UsuariosAdminPage() {
     }))
   }, [filteredUsers.length, pagination.limit])
 
+  // Função para lidar com erros de validação do formulário de criar usuário
+  const onCreateInvalid = (errors: FieldErrors<z.infer<typeof createUserSchema>>) => {
+    if (errors.name?.message) {
+      toast.warning(errors.name.message)
+      return
+    }
+    if (errors.email?.message) {
+      toast.warning(errors.email.message)
+      return
+    }
+    if (errors.password?.message) {
+      toast.warning(errors.password.message)
+      return
+    }
+    if (errors.role?.message) {
+      toast.warning(errors.role.message)
+      return
+    }
+  }
+
   // Criar usuário
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleCreateUser = async (data: CreateUserInput) => {
+    setIsCreating(true)
     try {
       const response = await fetch('/api/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(data)
       })
 
       if (!response.ok) {
@@ -179,27 +249,43 @@ export default function UsuariosAdminPage() {
 
       toast.success('Usuário criado com sucesso')
       setShowCreateDialog(false)
-      setFormData({
-        name: '',
-        email: '',
-        password: '',
-        role: 'FUNCIONARIO',
-        active: true
-      })
+      resetCreateForm()
       loadAllUsers()
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao criar usuário'
       toast.error(errorMessage)
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  // Função para lidar com erros de validação do formulário de editar usuário
+  const onEditInvalid = (errors: FieldErrors<z.infer<typeof editUserSchema>>) => {
+    if (errors.name?.message) {
+      toast.warning(errors.name.message)
+      return
+    }
+    if (errors.email?.message) {
+      toast.warning(errors.email.message)
+      return
+    }
+    if (errors.password?.message) {
+      toast.warning(errors.password.message)
+      return
+    }
+    if (errors.role?.message) {
+      toast.warning(errors.role.message)
+      return
     }
   }
 
   // Editar usuário
-  const handleEditUser = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleEditUser = async (data: EditUserInput) => {
     if (!selectedUser) return
 
+    setIsEditing(true)
     try {
-      const updateData = { ...formData }
+      const updateData = { ...data }
       if (!updateData.password) {
         delete (updateData as Record<string, unknown>).password
       }
@@ -224,6 +310,8 @@ export default function UsuariosAdminPage() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar usuário'
       toast.error(errorMessage)
+    } finally {
+      setIsEditing(false)
     }
   }
 
@@ -255,13 +343,12 @@ export default function UsuariosAdminPage() {
   // Abrir dialog de edição
   const openEditDialog = (user: User) => {
     setSelectedUser(user)
-    setFormData({
-      name: user.name,
-      email: user.email,
-      password: '',
-      role: user.role as 'ADMIN' | 'FUNCIONARIO' | 'VISUALIZADOR',
-      active: user.active
-    })
+    resetEditForm()
+    setEditValue('name', user.name)
+    setEditValue('email', user.email)
+    setEditValue('password', '')
+    setEditValue('role', user.role)
+    setEditValue('active', user.active)
     setShowEditDialog(true)
   }
 
@@ -299,44 +386,55 @@ export default function UsuariosAdminPage() {
                 Preencha os dados do novo usuário
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleCreateUser} className="space-y-4">
+            <form onSubmit={handleCreateSubmit(handleCreateUser, onCreateInvalid)} className="space-y-4" noValidate>
               <div className="space-y-2">
-                <Label htmlFor="name">Nome</Label>
+                <Label htmlFor="create-name">
+                  Nome Completo <span className="text-red-500">*</span>
+                </Label>
                 <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  required
+                  id="create-name"
+                  {...createRegister('name')}
+                  disabled={isCreating}
+                  placeholder="Nome completo do usuário"
+                  className={createErrors.name ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="create-email">
+                  Email <span className="text-red-500">*</span>
+                </Label>
                 <Input
-                  id="email"
+                  id="create-email"
                   type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  required
+                  {...createRegister('email')}
+                  disabled={isCreating}
+                  placeholder="email@ccf.gov.br"
+                  className={createErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
+                <Label htmlFor="create-password">
+                  Senha <span className="text-red-500">*</span>
+                </Label>
                 <Input
-                  id="password"
+                  id="create-password"
                   type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  required
+                  {...createRegister('password')}
+                  disabled={isCreating}
+                  placeholder="Mínimo 6 caracteres"
+                  className={createErrors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="role">Função</Label>
+                <Label htmlFor="create-role">
+                  Função <span className="text-red-500">*</span>
+                </Label>
                 <Select
-                  value={formData.role || 'FUNCIONARIO'}
-                  onValueChange={(value: 'ADMIN' | 'FUNCIONARIO' | 'VISUALIZADOR') => setFormData({...formData, role: value})}
+                  onValueChange={(value: 'ADMIN' | 'FUNCIONARIO' | 'VISUALIZADOR') => setCreateValue('role', value)}
                   defaultValue="FUNCIONARIO"
+                  disabled={isCreating}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={createErrors.role ? 'border-red-500 focus-visible:ring-red-500' : ''}>
                     <SelectValue placeholder="Selecione uma função" />
                   </SelectTrigger>
                   <SelectContent>
@@ -348,18 +446,29 @@ export default function UsuariosAdminPage() {
               </div>
               <div className="flex items-center space-x-2">
                 <Switch
-                  id="active"
-                  checked={formData.active}
-                  onCheckedChange={(checked) => setFormData({...formData, active: checked})}
+                  id="create-active"
+                  onCheckedChange={(checked) => setCreateValue('active', checked)}
+                  defaultChecked={true}
+                  disabled={isCreating}
                 />
-                <Label htmlFor="active">Usuário ativo</Label>
+                <Label htmlFor="create-active">Usuário ativo</Label>
               </div>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)} className="cursor-pointer">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCreateDialog(false)}
+                  disabled={isCreating}
+                  className="cursor-pointer"
+                >
                   Cancelar
                 </Button>
-                <Button type="submit" className="cursor-pointer">
-                  Criar Usuário
+                <Button
+                  type="submit"
+                  disabled={isCreating}
+                  className="cursor-pointer"
+                >
+                  {isCreating ? 'Criando...' : 'Criar Usuário'}
                 </Button>
               </div>
             </form>
@@ -407,45 +516,83 @@ export default function UsuariosAdminPage() {
         </Card>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros e Busca */}
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Buscar por nome ou email..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                />
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Buscar por nome ou email..."
+                    className="pl-10"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
               </div>
+              <Button
+                variant="outline"
+                size="icon"
+                className="cursor-pointer"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
             </div>
-            <Select value={roleFilter || 'all'} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Todas as funções" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as funções</SelectItem>
-                <SelectItem value="ADMIN">Administrador</SelectItem>
-                <SelectItem value="FUNCIONARIO">Funcionário</SelectItem>
-                <SelectItem value="VISUALIZADOR">Visualizador</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={activeFilter || 'all'} onValueChange={setActiveFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Todos os status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="true">Ativos</SelectItem>
-                <SelectItem value="false">Inativos</SelectItem>
-              </SelectContent>
-            </Select>
+
+            {showFilters && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Função</label>
+                  <Select value={roleFilter} onValueChange={setRoleFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todas as funções" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as funções</SelectItem>
+                      <SelectItem value="ADMIN">Administrador</SelectItem>
+                      <SelectItem value="FUNCIONARIO">Funcionário</SelectItem>
+                      <SelectItem value="VISUALIZADOR">Visualizador</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Status</label>
+                  <Select value={activeFilter} onValueChange={setActiveFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos os status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="true">Ativos</SelectItem>
+                      <SelectItem value="false">Inativos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearch('')
+                      setRoleFilter('all')
+                      setActiveFilter('all')
+                      toast.info('Filtros limpos')
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Limpar Filtros
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -554,24 +701,30 @@ export default function UsuariosAdminPage() {
               Altere os dados do usuário
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleEditUser} className="space-y-4">
+          <form onSubmit={handleEditSubmit(handleEditUser, onEditInvalid)} className="space-y-4" noValidate>
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Nome</Label>
+              <Label htmlFor="edit-name">
+                Nome Completo <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                required
+                {...editRegister('name')}
+                disabled={isEditing}
+                placeholder="Nome completo do usuário"
+                className={editErrors.name ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-email">Email</Label>
+              <Label htmlFor="edit-email">
+                Email <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="edit-email"
                 type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                required
+                {...editRegister('email')}
+                disabled={isEditing}
+                placeholder="email@ccf.gov.br"
+                className={editErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
             </div>
             <div className="space-y-2">
@@ -579,18 +732,21 @@ export default function UsuariosAdminPage() {
               <Input
                 id="edit-password"
                 type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                {...editRegister('password')}
+                disabled={isEditing}
+                placeholder="Mínimo 6 caracteres (opcional)"
+                className={editErrors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-role">Função</Label>
+              <Label htmlFor="edit-role">
+                Função <span className="text-red-500">*</span>
+              </Label>
               <Select
-                value={formData.role || 'FUNCIONARIO'}
-                onValueChange={(value: 'ADMIN' | 'FUNCIONARIO' | 'VISUALIZADOR') => setFormData({...formData, role: value})}
-                defaultValue="FUNCIONARIO"
+                onValueChange={(value: 'ADMIN' | 'FUNCIONARIO' | 'VISUALIZADOR') => setEditValue('role', value)}
+                disabled={isEditing}
               >
-                <SelectTrigger>
+                <SelectTrigger className={editErrors.role ? 'border-red-500 focus-visible:ring-red-500' : ''}>
                   <SelectValue placeholder="Selecione uma função" />
                 </SelectTrigger>
                 <SelectContent>
@@ -603,17 +759,27 @@ export default function UsuariosAdminPage() {
             <div className="flex items-center space-x-2">
               <Switch
                 id="edit-active"
-                checked={formData.active}
-                onCheckedChange={(checked) => setFormData({...formData, active: checked})}
+                onCheckedChange={(checked) => setEditValue('active', checked)}
+                disabled={isEditing}
               />
               <Label htmlFor="edit-active">Usuário ativo</Label>
             </div>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)} className="cursor-pointer">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowEditDialog(false)}
+                disabled={isEditing}
+                className="cursor-pointer"
+              >
                 Cancelar
               </Button>
-              <Button type="submit" className="cursor-pointer">
-                Atualizar Usuário
+              <Button
+                type="submit"
+                disabled={isEditing}
+                className="cursor-pointer"
+              >
+                {isEditing ? 'Atualizando...' : 'Atualizar Usuário'}
               </Button>
             </div>
           </form>

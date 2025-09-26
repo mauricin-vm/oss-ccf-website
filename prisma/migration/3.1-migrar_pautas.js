@@ -1,8 +1,8 @@
 // node prisma/migration/3.1-migrar_pautas.js
 
-const { PrismaClient } = require('@prisma/client')
-const fs = require('fs')
-const path = require('path')
+import { PrismaClient } from '@prisma/client'
+import fs from 'fs'
+import path from 'path'
 
 const prisma = new PrismaClient()
 
@@ -149,7 +149,7 @@ async function findConselheiroByName(nomeCompleto) {
     }
 
     return null
-  } catch (error) {
+  } catch {
     return null
   }
 }
@@ -560,7 +560,7 @@ async function criarProcessosFaltantes() {
         await prisma.logAuditoria.create({
           data: {
             usuarioId: usuarioSistema.id,
-            acao: 'CREATE',
+            acao: 'MIGRATE',
             entidade: 'Processo',
             entidadeId: novoProcesso.id,
             dadosNovos: {
@@ -1142,7 +1142,7 @@ async function migrarPautas() {
           await prisma.logAuditoria.create({
             data: {
               usuarioId: usuarioSistema.id,
-              acao: 'UPDATE',
+              acao: 'MIGRATE',
               entidade: 'Processo',
               entidadeId: procValido.processo.id,
               dadosNovos: {
@@ -1194,7 +1194,7 @@ async function migrarPautas() {
         await prisma.logAuditoria.create({
           data: {
             usuarioId: usuarioSistema.id,
-            acao: 'CREATE',
+            acao: 'MIGRATE',
             entidade: 'Pauta',
             entidadeId: pauta.id,
             dadosNovos: {
@@ -1498,7 +1498,7 @@ async function executarMigracaoCompleta() {
       let totalProcessosNaoEncontrados = 0
       Object.entries(processosPorAta).forEach(([ata, processos]) => {
         console.log(`\nAta ${ata} (${processos[0].dataAta}):`)
-        processos.forEach((proc, index) => {
+        processos.forEach((proc) => {
           totalProcessosNaoEncontrados++
           console.log(`  ${totalProcessosNaoEncontrados}. ${proc.numeroProcesso} - Relator: ${proc.relator} - Resultado: ${proc.resultado}`)
         })
@@ -1576,7 +1576,7 @@ if (require.main === module) {
   console.log('🚨 DEBUG: Script foi importado como módulo, não executado diretamente')
 }
 
-module.exports = {
+export {
   verificarDadosInicial,
   verificarDados,
   criarProcessosFaltantes,

@@ -17,12 +17,10 @@ import {
   Check,
   X,
   Edit,
-  AlertCircle,
   Receipt
 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
@@ -105,6 +103,8 @@ interface Processo {
 
 interface DetalhesAcordo {
   detalhes: DetalheAcordo[]
+  creditos?: Credito[]
+  inscricoes?: InscricaoDetalhe[]
 }
 
 interface DetalheAcordo {
@@ -112,6 +112,7 @@ interface DetalheAcordo {
   tipo: string
   descricao: string
   valorOriginal: number
+  valorFinal?: number
   observacoes?: string
   inscricoes?: InscricaoDetalhe[]
   imovel?: Imovel
@@ -123,7 +124,9 @@ interface InscricaoDetalhe {
   numeroInscricao: string
   tipoInscricao: string
   valorDebito: number
+  valorTotal?: number
   descricaoDebitos: DebitoDetalhe[]
+  debitos?: DebitoDetalhe[]
 }
 
 interface DebitoDetalhe {
@@ -142,36 +145,15 @@ interface Imovel {
 interface Credito {
   id: string
   numero: string
+  numeroCredito?: string
   tipo: string
+  tipoCredito?: string
   valor: number
-}
-
-interface CreditoOferecido {
-  id?: string
-  numero: string
-  tipo: string
-  valor: number
-  descricao?: string
-}
-
-interface InscricaoOferecida {
-  id?: string
-  numeroInscricao: string
-  tipoInscricao: string
-  valor: number
-  descricao?: string
   dataVencimento?: string
+  descricao?: string
 }
 
-interface DadosCreditos {
-  creditosOferecidos: CreditoOferecido[]
-  valorTotalCreditos: number
-}
 
-interface DadosDacao {
-  inscricoesOferecidas: InscricaoOferecida[]
-  valorTotalOferecido: number
-}
 
 interface AcordoData {
   id: string
@@ -209,7 +191,6 @@ export default function AcordoPage({ params }: AcordoPageProps) {
     dataVencimento: '',
     dataPagamento: ''
   })
-  const [errorEdit, setErrorEdit] = useState<string | null>(null)
   const [detalhesAcordo, setDetalhesAcordo] = useState<DetalhesAcordo | null>(null)
   const [showEditCustasModal, setShowEditCustasModal] = useState(false)
   const [formEdicaoCustas, setFormEdicaoCustas] = useState({
@@ -430,7 +411,6 @@ export default function AcordoPage({ params }: AcordoPageProps) {
       dataVencimento: new Date(parcela.dataVencimento).toISOString().split('T')[0],
       dataPagamento: parcela.dataPagamento ? new Date(parcela.dataPagamento).toISOString().split('T')[0] : ''
     })
-    setErrorEdit(null)
     setShowEditModal(true)
   }
 
@@ -441,7 +421,6 @@ export default function AcordoPage({ params }: AcordoPageProps) {
       dataVencimento: '',
       dataPagamento: ''
     })
-    setErrorEdit(null)
     // Limpar bordas vermelhas dos campos
     clearFieldErrorEdit('dataVencimento-edit')
     clearFieldErrorEdit('dataPagamento-edit')
@@ -476,7 +455,6 @@ export default function AcordoPage({ params }: AcordoPageProps) {
   }
 
   const clearFormErrors = () => {
-    setErrorEdit(null)
   }
 
   const showFieldError = (fieldId: string, errorMessage: string) => {
@@ -519,8 +497,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
 
     try {
       setProcessandoPagamento(true)
-      setErrorEdit(null)
-
+  
       // Agora todas as parcelas (incluindo honorários) usam a API de parcelas
       const status = calcularStatusAutomatico(formEdicaoParcela.dataVencimento, formEdicaoParcela.dataPagamento)
 
@@ -571,14 +548,12 @@ export default function AcordoPage({ params }: AcordoPageProps) {
         ? new Date(detalhes.custasDataPagamento).toISOString().split('T')[0]
         : ''
     })
-    setErrorEdit(null)
     setShowEditCustasModal(true)
   }
 
   const handleCancelarEdicaoCustas = () => {
     setShowEditCustasModal(false)
     setFormEdicaoCustas({ dataVencimento: '', dataPagamento: '' })
-    setErrorEdit(null)
     // Limpar bordas vermelhas dos campos
     clearFieldErrorEdit('custasDataVencimento-edit')
     clearFieldErrorEdit('custasDataPagamento-edit')
@@ -601,8 +576,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
 
     try {
       setProcessandoPagamento(true)
-      setErrorEdit(null)
-
+  
       const status = calcularStatusAutomatico(formEdicaoCustas.dataVencimento, formEdicaoCustas.dataPagamento)
 
       const response = await fetch(`/api/acordos/${acordo.id}/custas`, {
@@ -883,8 +857,8 @@ export default function AcordoPage({ params }: AcordoPageProps) {
     // Verificar se há custas vencidas (custas com data de vencimento passada e sem data de pagamento)
     let temCustasVencida = false
     const detalhes = getCurrentDetails()
-    if (detalhes?.custasAdvocaticias > 0) {
-      const custasDataVencimento = detalhes.custasDataVencimento || acordo.dataVencimento
+    if (detalhes?.custasAdvocaticias && detalhes.custasAdvocaticias > 0) {
+      const custasDataVencimento = detalhes.custasDataVencimento || acordo?.dataVencimento
       const custasDataPagamento = detalhes.custasDataPagamento
 
       if (custasDataVencimento && !custasDataPagamento) {
@@ -1416,8 +1390,8 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                         </div>
                         <div className="text-right">
                           <div className="flex items-center gap-2 justify-end mb-2">
-                            <Badge className={getParcelaStatusColor(custasStatus as any)}>
-                              {getParcelaStatusLabel(custasStatus as any)}
+                            <Badge className={getParcelaStatusColor(custasStatus)}>
+                              {getParcelaStatusLabel(custasStatus)}
                             </Badge>
                             {canEdit && !modoRegistrarPagamento && acordo.status !== 'cancelado' && acordo.status !== 'cumprido' && (
                               <Button
@@ -1663,7 +1637,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
       )}
 
       {/* Origem do Acordo */}
-      {(detalhesAcordo || acordo.creditos?.length > 0 || acordo.inscricoes?.length > 0) && (
+      {(detalhesAcordo && ((detalhesAcordo.creditos?.length ?? 0) > 0 || (detalhesAcordo.inscricoes?.length ?? 0) > 0)) && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1680,14 +1654,14 @@ export default function AcordoPage({ params }: AcordoPageProps) {
             <div className="space-y-4">
 
               {/* Créditos para compensação e dação */}
-              {acordo.creditos && acordo.creditos.length > 0 && (
+              {detalhesAcordo?.creditos && detalhesAcordo?.creditos.length > 0 && (
                 <div className="mb-6">
                   <h5 className="text-sm font-medium text-green-700 mb-3 flex items-center gap-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                     {tipoProcesso === 'COMPENSACAO' ? 'Créditos Oferecidos' : 'Inscrições Oferecidas'}
                   </h5>
                   <div className="space-y-3">
-                    {acordo.creditos.map((credito: any, idx: number) => (
+                    {detalhesAcordo?.creditos.map((credito: Credito, idx: number) => (
                       <div key={credito.id || `credito-${idx}`} className="p-3 bg-green-50 rounded-lg border border-green-200">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -1695,7 +1669,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                             <div>
                               <p className="font-medium text-sm text-green-900">{credito.numeroCredito}</p>
                               <p className="text-xs text-green-700 capitalize">
-                                {credito.tipoCredito.replace('_', ' ').toLowerCase()}
+                                {credito.tipoCredito?.replace('_', ' ').toLowerCase()}
                               </p>
                             </div>
                           </div>
@@ -1721,7 +1695,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                           Total {tipoProcesso === 'COMPENSACAO' ? 'dos Créditos' : 'das Inscrições Oferecidas'}:
                         </span>
                         <span className="text-sm font-bold text-green-900">
-                          R$ {acordo.creditos.reduce((total: number, credito: any) => total + Number(credito.valor || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          R$ {detalhesAcordo?.creditos.reduce((total: number, credito: Credito) => total + Number(credito.valor || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
                       </div>
                     </div>
@@ -1730,14 +1704,14 @@ export default function AcordoPage({ params }: AcordoPageProps) {
               )}
 
               {/* Inscrições a compensar */}
-              {acordo.inscricoes && acordo.inscricoes.length > 0 && (
+              {detalhesAcordo?.inscricoes && detalhesAcordo?.inscricoes.length > 0 && (
                 <div className="mb-6">
                   <h5 className="text-sm font-medium text-blue-700 mb-3 flex items-center gap-2">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                     {tipoProcesso === 'TRANSACAO_EXCEPCIONAL' ? 'Inscrições Incluídas' : 'Inscrições a Compensar'}
                   </h5>
                   <div className="space-y-3">
-                    {acordo.inscricoes.map((inscricao: any, idx: number) => (
+                    {detalhesAcordo?.inscricoes.map((inscricao: InscricaoDetalhe, idx: number) => (
                       <div key={inscricao.id || `inscricao-${idx}`} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -1761,7 +1735,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                           <div className="mt-3 pt-3 border-t border-blue-300">
                             <h6 className="text-xs font-medium text-blue-700 mb-2">Débitos:</h6>
                             <div className="space-y-2">
-                              {inscricao.debitos.map((debito: any, idx: number) => (
+                              {inscricao.descricaoDebitos.map((debito: DebitoDetalhe, idx: number) => (
                                 <div key={debito.id || `debito-${idx}`} className="flex items-center justify-between text-xs bg-white p-2 rounded">
                                   <span className="text-gray-700">{debito.descricao}</span>
                                   <div className="text-right">
@@ -1787,7 +1761,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                           Total das Inscrições:
                         </span>
                         <span className="text-sm font-bold text-blue-900">
-                          R$ {acordo.inscricoes.reduce((total: number, inscricao: any) => total + Number(inscricao.valorTotal || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          R$ {detalhesAcordo?.inscricoes.reduce((total: number, inscricao: InscricaoDetalhe) => total + Number(inscricao.valorDebito || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
                       </div>
                     </div>
@@ -1974,7 +1948,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                 ))
               ) : (
                 // Mostrar mensagem apenas se não há créditos nem inscrições
-                !acordo.creditos?.length && !acordo.inscricoes?.length && (
+                !detalhesAcordo?.creditos?.length && !detalhesAcordo?.inscricoes?.length && (
                   <div className="text-center py-8 text-gray-500">
                     <Receipt className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                     <p>Nenhum detalhe específico encontrado para este acordo.</p>

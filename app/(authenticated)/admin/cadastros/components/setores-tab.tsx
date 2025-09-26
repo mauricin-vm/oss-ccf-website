@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useForm, FieldErrors } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -17,7 +20,8 @@ import {
   Mail,
   User,
   Check,
-  X
+  X,
+  Filter
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -32,19 +36,64 @@ interface Setor {
   updatedAt: string
 }
 
+// Schemas de validação
+const createSetorSchema = z.object({
+  nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  sigla: z.string().min(2, 'Sigla deve ter pelo menos 2 caracteres').max(10, 'Sigla deve ter no máximo 10 caracteres'),
+  email: z.string().email('Email inválido').optional().or(z.literal('')),
+  responsavel: z.string().optional(),
+  ativo: z.boolean()
+})
+
+const editSetorSchema = z.object({
+  nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  sigla: z.string().min(2, 'Sigla deve ter pelo menos 2 caracteres').max(10, 'Sigla deve ter no máximo 10 caracteres'),
+  email: z.string().email('Email inválido').optional().or(z.literal('')),
+  responsavel: z.string().optional(),
+  ativo: z.boolean()
+})
+
+type CreateSetorInput = z.infer<typeof createSetorSchema>
+type EditSetorInput = z.infer<typeof editSetorSchema>
+
 export default function SetoresTab() {
   const [setores, setSetores] = useState<Setor[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [selectedSetor, setSelectedSetor] = useState<Setor | null>(null)
-  const [formData, setFormData] = useState({
-    nome: '',
-    sigla: '',
-    email: '',
-    responsavel: '',
-    ativo: true
+  const [isCreating, setIsCreating] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+
+  // Form para criar setor
+  const {
+    register: createRegister,
+    handleSubmit: handleCreateSubmit,
+    formState: { errors: createErrors },
+    reset: resetCreateForm,
+    setValue: setCreateValue
+  } = useForm<CreateSetorInput>({
+    resolver: zodResolver(createSetorSchema),
+    defaultValues: {
+      nome: '',
+      sigla: '',
+      email: '',
+      responsavel: '',
+      ativo: true
+    }
+  })
+
+  // Form para editar setor
+  const {
+    register: editRegister,
+    handleSubmit: handleEditSubmit,
+    formState: { errors: editErrors },
+    reset: resetEditForm,
+    setValue: setEditValue
+  } = useForm<EditSetorInput>({
+    resolver: zodResolver(editSetorSchema)
   })
 
   // Carregar setores
@@ -69,16 +118,32 @@ export default function SetoresTab() {
     loadSetores()
   }, [])
 
+  // Função para lidar com erros de validação do formulário de criar setor
+  const onCreateInvalid = (errors: FieldErrors<z.infer<typeof createSetorSchema>>) => {
+    if (errors.nome?.message) {
+      toast.warning(errors.nome.message)
+      return
+    }
+    if (errors.sigla?.message) {
+      toast.warning(errors.sigla.message)
+      return
+    }
+    if (errors.email?.message) {
+      toast.warning(errors.email.message)
+      return
+    }
+  }
+
   // Criar setor
-  const handleCreateSetor = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleCreateSetor = async (data: CreateSetorInput) => {
+    setIsCreating(true)
     try {
       const response = await fetch('/api/setores', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(data)
       })
 
       if (!response.ok) {
@@ -88,32 +153,44 @@ export default function SetoresTab() {
 
       toast.success('Setor criado com sucesso')
       setShowCreateDialog(false)
-      setFormData({
-        nome: '',
-        sigla: '',
-        email: '',
-        responsavel: '',
-        ativo: true
-      })
+      resetCreateForm()
       loadSetores()
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao criar setor'
       toast.error(errorMessage)
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  // Função para lidar com erros de validação do formulário de editar setor
+  const onEditInvalid = (errors: FieldErrors<z.infer<typeof editSetorSchema>>) => {
+    if (errors.nome?.message) {
+      toast.warning(errors.nome.message)
+      return
+    }
+    if (errors.sigla?.message) {
+      toast.warning(errors.sigla.message)
+      return
+    }
+    if (errors.email?.message) {
+      toast.warning(errors.email.message)
+      return
     }
   }
 
   // Editar setor
-  const handleEditSetor = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleEditSetor = async (data: EditSetorInput) => {
     if (!selectedSetor) return
 
+    setIsEditing(true)
     try {
       const response = await fetch(`/api/setores/${selectedSetor.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(data)
       })
 
       if (!response.ok) {
@@ -128,6 +205,8 @@ export default function SetoresTab() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar setor'
       toast.error(errorMessage)
+    } finally {
+      setIsEditing(false)
     }
   }
 
@@ -158,13 +237,12 @@ export default function SetoresTab() {
   // Abrir dialog de edição
   const openEditDialog = (setor: Setor) => {
     setSelectedSetor(setor)
-    setFormData({
-      nome: setor.nome,
-      sigla: setor.sigla,
-      email: setor.email || '',
-      responsavel: setor.responsavel || '',
-      ativo: setor.ativo
-    })
+    resetEditForm()
+    setEditValue('nome', setor.nome)
+    setEditValue('sigla', setor.sigla)
+    setEditValue('email', setor.email || '')
+    setEditValue('responsavel', setor.responsavel || '')
+    setEditValue('ativo', setor.ativo)
     setShowEditDialog(true)
   }
 
@@ -193,18 +271,7 @@ export default function SetoresTab() {
             Administre departamentos e setores do sistema
           </p>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={(open) => {
-          setShowCreateDialog(open)
-          if (!open) {
-            setFormData({
-              nome: '',
-              sigla: '',
-              email: '',
-              responsavel: '',
-              ativo: true
-            })
-          }
-        }}>
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
             <Button className="cursor-pointer">
               <Plus className="h-4 w-4 mr-2" />
@@ -218,57 +285,81 @@ export default function SetoresTab() {
                 Preencha os dados do novo setor
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleCreateSetor} className="space-y-4">
+            <form onSubmit={handleCreateSubmit(handleCreateSetor, onCreateInvalid)} className="space-y-4" noValidate>
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome do Setor <span className="text-red-500">*</span></Label>
+                <Label htmlFor="create-nome">
+                  Nome do Setor <span className="text-red-500">*</span>
+                </Label>
                 <Input
-                  id="nome"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  required
+                  id="create-nome"
+                  {...createRegister('nome')}
+                  disabled={isCreating}
+                  placeholder="Nome completo do setor"
+                  className={createErrors.nome ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="sigla">Sigla <span className="text-red-500">*</span></Label>
+                <Label htmlFor="create-sigla">
+                  Sigla <span className="text-red-500">*</span>
+                </Label>
                 <Input
-                  id="sigla"
-                  value={formData.sigla}
-                  onChange={(e) => setFormData({ ...formData, sigla: e.target.value.toUpperCase() })}
+                  id="create-sigla"
+                  {...createRegister('sigla', {
+                    onChange: (e) => {
+                      e.target.value = e.target.value.toUpperCase()
+                    }
+                  })}
+                  disabled={isCreating}
+                  placeholder="SIGLA"
                   maxLength={10}
-                  required
+                  className={createErrors.sigla ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="create-email">Email</Label>
                 <Input
-                  id="email"
+                  id="create-email"
                   type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  {...createRegister('email')}
+                  disabled={isCreating}
+                  placeholder="email@exemplo.com"
+                  className={createErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="responsavel">Responsável</Label>
+                <Label htmlFor="create-responsavel">Responsável</Label>
                 <Input
-                  id="responsavel"
-                  value={formData.responsavel}
-                  onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
+                  id="create-responsavel"
+                  {...createRegister('responsavel')}
+                  disabled={isCreating}
+                  placeholder="Nome do responsável pelo setor"
                 />
               </div>
               <div className="flex items-center space-x-2">
                 <Switch
-                  id="ativo"
-                  checked={formData.ativo}
-                  onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })}
+                  id="create-ativo"
+                  onCheckedChange={(checked) => setCreateValue('ativo', checked)}
+                  defaultChecked={true}
+                  disabled={isCreating}
                 />
-                <Label htmlFor="ativo">Setor ativo</Label>
+                <Label htmlFor="create-ativo">Setor ativo</Label>
               </div>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)} className="cursor-pointer">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCreateDialog(false)}
+                  disabled={isCreating}
+                  className="cursor-pointer"
+                >
                   Cancelar
                 </Button>
-                <Button type="submit" className="cursor-pointer">
-                  Criar Setor
+                <Button
+                  type="submit"
+                  disabled={isCreating}
+                  className="cursor-pointer"
+                >
+                  {isCreating ? 'Criando...' : 'Criar Setor'}
                 </Button>
               </div>
             </form>
@@ -307,20 +398,52 @@ export default function SetoresTab() {
         </Card>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros e Busca */}
       <Card>
         <CardHeader>
-          <CardTitle>Buscar Setores</CardTitle>
+          <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Buscar por nome, sigla ou responsável..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
-            />
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Buscar por nome, sigla ou responsável..."
+                    className="pl-10"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                className="cursor-pointer"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {showFilters && (
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4 pt-4 border-t">
+                <div className="flex items-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearch('')
+                      toast.info('Filtros limpos')
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Limpar Filtros
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -401,19 +524,7 @@ export default function SetoresTab() {
       </Card>
 
       {/* Dialog de Edição */}
-      <Dialog open={showEditDialog} onOpenChange={(open) => {
-        setShowEditDialog(open)
-        if (!open) {
-          setSelectedSetor(null)
-          setFormData({
-            nome: '',
-            sigla: '',
-            email: '',
-            responsavel: '',
-            ativo: true
-          })
-        }
-      }}>
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar Setor</DialogTitle>
@@ -421,24 +532,34 @@ export default function SetoresTab() {
               Altere os dados do setor
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleEditSetor} className="space-y-4">
+          <form onSubmit={handleEditSubmit(handleEditSetor, onEditInvalid)} className="space-y-4" noValidate>
             <div className="space-y-2">
-              <Label htmlFor="edit-nome">Nome do Setor <span className="text-red-500">*</span></Label>
+              <Label htmlFor="edit-nome">
+                Nome do Setor <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="edit-nome"
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                required
+                {...editRegister('nome')}
+                disabled={isEditing}
+                placeholder="Nome completo do setor"
+                className={editErrors.nome ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-sigla">Sigla <span className="text-red-500">*</span></Label>
+              <Label htmlFor="edit-sigla">
+                Sigla <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="edit-sigla"
-                value={formData.sigla}
-                onChange={(e) => setFormData({ ...formData, sigla: e.target.value.toUpperCase() })}
+                {...editRegister('sigla', {
+                  onChange: (e) => {
+                    e.target.value = e.target.value.toUpperCase()
+                  }
+                })}
+                disabled={isEditing}
+                placeholder="SIGLA"
                 maxLength={10}
-                required
+                className={editErrors.sigla ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
             </div>
             <div className="space-y-2">
@@ -446,32 +567,45 @@ export default function SetoresTab() {
               <Input
                 id="edit-email"
                 type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                {...editRegister('email')}
+                disabled={isEditing}
+                placeholder="email@exemplo.com"
+                className={editErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-responsavel">Responsável</Label>
               <Input
                 id="edit-responsavel"
-                value={formData.responsavel}
-                onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
+                {...editRegister('responsavel')}
+                disabled={isEditing}
+                placeholder="Nome do responsável pelo setor"
               />
             </div>
             <div className="flex items-center space-x-2">
               <Switch
                 id="edit-ativo"
-                checked={formData.ativo}
-                onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })}
+                onCheckedChange={(checked) => setEditValue('ativo', checked)}
+                disabled={isEditing}
               />
               <Label htmlFor="edit-ativo">Setor ativo</Label>
             </div>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)} className="cursor-pointer">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowEditDialog(false)}
+                disabled={isEditing}
+                className="cursor-pointer"
+              >
                 Cancelar
               </Button>
-              <Button type="submit" className="cursor-pointer">
-                Atualizar Setor
+              <Button
+                type="submit"
+                disabled={isEditing}
+                className="cursor-pointer"
+              >
+                {isEditing ? 'Atualizando...' : 'Atualizar Setor'}
               </Button>
             </div>
           </form>

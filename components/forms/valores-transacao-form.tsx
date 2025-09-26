@@ -1,16 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useForm, useFieldArray } from 'react-hook-form'
+import { useForm, useFieldArray, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Loader2, AlertCircle, Plus, Trash2, FileText, Calculator, DollarSign, Edit, CreditCard, Settings } from 'lucide-react'
+import { Loader2, Plus, Trash2, FileText, Calculator, DollarSign, Edit, CreditCard, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface InscricaoData {
@@ -100,7 +99,7 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
     handleSubmit,
     watch,
     setValue,
-    formState: { errors }
+    formState: { }
   } = useForm<ValoresTransacaoFormInput>({
     resolver: zodResolver(valoresTransacaoFormSchema),
     defaultValues: {
@@ -181,40 +180,64 @@ export default function ValoresTransacaoForm({ processoId, onSuccess }: ValoresT
   }, [processoId, appendInscricao, setValue])
 
   // Função para lidar com erros de validação do formulário principal
-  const onInvalid = (errors: any) => {
-    // Ordem lógica dos campos no formulário
-    const fieldOrder = [
-      'proposta.valorTotalProposto',
-      'proposta.metodoPagamento',
-      'proposta.valorEntrada',
-      'proposta.quantidadeParcelas'
-    ]
-
-    // Procurar pelo primeiro erro na ordem dos campos
-    for (const field of fieldOrder) {
-      const fieldParts = field.split('.')
-      let fieldError = errors
-
-      // Navegar pela estrutura aninhada do erro
-      for (const part of fieldParts) {
-        fieldError = fieldError?.[part]
-      }
-
-      if (fieldError?.message) {
-        toast.warning(fieldError.message)
-
-        // Focar no campo com erro após um pequeno delay
-        setTimeout(() => {
-          const element = document.getElementById(field.replace('.', '-'))
-          if (element) {
-            element.focus()
-            element.style.borderColor = '#ef4444'
-            element.style.boxShadow = '0 0 0 1px #ef4444'
-            element.setAttribute('data-error', 'true')
-          }
-        }, 100)
-        break
-      }
+  const onInvalid = (errors: FieldErrors<ValoresTransacaoFormInput>) => {
+    // Verificar erros de forma type-safe
+    if (errors.proposta?.valorTotalProposto?.message) {
+      toast.warning(errors.proposta.valorTotalProposto.message)
+      setTimeout(() => {
+        const element = document.getElementById('proposta-valorTotalProposto')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+          element.setAttribute('data-error', 'true')
+        }
+      }, 100)
+      return
+    }
+    if (errors.proposta?.metodoPagamento?.message) {
+      toast.warning(errors.proposta.metodoPagamento.message)
+      setTimeout(() => {
+        const element = document.getElementById('proposta-metodoPagamento')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+          element.setAttribute('data-error', 'true')
+        }
+      }, 100)
+      return
+    }
+    if (errors.proposta?.valorEntrada?.message) {
+      toast.warning(errors.proposta.valorEntrada.message)
+      setTimeout(() => {
+        const element = document.getElementById('proposta-valorEntrada')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+          element.setAttribute('data-error', 'true')
+        }
+      }, 100)
+      return
+    }
+    if (errors.proposta?.quantidadeParcelas?.message) {
+      toast.warning(errors.proposta.quantidadeParcelas.message)
+      setTimeout(() => {
+        const element = document.getElementById('proposta-quantidadeParcelas')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+          element.setAttribute('data-error', 'true')
+        }
+      }, 100)
+      return
+    }
+    // Verificar erros nas inscrições se houver
+    if (errors.inscricoes?.message) {
+      toast.warning(errors.inscricoes.message)
+      return
     }
   }
 

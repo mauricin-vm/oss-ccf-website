@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { acordoSchema, type AcordoInput } from '@/lib/validations/acordo'
 import { z } from 'zod'
 
 // Schema simplificado para o formulário da página (não precisa ser tão complexo quanto o da API)
@@ -19,7 +18,9 @@ const acordoFormSchema = z.object({
   modalidadePagamento: z.enum(['avista', 'parcelado']).optional(),
   numeroParcelas: z.number().optional(),
   valorTotal: z.number().optional(),
-  valorFinal: z.number().optional()
+  valorFinal: z.number().optional(),
+  percentualDesconto: z.number().optional(),
+  valorDesconto: z.number().optional()
 })
 
 type AcordoFormInput = z.infer<typeof acordoFormSchema>
@@ -27,43 +28,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, AlertCircle, HandCoins, Search, Building, Settings, CreditCard } from 'lucide-react'
+import { Loader2, HandCoins, Search, Building, Settings, CreditCard } from 'lucide-react'
 import TransacaoExcepcionalAcordoSection from '@/components/acordo/transacao-excepcional-acordo-section'
 import CompensacaoSection from '@/components/acordo/compensacao-section'
 import DacaoSection from '@/components/acordo/dacao-section'
 import { toast } from 'sonner'
 
 // Importar tipos dos componentes específicos
-type ValoresTransacao = {
-  inscricoes: Array<{
-    id: string
-    numeroInscricao: string
-    tipoInscricao: string
-    debitos: Array<{
-      id: string
-      descricao: string
-      valor: number
-      dataVencimento: string
-      valorOriginal?: number
-    }>
-    selecionada?: boolean
-    debitosSelecionados?: string[]
-  }>
-  proposta: {
-    valorTotalProposto: number
-    metodoPagamento: string
-    valorEntrada: number
-    quantidadeParcelas: number
-  }
-  resumo: {
-    valorTotalInscricoes: number
-    valorTotalProposto: number
-    valorDesconto: number
-    percentualDesconto: number
-  }
-}
 
 type ValoresCompensacao = {
   creditos: Array<{
@@ -107,33 +79,7 @@ type ValoresDacao = {
   }>
 }
 
-interface ProcessoElegivel {
-  id: string
-  numero: string
-  tipo: string
-  valor: number
-  status: string
-  tipoDecisao?: string
-  contribuinte: {
-    id: string
-    nome: string
-    documento: string
-    email: string
-  }
-  acordos?: Array<{
-    status: string
-  }>
-  valoresEspecificos?: {
-    configurado: boolean
-    valorOriginal: number
-    valorFinal: number
-    detalhes?: ValoresTransacaoForm | ValoresCompensacaoForm
-  }
-}
 
-interface AcordoExistente {
-  status: string
-}
 
 interface CreditoData {
   tipo: string
@@ -167,10 +113,17 @@ interface ValoresTransacaoForm {
     metodoPagamento: string
     valorEntrada: number
     quantidadeParcelas: number
+    custasAdvocaticias?: number
+    custasDataVencimento?: string
+    honorariosValor?: number
+    honorariosMetodoPagamento?: string
+    honorariosParcelas?: number
   }
   resumo?: {
     valorTotalInscricoes: number
     valorTotalProposto: number
+    valorDesconto?: number
+    percentualDesconto?: number
   }
 }
 
@@ -450,7 +403,7 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
 
     return processo.numero.toLowerCase().includes(searchLower) ||
       processo.contribuinte.nome.toLowerCase().includes(searchLower) ||
-      (searchNumbers && processo.contribuinte.cpfCnpj?.includes(searchNumbers))
+      (searchNumbers && processo.contribuinte.documento?.includes(searchNumbers))
   })
 
   // Paginação local
@@ -540,9 +493,9 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
   }, [processoId, searchParams])
 
   // Watch valores para exibição
-  const valorTotal = watch('valorTotal') || 0
-  const percentualDesconto = watch('percentualDesconto') || 0
-  const valorDesconto = watch('valorDesconto') || 0
+  const valorTotal = (watch('valorTotal') as number) || 0
+  const percentualDesconto = (watch('percentualDesconto') as number) || 0
+  const valorDesconto = (watch('valorDesconto') as number) || 0
 
   // Calcular valores finais para exibição (sem usar setValue)
   const calcularValores = () => {
@@ -593,27 +546,27 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
         // Para transação excepcional: usar valores dos dados específicos
         finalData = {
           ...data,
-          valorTotal: dadosEspecificos.valorInscricoes, // Valor original das inscrições
-          valorFinal: dadosEspecificos.propostaFinal?.valorTotalProposto || data.valorTotal,
-          valorDesconto: Number(dadosEspecificos.valorInscricoes) - (dadosEspecificos.propostaFinal?.valorTotalProposto || data.valorTotal),
+          valorTotal: dadosEspecificos?.valorInscricoes, // Valor original das inscrições
+          valorFinal: dadosEspecificos?.propostaFinal?.valorTotalProposto || data.valorTotal,
+          valorDesconto: Number(dadosEspecificos?.valorInscricoes || 0) - (dadosEspecificos?.propostaFinal?.valorTotalProposto || data.valorTotal || 0),
           dadosEspecificos
         }
       } else if (selectedProcesso?.tipo === 'COMPENSACAO' && dadosEspecificos) {
         // Para compensação: usar valores dos dados específicos
         finalData = {
           ...data,
-          valorTotal: dadosEspecificos.valorTotal || data.valorTotal,
-          valorFinal: dadosEspecificos.valorFinal || data.valorFinal,
-          valorDesconto: (dadosEspecificos.valorTotal || data.valorTotal) - (dadosEspecificos.valorFinal || data.valorFinal),
+          valorTotal: dadosEspecificos?.valorTotal || data.valorTotal,
+          valorFinal: dadosEspecificos?.valorFinal || data.valorFinal,
+          valorDesconto: (dadosEspecificos?.valorTotal || data.valorTotal || 0) - (dadosEspecificos?.valorFinal || data.valorFinal || 0),
           dadosEspecificos
         }
       } else if (selectedProcesso?.tipo === 'DACAO_PAGAMENTO' && dadosEspecificos) {
         // Para dação em pagamento: usar valores dos dados específicos
         finalData = {
           ...data,
-          valorTotal: dadosEspecificos.valorTotal || data.valorTotal,
-          valorFinal: dadosEspecificos.valorFinal || data.valorFinal,
-          valorDesconto: (dadosEspecificos.valorTotal || data.valorTotal) - (dadosEspecificos.valorFinal || data.valorFinal),
+          valorTotal: dadosEspecificos?.valorTotal || data.valorTotal,
+          valorFinal: dadosEspecificos?.valorFinal || data.valorFinal,
+          valorDesconto: (dadosEspecificos?.valorTotal || data.valorTotal || 0) - (dadosEspecificos?.valorFinal || data.valorFinal || 0),
           dadosEspecificos
         }
       } else {
@@ -777,41 +730,29 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
   }
 
   // Função para lidar APENAS com erros de validação dos campos do formulário
-  const onInvalid = (errors: any) => {
-    // Definir ordem de prioridade dos campos - SEMPRE dataAssinatura antes de dataVencimento
-    const fieldOrder = ['processoId', 'dataAssinatura', 'dataVencimento']
-
-    // Procurar erros nos campos do formulário na ordem específica
-    let firstErrorField = null
-    let firstErrorMessage = null
-
-    for (const field of fieldOrder) {
-      if (errors[field]?.message) {
-        firstErrorField = field
-        firstErrorMessage = errors[field].message
-        break
-      }
+  const onInvalid = (errors: FieldErrors<AcordoFormInput>) => {
+    if (errors.processoId?.message) {
+      toast.warning(errors.processoId.message)
+      setTimeout(() => setFocus('processoId'), 100)
+      return
+    }
+    if (errors.dataAssinatura?.message) {
+      toast.warning(errors.dataAssinatura.message)
+      setTimeout(() => setFocus('dataAssinatura'), 100)
+      return
+    }
+    if (errors.dataVencimento?.message) {
+      toast.warning(errors.dataVencimento.message)
+      setTimeout(() => setFocus('dataVencimento'), 100)
+      return
     }
 
     // Se não encontrou erro nos campos prioritários, pegar qualquer primeiro erro
-    if (!firstErrorField) {
-      const allErrorFields = Object.keys(errors)
-      if (allErrorFields.length > 0) {
-        firstErrorField = allErrorFields[0]
-        const firstError = Object.values(errors)[0] as any
-        firstErrorMessage = firstError?.message
-      }
-    }
-
-    // Mostrar toast e focar no campo (APENAS para erros de formulário)
-    if (firstErrorMessage) {
-      toast.warning(firstErrorMessage)
-
-      // Focar no campo com erro
-      if (firstErrorField) {
-        setTimeout(() => {
-          setFocus(firstErrorField as any)
-        }, 100)
+    const allErrorFields = Object.keys(errors)
+    if (allErrorFields.length > 0) {
+      const firstError = Object.values(errors)[0] as { message?: string }
+      if (firstError?.message) {
+        toast.warning(firstError.message)
       }
     } else {
       toast.warning('Por favor, corrija os erros no formulário')
@@ -1008,7 +949,35 @@ export default function AcordoForm({ onSuccess, processoId }: AcordoFormProps) {
           <CardContent>
             {selectedProcesso.valoresEspecificos?.detalhes ? (
               <TransacaoExcepcionalAcordoSection
-                valoresTransacao={selectedProcesso.valoresEspecificos.detalhes as ValoresTransacao}
+                valoresTransacao={{
+                  inscricoes: (selectedProcesso.valoresEspecificos.detalhes as ValoresTransacaoForm).inscricoes.map((inscricao, index) => ({
+                    id: `inscricao-${index}`,
+                    numeroInscricao: inscricao.numeroInscricao,
+                    tipoInscricao: inscricao.tipoInscricao,
+                    debitos: (inscricao.debitos || []).map((debito, debitoIndex) => ({
+                      id: `debito-${index}-${debitoIndex}`,
+                      descricao: debito.descricao,
+                      valor: debito.valor,
+                      dataVencimento: debito.dataVencimento
+                    })),
+                    selecionada: false,
+                    debitosSelecionados: []
+                  })),
+                  proposta: {
+                    ...(selectedProcesso.valoresEspecificos.detalhes as ValoresTransacaoForm).proposta,
+                    custasAdvocaticias: (selectedProcesso.valoresEspecificos.detalhes as ValoresTransacaoForm).proposta?.custasAdvocaticias || 0,
+                    custasDataVencimento: (selectedProcesso.valoresEspecificos.detalhes as ValoresTransacaoForm).proposta?.custasDataVencimento || '',
+                    honorariosValor: (selectedProcesso.valoresEspecificos.detalhes as ValoresTransacaoForm).proposta?.honorariosValor || 0,
+                    honorariosMetodoPagamento: (selectedProcesso.valoresEspecificos.detalhes as ValoresTransacaoForm).proposta?.honorariosMetodoPagamento || '',
+                    honorariosParcelas: (selectedProcesso.valoresEspecificos.detalhes as ValoresTransacaoForm).proposta?.honorariosParcelas || 1
+                  },
+                  resumo: {
+                    valorTotalInscricoes: (selectedProcesso.valoresEspecificos.detalhes as ValoresTransacaoForm).resumo?.valorTotalInscricoes || 0,
+                    valorTotalProposto: (selectedProcesso.valoresEspecificos.detalhes as ValoresTransacaoForm).resumo?.valorTotalProposto || 0,
+                    valorDesconto: (selectedProcesso.valoresEspecificos.detalhes as ValoresTransacaoForm).resumo?.valorDesconto || 0,
+                    percentualDesconto: (selectedProcesso.valoresEspecificos.detalhes as ValoresTransacaoForm).resumo?.percentualDesconto || 0
+                  }
+                }}
                 onSelectionChange={(dadosSelecionados: DadosSelecionadosTransacao) => {
                   // Atualizar valores do formulário baseado na seleção
                   setValue('valorTotal', dadosSelecionados.valorTotal as number)

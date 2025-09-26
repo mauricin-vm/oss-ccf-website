@@ -37,12 +37,12 @@ export function BarChartTipos({ data }: BarChartTiposProps) {
     return colors[tipo] || '#6b7280'
   }
 
-  const chartData = data.map(item => ({
+  const chartData = Array.isArray(data) ? data.map(item => ({
     tipo: getTipoProcessoLabel(item.tipo),
     valor: Number(item._sum.valorTotal),
     quantidade: item._count,
     fill: getTipoColor(item.tipo)
-  }))
+  })) : []
 
   return (
     <div className="h-80">

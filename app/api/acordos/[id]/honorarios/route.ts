@@ -53,14 +53,11 @@ export async function PUT(
 
     // Verificar se o acordo tem honorários baseado no tipo
     let temHonorarios = false
-    let valorHonorarios = 0
 
     if (acordo.tipoProcesso === 'COMPENSACAO' && acordo.compensacao) {
-      temHonorarios = acordo.compensacao.honorariosValor !== null && acordo.compensacao.honorariosValor > 0
-      valorHonorarios = Number(acordo.compensacao.honorariosValor) || 0
+      temHonorarios = acordo.compensacao.honorariosValor !== null && Number(acordo.compensacao.honorariosValor) > 0
     } else if (acordo.tipoProcesso === 'DACAO_PAGAMENTO' && acordo.dacao) {
-      temHonorarios = acordo.dacao.honorariosValor !== null && acordo.dacao.honorariosValor > 0
-      valorHonorarios = Number(acordo.dacao.honorariosValor) || 0
+      temHonorarios = acordo.dacao.honorariosValor !== null && Number(acordo.dacao.honorariosValor) > 0
     } else {
       return NextResponse.json(
         { error: 'Apenas acordos de compensação e dação têm controle de honorários' },
@@ -94,7 +91,7 @@ export async function PUT(
     }
 
     // Usar transação para atualizar honorários e verificar se acordo foi cumprido
-    const result = await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       // Atualizar honorários baseado no tipo de processo
       if (acordo.tipoProcesso === 'COMPENSACAO') {
         await tx.acordoCompensacao.update({

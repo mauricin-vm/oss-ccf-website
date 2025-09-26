@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { sessaoSchema, type SessaoInput } from '@/lib/validations/pauta'
 import { TipoSessao } from '@/types'
@@ -10,11 +10,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, AlertCircle, Calendar, Users, Search, User } from 'lucide-react'
+import { Loader2, Calendar, Users, Search, User } from 'lucide-react'
 import { formatLocalDate } from '@/lib/utils/date'
 import { toast } from 'sonner'
 
@@ -56,7 +55,6 @@ interface Conselheiro {
 export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingPauta, setIsLoadingPauta] = useState(false)
   const [pautas, setPautas] = useState<Pauta[]>([])
@@ -84,33 +82,71 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
   })
 
   // Função para lidar com erros de validação do formulário
-  const onInvalid = (errors: any) => {
-    // Ordem lógica dos campos no formulário
-    const fieldOrder = [
-      'tipoSessao',
-      'agenda',
-      'pautaId',
-      'dataInicio',
-      'presidenteId',
-      'conselheiros'
-    ]
-
-    // Procurar pelo primeiro erro na ordem dos campos
-    for (const field of fieldOrder) {
-      if (errors[field]?.message) {
-        toast.warning(errors[field].message)
-
-        // Focar no campo com erro após um pequeno delay
-        setTimeout(() => {
-          const element = document.getElementById(field)
-          if (element) {
-            element.focus()
-            element.style.borderColor = '#ef4444'
-            element.style.boxShadow = '0 0 0 1px #ef4444'
-          }
-        }, 100)
-        break
-      }
+  const onInvalid = (errors: FieldErrors<SessaoInput>) => {
+    // Verificar erros de forma type-safe
+    if (errors.tipoSessao?.message) {
+      toast.warning(errors.tipoSessao.message)
+      setTimeout(() => {
+        const element = document.getElementById('tipoSessao')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.agenda?.message) {
+      toast.warning(errors.agenda.message)
+      setTimeout(() => {
+        const element = document.getElementById('agenda')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.pautaId?.message) {
+      toast.warning(errors.pautaId.message)
+      setTimeout(() => {
+        const element = document.getElementById('pautaId')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.dataInicio?.message) {
+      toast.warning(errors.dataInicio.message)
+      setTimeout(() => {
+        const element = document.getElementById('dataInicio')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.presidenteId?.message) {
+      toast.warning(errors.presidenteId.message)
+      setTimeout(() => {
+        const element = document.getElementById('presidenteId')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.conselheiros?.message) {
+      toast.warning(errors.conselheiros.message)
+      return
     }
   }
 
@@ -215,7 +251,6 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
 
   const onSubmit = async (data: SessaoInput) => {
     setIsLoading(true)
-    setError(null)
 
     try {
       const response = await fetch('/api/sessoes', {
@@ -242,7 +277,6 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro inesperado'
-      setError(errorMessage)
       toast.error(errorMessage)
     } finally {
       setIsLoading(false)

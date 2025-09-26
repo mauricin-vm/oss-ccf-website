@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50) // Máximo 50
 
     // Query otimizada para buscar apenas processos aptos a acordos
-    const where: any = {
+    const where: Prisma.ProcessoWhereInput = {
       AND: [
         // 1. Processo JULGADO
         { status: 'JULGADO' },
@@ -48,7 +49,8 @@ export async function GET(request: NextRequest) {
 
     // Adicionar filtro de busca se fornecido
     if (search) {
-      where.AND.push({
+      const currentAnd = Array.isArray(where.AND) ? where.AND : (where.AND ? [where.AND] : [])
+      currentAnd.push({
         OR: [
           { numero: { contains: search, mode: 'insensitive' as const } },
           { contribuinte: { nome: { contains: search, mode: 'insensitive' as const } } },
@@ -57,6 +59,7 @@ export async function GET(request: NextRequest) {
           ] : [])
         ]
       })
+      where.AND = currentAnd
     }
 
     const [processos, total] = await Promise.all([

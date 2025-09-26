@@ -39,6 +39,7 @@ import AdicionarHistoricoModal from '@/components/modals/adicionar-historico-mod
 import AlterarStatusModal from '@/components/modals/alterar-status-modal'
 import ProcessoActions from '@/components/processo/processo-actions'
 import ValoresProcessoModal from '@/components/modals/valores-processo-modal'
+import AcordaoModal from '@/components/modals/acordao-modal'
 import { getStatusInfo, getResultadoBadge as getResultadoBadgeFromConstants, getPosicaoVotoInfo, getCardBackground as getCardBackgroundFromConstants } from '@/lib/constants/status'
 import { getTipoProcessoInfo } from '@/lib/constants/tipos-processo'
 
@@ -57,6 +58,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
   const [showHistoricoModal, setShowHistoricoModal] = useState(false)
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [showValoresModal, setShowValoresModal] = useState(false)
+  const [showAcordaoModal, setShowAcordaoModal] = useState(false)
 
   const formatCpfCnpj = (value: string) => {
     if (!value) return ''
@@ -727,7 +729,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
           </Card>
         </TabsContent>
 
-        <TabsContent value="julgamento">
+        <TabsContent value="julgamento" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Histórico de Julgamento</CardTitle>
@@ -787,7 +789,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                             <div className="text-right space-y-2">
                               <div className="flex items-center gap-2">
                                 {/* Botão de edição - apenas para admins e processos julgados */}
-                                {session?.user?.role === 'ADMIN' &&
+                                {(session?.user as SessionUser)?.role === 'ADMIN' &&
                                  processo?.status === 'JULGADO' &&
                                  decisao.tipoResultado === 'JULGADO' &&
                                  decisao.sessao?.id && (
@@ -940,6 +942,71 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                         </div>
                       )
                     })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Acórdão</CardTitle>
+                  <CardDescription>
+                    Informações sobre o acórdão publicado para este processo
+                  </CardDescription>
+                </div>
+                {canEdit && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAcordaoModal(true)}
+                    className="cursor-pointer"
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    {processo.acordao ? 'Editar' : 'Adicionar'}
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {!processo.acordao ? (
+                <div className="text-center py-8">
+                  <FileText className="mx-auto h-12 w-12 text-gray-400" />
+                  <p className="mt-2 text-gray-500">
+                    Nenhum acórdão registrado
+                  </p>
+                  {canEdit && (
+                    <p className="text-sm text-gray-400 mt-1">
+                      Clique em &quot;Adicionar&quot; para registrar as informações do acórdão
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Número do Acórdão</Label>
+                      <p className="font-medium">
+                        {processo.acordao.numeroAcordao || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <Label>Data de Publicação</Label>
+                      <p className="font-medium">
+                        {processo.acordao.dataPublicacao
+                          ? new Date(processo.acordao.dataPublicacao).toLocaleDateString('pt-BR')
+                          : 'N/A'
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  {processo.acordao.numeroPublicacao && (
+                    <div>
+                      <Label>Número da Publicação</Label>
+                      <p className="font-medium">{processo.acordao.numeroPublicacao}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -1101,7 +1168,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                 <div className="space-y-4">
                   {processo.acordos?.map((acordo) => {
                     // Criar transacaoDetails no frontend usando os dados disponíveis
-                    if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && acordo.transacao && !acordo.transacaoDetails) {
+                    if (processo.tipo === 'TRANSACAO_EXCEPCIONAL' && acordo.transacao && typeof acordo.transacao === 'object' && !acordo.transacaoDetails) {
                       const transacao = acordo.transacao
 
                       // Calcular custas e honorários dos dados existentes
@@ -1110,6 +1177,12 @@ export default function ProcessoDetalhesPage({ params }: Props) {
 
                       // Criar transacaoDetails no frontend
                       acordo.transacaoDetails = {
+                        tipoTransacao: 'EXCEPCIONAL',
+                        valorTransacao: Number(transacao.valorTotalProposto) || 0,
+                        percentualDesconto: 0,
+                        modalidadePagamento: 'avista',
+                        numeroParcelas: 0,
+                        valorParcela: 0,
                         custasAdvocaticias,
                         custasDataVencimento: transacao.custasDataVencimento,
                         custasDataPagamento: transacao.custasDataPagamento,
@@ -1125,7 +1198,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     }
 
                     // Criar compensacaoDetails no frontend usando os dados disponíveis
-                    if (processo.tipo === 'COMPENSACAO' && acordo.compensacao && !acordo.compensacaoDetails) {
+                    if (processo.tipo === 'COMPENSACAO' && acordo.compensacao && typeof acordo.compensacao === 'object' && !acordo.compensacaoDetails) {
                       const compensacao = acordo.compensacao
 
                       // Calcular custas e honorários dos dados existentes
@@ -1136,6 +1209,10 @@ export default function ProcessoDetalhesPage({ params }: Props) {
 
                       // Criar compensacaoDetails no frontend
                       acordo.compensacaoDetails = {
+                        tipoCompensacao: 'CREDITO',
+                        valorCompensacao: Number(compensacao.valorLiquido) || 0,
+                        numeroCredito: 'N/A',
+                        valorCredito: valorTotalCreditos,
                         valorTotalCreditos,
                         valorTotalDebitos,
                         valorLiquido: Number(compensacao.valorLiquido) || 0,
@@ -1151,7 +1228,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                     }
 
                     // Criar dacaoDetails no frontend usando os dados disponíveis
-                    if (processo.tipo === 'DACAO_PAGAMENTO' && acordo.dacao && !acordo.dacaoDetails) {
+                    if (processo.tipo === 'DACAO_PAGAMENTO' && acordo.dacao && typeof acordo.dacao === 'object' && !acordo.dacaoDetails) {
                       const dacao = acordo.dacao
 
                       // Calcular custas e honorários dos dados existentes
@@ -1162,6 +1239,10 @@ export default function ProcessoDetalhesPage({ params }: Props) {
 
                       // Criar dacaoDetails no frontend
                       acordo.dacaoDetails = {
+                        tipoDacao: 'PAGAMENTO',
+                        valorDacao: Number(dacao.valorAvaliado) || 0,
+                        descricaoBem: 'Bem oferecido em dação',
+                        valorAvaliado: Number(dacao.valorAvaliado) || 0,
                         valorTotalOferecido,
                         valorTotalCompensar,
                         valorLiquido: Number(dacao.valorLiquido) || 0,
@@ -1231,11 +1312,6 @@ export default function ProcessoDetalhesPage({ params }: Props) {
 
                     // Calcular progresso do pagamento
                     const valorTotal = getValorAcordo()
-                    const valorPago = (acordo.parcelas as ProcessoParcela[]).reduce((total: number, parcela: ProcessoParcela) => {
-                      return total + (parcela.pagamentos || []).reduce((subtotal: number, pagamento: ProcessoPagamento) => {
-                        return subtotal + (Number(pagamento.valorPago) || 0)
-                      }, 0)
-                    }, 0)
 
                     const getProgressoPagamento = () => {
                       const tipoProcesso = processo.tipo
@@ -1245,7 +1321,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                         const parcelas = acordo.parcelas || []
 
                         // Calcular valor total das parcelas (acordo + honorários)
-                        const valorTotalParcelas = parcelas.reduce((total: number, parcela: any) => {
+                        const valorTotalParcelas = parcelas.reduce((total: number, parcela: ProcessoParcela) => {
                           return total + Number(parcela.valor || 0)
                         }, 0)
 
@@ -1254,9 +1330,9 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                         const valorTotalGeral = valorTotalParcelas + custasAdvocaticias
 
                         // Calcular valor pago de todas as parcelas (acordo + honorários)
-                        let valorPago = parcelas.reduce((total: number, parcela: any) => {
+                        let valorPago = parcelas.reduce((total: number, parcela: ProcessoParcela) => {
                           const pagamentos = parcela.pagamentos || []
-                          return total + pagamentos.reduce((subtotal: number, pagamento: any) => {
+                          return total + pagamentos.reduce((subtotal: number, pagamento: ProcessoPagamento) => {
                             return subtotal + Number(pagamento.valorPago || 0)
                           }, 0)
                         }, 0)
@@ -1305,19 +1381,19 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                       } else {
                         // Verificar se custas foram pagas
                         const details = tipoProcesso === 'COMPENSACAO' ? acordo.compensacaoDetails : acordo.dacaoDetails
-                        if (details?.custasDataPagamento && details.custasAdvocaticias > 0) {
+                        if (details?.custasDataPagamento && (details.custasAdvocaticias ?? 0) > 0) {
                           valorPago += Number(details.custasAdvocaticias)
                         }
 
                         // Verificar parcelas de honorários pagas
-                        const parcelasHonorarios = acordo.parcelas?.filter((p: any) => p.tipoParcela === 'PARCELA_HONORARIOS') || []
-                        parcelasHonorarios.forEach((parcela: any) => {
-                          if (parcela.status === 'PAGO') {
+                        const parcelasHonorarios = acordo.parcelas?.filter((p: ProcessoParcela) => p.tipoParcela === 'PARCELA_HONORARIOS') || []
+                        parcelasHonorarios.forEach((parcela: ProcessoParcela) => {
+                          if (parcela.status === 'PAGA') {
                             valorPago += Number(parcela.valor)
                           } else {
                             // Somar pagamentos parciais
                             const pagamentos = parcela.pagamentos || []
-                            valorPago += pagamentos.reduce((total: number, pagamento: any) => {
+                            valorPago += pagamentos.reduce((total: number, pagamento: ProcessoPagamento) => {
                               return total + Number(pagamento.valorPago || 0)
                             }, 0)
                           }
@@ -1541,7 +1617,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                           // Contar pagamentos das parcelas - apenas de parcelas pagas
                                           const pagamentosParcelas = (acordo.parcelas || []).reduce((total, parcela) => {
                                             // Só contar pagamentos se a parcela estiver com status PAGO
-                                            if (parcela.status === 'PAGO') {
+                                            if (parcela.status === 'PAGA') {
                                               return total + (parcela.pagamentos?.length || 0)
                                             }
                                             return total
@@ -1600,7 +1676,7 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                         // Contar pagamentos das parcelas - apenas de parcelas pagas
                                         const pagamentosParcelas = (acordo.parcelas || []).reduce((total, parcela) => {
                                           // Só contar pagamentos se a parcela estiver com status PAGO
-                                          if (parcela.status === 'PAGO') {
+                                          if (parcela.status === 'PAGA') {
                                             return total + (parcela.pagamentos?.length || 0)
                                           }
                                           return total
@@ -1856,6 +1932,18 @@ export default function ProcessoDetalhesPage({ params }: Props) {
             id: resolvedParams.id,
             tipo: processo.tipo
           }}
+          onSuccess={() => {
+            loadProcesso()
+          }}
+        />
+      )}
+
+      {/* Modal de Acórdão */}
+      {canEdit && resolvedParams && processo && (
+        <AcordaoModal
+          processoId={resolvedParams.id}
+          open={showAcordaoModal}
+          onOpenChange={setShowAcordaoModal}
           onSuccess={() => {
             loadProcesso()
           }}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -10,10 +10,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, AlertCircle, Gavel, Clock, Pause, Search, CheckCircle, Users, DollarSign } from 'lucide-react'
+import { Loader2, Gavel, Clock, Pause, Search, CheckCircle, Users, DollarSign } from 'lucide-react'
 import VotacaoModal from '@/components/modals/votacao-modal'
 import { toast } from 'sonner'
 
@@ -162,7 +161,6 @@ interface Conselheiro {
 export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingData, setIsLoadingData] = useState(true)
   const [processos, setProcessos] = useState<ProcessoPauta[]>([])
@@ -178,7 +176,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
     handleSubmit,
     setValue,
     watch,
-    formState: { errors }
+    formState: { }
   } = useForm<DecisaoInput>({
     resolver: zodResolver(decisaoSchema),
     defaultValues: {
@@ -190,48 +188,141 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
   })
 
   // Função para lidar com erros de validação do formulário
-  const onInvalid = (errors: any) => {
-    // Ordem lógica dos campos no formulário
-    const fieldOrder = [
-      'processoId',
-      'tipoResultado',
-      'tipoDecisao',
-      'motivoSuspensao',
-      'conselheiroPedidoVista',
-      'prazoVista',
-      'especificacaoDiligencia',
-      'prazoDiligencia',
-      'tipoAcordo',
-      'ataTexto',
-      'observacoes'
-    ]
-
-    // Procurar pelo primeiro erro na ordem dos campos
-    for (const field of fieldOrder) {
-      if (errors[field]?.message) {
-        toast.warning(errors[field].message)
-
-        // Focar no campo com erro após um pequeno delay
-        setTimeout(() => {
-          const element = document.getElementById(field)
-          if (element) {
-            element.focus()
-            element.style.borderColor = '#ef4444'
-            element.style.boxShadow = '0 0 0 1px #ef4444'
-          }
-        }, 100)
-        break
-      }
+  const onInvalid = (errors: FieldErrors<DecisaoInput>) => {
+    if (errors.processoId?.message) {
+      toast.warning(errors.processoId.message)
+      setTimeout(() => {
+        const element = document.getElementById('processoId')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.tipoResultado?.message) {
+      toast.warning(errors.tipoResultado.message)
+      setTimeout(() => {
+        const element = document.getElementById('tipoResultado')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.tipoDecisao?.message) {
+      toast.warning(errors.tipoDecisao.message)
+      setTimeout(() => {
+        const element = document.getElementById('tipoDecisao')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.motivoSuspensao?.message) {
+      toast.warning(errors.motivoSuspensao.message)
+      setTimeout(() => {
+        const element = document.getElementById('motivoSuspensao')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.conselheiroPedidoVista?.message) {
+      toast.warning(errors.conselheiroPedidoVista.message)
+      setTimeout(() => {
+        const element = document.getElementById('conselheiroPedidoVista')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.prazoVista?.message) {
+      toast.warning(errors.prazoVista.message)
+      setTimeout(() => {
+        const element = document.getElementById('prazoVista')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.especificacaoDiligencia?.message) {
+      toast.warning(errors.especificacaoDiligencia.message)
+      setTimeout(() => {
+        const element = document.getElementById('especificacaoDiligencia')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.prazoDiligencia?.message) {
+      toast.warning(errors.prazoDiligencia.message)
+      setTimeout(() => {
+        const element = document.getElementById('prazoDiligencia')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.tipoAcordo?.message) {
+      toast.warning(errors.tipoAcordo.message)
+      setTimeout(() => {
+        const element = document.getElementById('tipoAcordo')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.ataTexto?.message) {
+      toast.warning(errors.ataTexto.message)
+      setTimeout(() => {
+        const element = document.getElementById('ataTexto')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
+    }
+    if (errors.observacoes?.message) {
+      toast.warning(errors.observacoes.message)
+      setTimeout(() => {
+        const element = document.getElementById('observacoes')
+        if (element) {
+          element.focus()
+          element.style.borderColor = '#ef4444'
+          element.style.boxShadow = '0 0 0 1px #ef4444'
+        }
+      }, 100)
+      return
     }
   }
 
-  const clearFieldError = (fieldId: string) => {
-    const element = document.getElementById(fieldId)
-    if (element) {
-      element.style.borderColor = ''
-      element.style.boxShadow = ''
-    }
-  }
 
   const tipoResultado = watch('tipoResultado')
 
@@ -278,7 +369,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
 
   const onSubmit = async (data: DecisaoInput) => {
     setIsLoading(true)
-    setError(null)
 
     // Validações específicas antes do envio
     if (data.tipoResultado === 'JULGADO' && !votacaoResultado) {
@@ -317,7 +407,6 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro inesperado'
-      setError(errorMessage)
       toast.error(errorMessage)
     } finally {
       setIsLoading(false)

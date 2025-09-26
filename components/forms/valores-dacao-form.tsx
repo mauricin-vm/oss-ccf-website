@@ -513,7 +513,6 @@ export default function ValoresDacaoForm({ processoId, onSuccess }: ValoresDacao
 
     // Validar débitos - pelo menos um débito completo
     let hasValidDebito = false
-    let firstDebitoError: string | null = null
 
     for (let i = 0; i < inscricaoCompensarForm.debitos.length; i++) {
       const debito = inscricaoCompensarForm.debitos[i]

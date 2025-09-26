@@ -36,7 +36,7 @@ export function LineChartEvolucao({ data }: LineChartEvolucaoProps) {
     return meses[mes]
   }
 
-  const chartData = data.map(item => ({
+  const chartData = Array.isArray(data) ? data.map(item => ({
     mes: getMesLabel(item.mes),
     mesAno: `${getMesLabel(item.mes)}/${item.ano}`,
     mesNumero: item.mes,
@@ -45,7 +45,7 @@ export function LineChartEvolucao({ data }: LineChartEvolucaoProps) {
     acordos: item.acordos,
     parcelas: item.parcelas,
     total: item.total
-  }))
+  })) : []
 
   return (
     <div className="h-80">
