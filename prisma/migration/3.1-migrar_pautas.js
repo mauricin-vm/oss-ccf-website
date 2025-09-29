@@ -1,8 +1,8 @@
 // node prisma/migration/3.1-migrar_pautas.js
 
-import { PrismaClient } from '@prisma/client'
-import fs from 'fs'
-import path from 'path'
+const { PrismaClient } = require('@prisma/client')
+const fs = require('fs')
+const path = require('path')
 
 const prisma = new PrismaClient()
 
@@ -23,22 +23,6 @@ const PROCESSOS_FALTANTES = {
         "cep": "79034000"
       },
       "dataAbertura": "2025-07-22",
-      "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
-    },
-    {
-      "numero": "31056/2025-72",
-      "tipo": "TRANSACAO_EXCEPCIONAL",
-      "contribuinte": {
-        "nome": "Fabiana Silva dos Santos",
-        "cpfCnpj": "89281179687",
-        "email": "fabianasantos@nwadv.com.br",
-        "telefone": "67992698987/67999951122",
-        "endereco": "Rua Goiás, 461, Jardim dos Estados",
-        "cidade": "Campo Grande",
-        "estado": "MS",
-        "cep": "79020100"
-      },
-      "dataAbertura": "2025-06-27",
       "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
     },
     {
@@ -87,6 +71,230 @@ const PROCESSOS_FALTANTES = {
         "cep": ""
       },
       "dataAbertura": "2025-07-11",
+      "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
+    },
+    {
+      "numero": "36927/2025-44",
+      "tipo": "TRANSACAO_EXCEPCIONAL",
+      "contribuinte": {
+        "nome": "Funerária e Pax Nipo Brasileira LTDA - ME",
+        "cpfCnpj": "03024157000145",
+        "email": "netoceni.adv@gmail.com",
+        "telefone": "67996007741",
+        "endereco": "Rua Raul Pires Barbosa, 612",
+        "cidade": "Campo Grande",
+        "estado": "MS",
+        "cep": "79040150"
+      },
+      "dataAbertura": "2025-07-18",
+      "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
+    },
+    {
+      "numero": "35815/2025-76",
+      "tipo": "TRANSACAO_EXCEPCIONAL",
+      "contribuinte": {
+        "nome": "André Luiz Scaff",
+        "cpfCnpj": "36736970130",
+        "email": "",
+        "telefone": "",
+        "endereco": "Rua Filodrendo, 90, Damha I",
+        "cidade": "Campo Grande",
+        "estado": "MS",
+        "cep": "79046138"
+      },
+      "dataAbertura": "2025-07-15",
+      "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
+    },
+    {
+      "numero": "36133/2025-81",
+      "tipo": "TRANSACAO_EXCEPCIONAL",
+      "contribuinte": {
+        "nome": "Flavio Rodrigo Valler",
+        "cpfCnpj": "71658025172",
+        "email": "",
+        "telefone": "",
+        "endereco": "Rua Costa Marques, 42, Itanhangá Park",
+        "cidade": "Campo Grande",
+        "estado": "MS",
+        "cep": "79003107"
+      },
+      "dataAbertura": "2025-07-16",
+      "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
+    },
+    {
+      "numero": "36128/2025-78",
+      "tipo": "TRANSACAO_EXCEPCIONAL",
+      "contribuinte": {
+        "nome": "Jaime Valler",
+        "cpfCnpj": "14441649100",
+        "email": "",
+        "telefone": "",
+        "endereco": "Rua Itamaracá, 77, Itanhangá Park",
+        "cidade": "Campo Grande",
+        "estado": "MS",
+        "cep": "79117070"
+      },
+      "dataAbertura": "2025-07-16",
+      "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
+    },
+    {
+      "numero": "36119/2025-87",
+      "tipo": "TRANSACAO_EXCEPCIONAL",
+      "contribuinte": {
+        "nome": "Jaime Valler Filho",
+        "cpfCnpj": "71658068149",
+        "email": "",
+        "telefone": "",
+        "endereco": "",
+        "cidade": "Caracol",
+        "estado": "MS",
+        "cep": ""
+      },
+      "dataAbertura": "2025-07-16",
+      "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
+    },
+    {
+      "numero": "47770/2025-82",
+      "tipo": "TRANSACAO_EXCEPCIONAL",
+      "contribuinte": {
+        "nome": "Marcelo Freddo",
+        "cpfCnpj": "35598794187",
+        "email": "",
+        "telefone": "",
+        "endereco": "Rua Bento Gonçalves, 1775, Centro",
+        "cidade": "Doutor Mauricio Cardoso",
+        "estado": "RS",
+        "cep": ""
+      },
+      "dataAbertura": "2025-09-08",
+      "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
+    },
+    {
+      "numero": "36271/2025-60",
+      "tipo": "TRANSACAO_EXCEPCIONAL",
+      "contribuinte": {
+        "nome": "Elton Leal Loureiro",
+        "cpfCnpj": "83542302104",
+        "email": "eltonlelaloureiro@gmail.com",
+        "telefone": "67981154355",
+        "endereco": "Rua Nero Lerina da Silva, 74, Chácara Cachoeira",
+        "cidade": "Campo Grande",
+        "estado": "MS",
+        "cep": "79070-840"
+      },
+      "dataAbertura": "2025-07-16",
+      "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
+    },
+    {
+      "numero": "36087/2025-10",
+      "tipo": "TRANSACAO_EXCEPCIONAL",
+      "contribuinte": {
+        "nome": "Marcela Carvalho Camargo Caciatori Bravo",
+        "cpfCnpj": "04681309184",
+        "email": "guilherme.carvalho@hotmail.com",
+        "telefone": "67984162486",
+        "endereco": "Rua Ingazeira, 15, Vivenda do Bosque",
+        "cidade": "Campo Grande",
+        "estado": "MS",
+        "cep": "79034000"
+      },
+      "dataAbertura": "2025-07-16",
+      "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
+    },
+    {
+      "numero": "36312/2025-18",
+      "tipo": "TRANSACAO_EXCEPCIONAL",
+      "contribuinte": {
+        "nome": "Divanei Abruceze Gonçalves",
+        "cpfCnpj": "48992534191",
+        "email": "erika_ags@hotmail.com",
+        "telefone": "67999171405",
+        "endereco": "",
+        "cidade": "Campo Grande",
+        "estado": "MS",
+        "cep": ""
+      },
+      "dataAbertura": "2025-07-16",
+      "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
+    },
+    {
+      "numero": "37533/2025-11",
+      "tipo": "TRANSACAO_EXCEPCIONAL",
+      "contribuinte": {
+        "nome": "Dilson Buytendorp",
+        "cpfCnpj": "35601825149",
+        "email": "dilsonbuy@bol.com.br",
+        "telefone": "67999887830",
+        "endereco": "Av. Centáurea, 555, Jardim",
+        "cidade": "Campo Grande",
+        "estado": "MS",
+        "cep": "79040711"
+      },
+      "dataAbertura": "2025-07-22",
+      "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
+    },
+    {
+      "numero": "37417/2025-94",
+      "tipo": "TRANSACAO_EXCEPCIONAL",
+      "contribuinte": {
+        "nome": "Paulo Shigueki Higa",
+        "cpfCnpj": "45690863149",
+        "email": "alpedasilro@yahoo.com.br",
+        "telefone": "67998404171",
+        "endereco": "Av. Monte Castelo, 519",
+        "cidade": "Campo Grande",
+        "estado": "MS",
+        "cep": "79040711"
+      },
+      "dataAbertura": "2025-07-22",
+      "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
+    },
+    {
+      "numero": "36931/2025-11",
+      "tipo": "TRANSACAO_EXCEPCIONAL",
+      "contribuinte": {
+        "nome": "Espólio de Miyahira Itisada",
+        "cpfCnpj": "05148472120",
+        "email": "",
+        "telefone": "",
+        "endereco": "Rua Treze de Maio, 4477 - Loja 02",
+        "cidade": "Campo Grande",
+        "estado": "MS",
+        "cep": ""
+      },
+      "dataAbertura": "2025-07-18",
+      "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
+    },
+    {
+      "numero": "35806/2025-85",
+      "tipo": "TRANSACAO_EXCEPCIONAL",
+      "contribuinte": {
+        "nome": "Unicrer Educacional LTDA",
+        "cpfCnpj": "02921783000171",
+        "email": "rede_contabil@outlook.com",
+        "telefone": "67993069119",
+        "endereco": "Rua Sodré, 327, Vila Carvalho",
+        "cidade": "Campo Grande",
+        "estado": "MS",
+        "cep": "79005160"
+      },
+      "dataAbertura": "2025-07-15",
+      "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
+    },
+    {
+      "numero": "36734/2025-93",
+      "tipo": "TRANSACAO_EXCEPCIONAL",
+      "contribuinte": {
+        "nome": "G.G. de Lima Empreendimentos Imobiliários SPE LTDA",
+        "cpfCnpj": "43852034000117",
+        "email": "contato@rtm.adv.br",
+        "telefone": "6730253500",
+        "endereco": "Rua Quinze de Novembro, 2743, Jardim dos Estados",
+        "cidade": "Campo Grande",
+        "estado": "MS",
+        "cep": "79020300"
+      },
+      "dataAbertura": "2025-07-18",
       "observacoes": "Processo cadastrado durante migração por falta de informação no banco de dados antigo."
     }
   ],
@@ -538,7 +746,8 @@ async function criarProcessosFaltantes() {
             createdById: usuarioSistema.id, // Campo obrigatório que estava faltando!
             dataAbertura: new Date(processoData.dataAbertura),
             status: 'EM_ANALISE',
-            observacoes: processoData.observacoes
+            observacoes: processoData.observacoes,
+            createdAt: new Date(processoData.dataAbertura)
           }
         })
 
@@ -1576,7 +1785,7 @@ if (require.main === module) {
   console.log('🚨 DEBUG: Script foi importado como módulo, não executado diretamente')
 }
 
-export {
+module.exports = {
   verificarDadosInicial,
   verificarDados,
   criarProcessosFaltantes,

@@ -1,216 +1,2522 @@
 {
   "acordos": [
     {
-      // TIPO: TRANSACAO_EXCEPCIONAL (padrão completo)
-      "processoNumero": "37436/2025-11",
-      "dataAssinatura": "2024-08-15",
-      "dataVencimento": "2025-08-15",
-      "valorTotalProposto": 150000.00,
-      "valorEntrada": 150000.00,
-      "metodoPagamento": "parcelado", // parcelado ou avista
-      "numeroParcelas": 24,
-      "custas": 6250.00,
+      "processoNumero": "97211/2022-27",
+      "dataAssinatura": "2022-11-03",
+      "dataVencimento": "2025-09-24",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 155801.89,
+      "valorDesconto": 8670.51,
+      "percentualDesconto": 0.0,
+      "valorFinal": 147131.38,
+      "valorEntrada": null,
+      "status": "cancelado",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados. Cancelado por pagamento espontâneo do débito.",
+      "custas": "",
       "honorarios": "",
-      "honorariosMetodoPagamento": "parcelado", // parcelado ou avista
-      "honorariosParcelas": 24,
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Desapropriação processo 48432/2008-31",
+            "numero": "48432/2008-31",
+            "valor": 155801.89,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "16100010082",
+            "tipoInscricao": "imobiliaria",
+            "debitos": [
+              {
+                "descricao": "ITBI",
+                "valor": 147131.38,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "24500/2022-43",
+      "dataAssinatura": "2022-05-02",
+      "dataVencimento": "2025-09-24",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 27269745.04,
+      "valorDesconto": 11705952.65,
+      "percentualDesconto": 0.0,
+      "valorFinal": 15563792.39,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Precatório",
+            "numero": "",
+            "valor": 27269745.04,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "02562210019",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 15563792.39,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "65446/2022-41",
+      "dataAssinatura": "2023-02-08",
+      "dataVencimento": "2025-09-24",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 1130426.41,
+      "valorDesconto": 768782.67,
+      "percentualDesconto": 0.0,
+      "valorFinal": 361643.74,
+      "valorEntrada": null,
+      "status": "cancelado",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Cessão de Crédito",
+            "numero": "65446/2022-41",
+            "valor": 1130426.41,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "5570070136",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 361643.74,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "29144/2020-56",
+      "dataAssinatura": "2023-05-05",
+      "dataVencimento": "2025-09-24",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 113538.12,
+      "valorDesconto": 39860.02,
+      "percentualDesconto": 0.0,
+      "valorFinal": 73678.10,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Indenização",
+            "numero": "29144/2020-56",
+            "valor": 113538.12,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "8290160015",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 73678.10,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "117677/2022-10",
+      "dataAssinatura": "2024-02-28",
+      "dataVencimento": "2025-09-24",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 42573.29,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 42573.29,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": 135.00,
+      "honorarios": 3670.98,
+      "formapagamentohonorario": "avista",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Desapropriação",
+            "numero": "37709/2006-20 e 81878/2011-73",
+            "valor": 42573.29,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "8480070012",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 42573.29,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "75647/2022-29",
+      "dataAssinatura": "2023-03-09",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 47341.54,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 28985.23,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Diferença de Alíquota de IPTU",
+            "numero": "0817986-89.2017.8.12.0110",
+            "valor": 47341.54,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "30620413620",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 28985.23,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "116533/2022-64",
+      "dataAssinatura": "2023-04-11",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 56716.66,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 56716.66,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Judicial",
+            "numero": "0811944-24.2017.8.12.0110",
+            "valor": 56716.66,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "9941530815",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 56716.66,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "114935/2022-05",
+      "dataAssinatura": "2023-08-01",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 92665.94,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 85274.78,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "90",
+      "honorarios": "7453,17",
+      "formapagamentohonorario": "avista",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Indenização",
+            "numero": "0804831-21.2018.8.12.0001",
+            "valor": 92665.94,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "5170090227",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 92665.94,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "36979/2023-60",
+      "dataAssinatura": "2023-07-10",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 3123.38,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 2293.52,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Cobrança de ISS indevida",
+            "numero": "0804489-71.2018.8.12.0110",
+            "valor": 3123.38,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "9110140220",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 2293.52,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "63930/2023-43",
+      "dataAssinatura": "2023-10-23",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 181084.65,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 80369.37,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": 1870.60,
+      "formapagamentohonorario": "avista",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Judicial",
+            "numero": "1605566-82.2022.8.12.0000 e 0831756.54.2018.8.12.0001",
+            "valor": 181084.65,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "3720326433",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 80369.37,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "105606/2023-55",
+      "dataAssinatura": "2024-03-15",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 38960.98,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 24700.45,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Precatório",
+            "numero": "1605997-19.2022.8.12.000",
+            "valor": 38960.98,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "3361730223",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 24700.45,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "2293/2024-29",
+      "dataAssinatura": "2024-02-29",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 3020596.62,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 1812972.31,
+      "valorEntrada": null,
+      "status": "ativo",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Desapropriação",
+            "numero": "11162/2012-16",
+            "valor": 3020596.62,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "8513010010",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 1812972.31,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "2956/2024-14",
+      "dataAssinatura": "2024-03-01",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 74599.85,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 41372.51,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Pagamento indevido de ITBI",
+            "numero": "86594/2023-15",
+            "valor": 74599.85,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "6900160192",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 41372.51,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "56495/2024-27",
+      "dataAssinatura": "2025-03-20",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 870951.33,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 502164.05,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Recolhimento a maior de ISS",
+            "numero": "137786001",
+            "valor": 870951.33,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "137786001",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 502164.05,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "106142/2024-11",
+      "dataAssinatura": "2025-06-10",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 9014667.21,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 3349031.15,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Precatório",
+            "numero": "1602311-48.2024.8.12.000",
+            "valor": 9014667.21,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "6304010108",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 3349031.15,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "2338/2025-46",
+      "dataAssinatura": "2025-02-27",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 1361371.11,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 1393590.51,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Judicial",
+            "numero": "0843497-23.2020.8.12.0001",
+            "valor": 1361371.11,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "9051440037",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 1393590.51,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "90288/2024-65",
+      "dataAssinatura": "2025-06-02",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 170664.95,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 147959.90,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Precatório",
+            "numero": "1601773-04.2023.8.12.0000",
+            "valor": 170664.95,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "538020190",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 147959.90,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "817/2025-28",
+      "dataAssinatura": "2025-04-15",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 51904.89,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 51904.89,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Precatório",
+            "numero": "0024831-80.2021.5.24.0003",
+            "valor": 51904.89,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "6330940474",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 51904.89,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "1320/2025-45",
+      "dataAssinatura": "2025-06-26",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 851689.12,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 293393.28,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Desapropriação",
+            "numero": "42381/2017-71 e 42380/2017-16",
+            "valor": 851689.12,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "5640090156",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 293393.28,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "1398/2025-32",
+      "dataAssinatura": "2025-05-30",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 851689.12,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 349012.62,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Desapropriação",
+            "numero": "42381/2017-71 e 42380/2017-16",
+            "valor": 851689.12,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "6500120353",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 349012.62,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "2635/2024-19",
+      "dataAssinatura": "2024-08-14",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 229437.19,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 14258.88,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Precatório",
+            "numero": "1605076-60.2022.8.12.0000",
+            "valor": 229437.19,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "5510070064",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 14258.88,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "31867/2024-30",
+      "dataAssinatura": "2024-06-20",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 14109877.84,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 3861048.30,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": 1515.00,
+      "honorarios": 114966.74,
+      "formapagamentohonorario": "avista",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Desapropriaçao",
+            "numero": "0835305-43.2016.8.12.0001",
+            "valor": 14109877.84,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "2561810039",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 3861048.30,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "107198/2024-01",
+      "dataAssinatura": "2025-05-15",
+      "dataVencimento": "2025-06-03",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 525287.47,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 525287.47,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Desapropriaçao",
+            "numero": "MATRICULA 263143",
+            "valor": 525287.47,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "9921630090",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 525287.47,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "18321/2023-21",
+      "dataAssinatura": "2023-06-30",
+      "dataVencimento": "2025-06-03",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 10386.98,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 10386.98,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Dif. alíquota de IPTU",
+            "numero": "0817986-89.2017.8.12.0110",
+            "valor": 42964.70,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "5150050601",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 10386.98,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "21905/2025-81",
+      "dataAssinatura": "2025-06-30",
+      "dataVencimento": "2025-06-03",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 838544.97,
+      "valorDesconto": "",
+      "percentualDesconto": 0.0,
+      "valorFinal": 803523.67,
+      "valorEntrada": null,
+      "status": "cumprido",
+      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "creditos": [
+          {
+            "tipo": "Desapropriação",
+            "numero": "58068/2012-76",
+            "valor": 838544.79,
+            "dataVencimento": "",
+            "descricao": ""
+          }
+        ],
+        "inscricoes": [
+          {
+            "numeroInscricao": "8570170270",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 803523.67,
+                "dataVencimento": "10/10/2022"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "121950/2019-13",
+      "dataAssinatura": "2020-11-01",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 3305004.92,
+      "valorFinal": 3303828.19,
+      "status": "cumprido",
+      "observacoes": "Dação de imóvel para quitação de débitos",
+      "custas": 1515.00,
+      "honorarios": 114966.74,
+      "formapagamentohonorario": "avista",
+      "dadosEspecificos": {
+        "inscricoesOferecidas": [
+          {
+            "numeroInscricao": "24532330013",
+            "tipoInscricao": "imobiliaria",
+            "valor": 3305004.92,
+            "dataVencimento": "2024-09-10",
+            "descricao": "Imóvel na Rua Garibaldi, n. 0, Serravile - Campo Grande/MS"
+          }
+        ],
+        "inscricoesCompensar": [
+          {
+            "numeroInscricao": "245323300013",
+            "tipoInscricao": "imobiliaria",
+            "debitos": [
+              {
+                "descricao": "TOTAL",
+                "valor": 3303828.19,
+                "dataVencimento": "2020-12-31"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "16941/2022-53",
+      "dataAssinatura": "2023-03-28",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 10974636.22,
+      "valorFinal": 10974636.22,
+      "status": "cumprido",
+      "observacoes": "Dação de imóvel para quitação de débitos",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "inscricoesOferecidas": [
+          {
+            "numeroInscricao": "15230020016",
+            "tipoInscricao": "imobiliaria",
+            "valor": 10974636.22,
+            "dataVencimento": "2024-09-10",
+            "descricao": "Imóvel na Av. dos Cafezais, n. 87, Campo Nobre 2 - Campo Grande/MS"
+          }
+        ],
+        "inscricoesCompensar": [
+          {
+            "numeroInscricao": "15230020040",
+            "tipoInscricao": "imobiliaria",
+            "debitos": [
+              {
+                "descricao": "TOTAL",
+                "valor": 10974636.22,
+                "dataVencimento": "2020-12-31"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "2195/2020-86",
+      "dataAssinatura": "2020-08-31",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 653829.36,
+      "valorFinal": 653829.36,
+      "status": "cumprido",
+      "observacoes": "Dação de imóvel para quitação de débitos",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "inscricoesOferecidas": [
+          {
+            "numeroInscricao": "6000030137",
+            "tipoInscricao": "imobiliaria",
+            "valor": 653829.36,
+            "dataVencimento": "2024-09-10",
+            "descricao": "Imóvel na Rua Amazonas, n. 3206, Jardim Autonomista - Campo Grande/MS"
+          }
+        ],
+        "inscricoesCompensar": [
+          {
+            "numeroInscricao": "6000030137",
+            "tipoInscricao": "imobiliaria",
+            "debitos": [
+              {
+                "descricao": "TOTAL",
+                "valor": 653829.36,
+                "dataVencimento": "2020-12-31"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "22435/2021-21",
+      "dataAssinatura": "2021-12-17",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 682330.51,
+      "valorFinal": 682330.51,
+      "status": "cumprido",
+      "observacoes": "Dação de imóvel para quitação de débitos",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "inscricoesOferecidas": [
+          {
+            "numeroInscricao": "24452430491",
+            "tipoInscricao": "imobiliaria",
+            "valor": 682330.51,
+            "dataVencimento": "2024-09-10",
+            "descricao": "Imóvel na AV. Flores da Cunha, n. 0000, Jardim Noroeste - Campo Grande/MS"
+          }
+        ],
+        "inscricoesCompensar": [
+          {
+            "numeroInscricao": "05600010613",
+            "tipoInscricao": "imobiliaria",
+            "debitos": [
+              {
+                "descricao": "TOTAL",
+                "valor": 682330.51,
+                "dataVencimento": "2020-12-31"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "83668/2020-92",
+      "dataAssinatura": "2021-10-08",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 24985.58,
+      "valorFinal": 24985.58,
+      "status": "cumprido",
+      "observacoes": "Dação de imóvel para quitação de débitos",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "inscricoesOferecidas": [
+          {
+            "numeroInscricao": "5420151383",
+            "tipoInscricao": "imobiliaria",
+            "valor": 24985.58,
+            "dataVencimento": "2024-09-10",
+            "descricao": "Imóvel na Rua Barao do Rio Branco, n. 493, LJ 17 Q-U RUAIII, Vila Barao do Rio Branco - Campo Grande/MS"
+          }
+        ],
+        "inscricoesCompensar": [
+          {
+            "numeroInscricao": "5420151383",
+            "tipoInscricao": "imobiliaria",
+            "debitos": [
+              {
+                "descricao": "TOTAL",
+                "valor": 24985.58,
+                "dataVencimento": "2020-12-31"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "90806/2019-19",
+      "dataAssinatura": "2019-11-27",
+      "dataVencimento": "2025-09-25",
+      "modalidadePagamento": "avista",
+      "numeroParcelas": 1,
+      "valorTotal": 1901736.10,
+      "valorFinal": 1527442.19,
+      "status": "cumprido",
+      "observacoes": "Dação de imóvel para quitação de débitos",
+      "custas": "",
+      "honorarios": "",
+      "formapagamentohonorario": "",
+      "dadosEspecificos": {
+        "inscricoesOferecidas": [
+          {
+            "numeroInscricao": "5350030338",
+            "tipoInscricao": "imobiliaria",
+            "valor": 1901736.10,
+            "dataVencimento": "2024-09-10",
+            "descricao": "Imóvel na Av. Mato Grosso, n. 1194, Vila Cidade - Campo Grande/MS"
+          }
+        ],
+        "inscricoesCompensar": [
+          {
+            "numeroInscricao": "5350030338",
+            "tipoInscricao": "imobiliaria",
+            "debitos": [
+              {
+                "descricao": "TOTAL",
+                "valor": 1527442.19,
+                "dataVencimento": "2020-12-31"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "100978/2024-01",
+      "dataAssinatura": "2025-02-07",
+      "dataVencimento": "2025-03-14",
+      "valorTotalAcordo": 233500.68,
+      "valorEntrada": 23328.38,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 95,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
       "status": "ativo",
       "observacoes": "",
       "dadosEspecificos": {
         "inscricoes": [
           {
-            "numeroInscricao": "IMO-37436-2024",
+            "numeroInscricao": "174819009",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 233500.68,
+                "dataVencimento": "2023-12-31"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "66199/2023-90",
+      "dataAssinatura": "2023-09-12",
+      "dataVencimento": "2023-09-15",
+      "valorTotalAcordo": 6202025.34,
+      "valorEntrada": "",
+      "metodoPagamento": "avista",
+      "numeroParcelas": "",
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "102312007",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 6202025.34,
+                "dataVencimento": "2023-12-31"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "73835/2023-49",
+      "dataAssinatura": "2023-09-19",
+      "dataVencimento": "2023-09-15",
+      "valorTotalAcordo": 690373.40,
+      "valorEntrada": "",
+      "metodoPagamento": "avista",
+      "numeroParcelas": "",
+      "custas": 75.00,
+      "honorarios": 34518.67,
+      "honorariosMetodoPagamento": "avista",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "89228000",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 690373.40,
+                "dataVencimento": "2023-12-31"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "71874/2023-20",
+      "dataAssinatura": "2023-09-29",
+      "dataVencimento": "2023-09-28",
+      "valorTotalAcordo": 218236.51,
+      "valorEntrada": "",
+      "metodoPagamento": "avista",
+      "numeroParcelas": "",
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "05360150714",
             "tipoInscricao": "imobiliaria",
             "debitos": [
               {
-                "descricao": "IPTU 2023",
-                "valor": 75000.00,
-                "dataVencimento": "2023-12-31"
-              },
-              {
-                "descricao": "IPTU 2024",
-                "valor": 75000.00,
-                "dataVencimento": "2024-12-31"
+                "descricao": "Total",
+                "valor": 218236.51,
+                "dataVencimento": "2023-09-28"
               }
             ]
           }
-        ],
-        "valorInscricoes": 150000.00
+        ]
       }
     },
     {
-      // TIPO: TRANSACAO_EXCEPCIONAL (padrão completo - à vista)
-      "processoNumero": "35115/2025-81",
-      "dataAssinatura": "2024-08-05",
-      "dataVencimento": "2024-08-20",
-      "modalidadePagamento": "avista",
-      "numeroParcelas": 1,
-      "valorTotal": 85000.00,
-      "valorDesconto": 17000.00,
-      "percentualDesconto": 20.0,
-      "valorFinal": 68000.00,
-      "valorEntrada": 0.00,
-      "status": "cumprido",
-      "observacoes": "Acordo à vista com desconto de 20% para quitação imediata",
-      "dadosEspecificos": {
-        "inscricoes": [
-          {
-            "numeroInscricao": "ECO-35115-2023",
-            "tipoInscricao": "economica",
-            "debitos": [
-              {
-                "descricao": "ISS 2022",
-                "valor": 45000.00,
-                "dataVencimento": "2022-12-31"
-              },
-              {
-                "descricao": "ISS 2023",
-                "valor": 40000.00,
-                "dataVencimento": "2023-12-31"
-              }
-            ]
-          }
-        ],
-        "valorInscricoes": 85000.00
-      }
-    },
-    {
-      // TIPO: TRANSACAO_EXCEPCIONAL (padrão completo - parcelado)
-      "processoNumero": "35265/2025-95",
-      "dataAssinatura": "2024-09-01",
-      "dataVencimento": "2025-03-01",
-      "modalidadePagamento": "parcelado",
-      "numeroParcelas": 6,
-      "valorTotal": 120000.00,
-      "valorDesconto": 12000.00,
-      "percentualDesconto": 10.0,
-      "valorFinal": 108000.00,
-      "valorEntrada": 18000.00,
+      "processoNumero": "75028/2023-98",
+      "dataAssinatura": "2023-09-28",
+      "dataVencimento": "2023-09-29",
+      "valorTotalAcordo": 428882.20,
+      "valorEntrada": 61534.11,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 70,
+      "custas": 90.00,
+      "honorarios": 21444.11,
+      "honorariosMetodoPagamento": "avista",
+      "honorariosParcelas": "",
       "status": "ativo",
-      "observacoes": "Acordo parcelado em 6 vezes com entrada de R$ 18.000,00",
+      "observacoes": "",
       "dadosEspecificos": {
         "inscricoes": [
           {
-            "numeroInscricao": "ECO-35265-2023",
+            "numeroInscricao": "52160006",
             "tipoInscricao": "economica",
             "debitos": [
               {
-                "descricao": "ICMS 2023",
-                "valor": 120000.00,
-                "dataVencimento": "2023-12-31"
+                "descricao": "Total",
+                "valor": 428882.20,
+                "dataVencimento": "2023-09-28"
               }
             ]
           }
-        ],
-        "valorInscricoes": 120000.00
+        ]
       }
     },
     {
-      // TIPO: COMPENSACAO (padrão para compensação)
-      "processoNumero": "31056/2025-72",
-      "dataAssinatura": "2024-07-20",
-      "dataVencimento": "2024-07-20",
-      "modalidadePagamento": "avista",
+      "processoNumero": "74435/2023-04",
+      "dataAssinatura": "2023-10-27",
+      "dataVencimento": "2023-10-31",
+      "valorTotalAcordo": 161234.73,
+      "valorEntrada": 80617.36,
+      "metodoPagamento": "parcelado",
       "numeroParcelas": 1,
-      "valorTotal": 250000.00,
-      "valorDesconto": 0.00,
-      "percentualDesconto": 0.0,
-      "valorFinal": 200000.00,
-      "valorEntrada": 0.00,
+      "custas": 60.00,
+      "honorarios": 27238.60,
+      "honorariosMetodoPagamento": "avista",
+      "honorariosParcelas": "",
       "status": "cumprido",
-      "observacoes": "Acordo de compensação de créditos feito em migração de dados.",
+      "observacoes": "",
       "dadosEspecificos": {
-        "creditos": [
+        "inscricoes": [
           {
-            "tipo": "Restituição ICMS",
-            "numero": "REST-ICMS-2023-001",
-            "valor": 180000.00,
-            "dataVencimento": "2023-06-30",
-            "descricao": ""
+            "numeroInscricao": "69000700100",
+            "tipoInscricao": "imobiliaria",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 41318.21,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
           },
           {
-            "tipo": "Saldo Credor",
-            "numero": "SALDO-ICMS-2024-001",
-            "valor": 70000.00,
-            "dataVencimento": "2024-03-31",
-            "descricao": ""
-          }
-        ],
-        "inscricoes": [
-          {
-            "numeroInscricao": "ECO-31056-2022",
-            "tipoInscricao": "economica",
+            "numeroInscricao": "8660160338",
+            "tipoInscricao": "imobiliaria",
             "debitos": [
               {
-                "descricao": "ICMS 2021",
-                "valor": 120000.00,
-                "dataVencimento": "2021-12-31"
-              },
+                "descricao": "Total",
+                "valor": 10500.00,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          },
+          {
+            "numeroInscricao": "5790230126",
+            "tipoInscricao": "imobiliaria",
+            "debitos": [
               {
-                "descricao": "ICMS 2022",
-                "valor": 80000.00,
-                "dataVencimento": "2022-12-31"
+                "descricao": "Total",
+                "valor": 53072.09,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          },
+          {
+            "numeroInscricao": "37560210012",
+            "tipoInscricao": "imobiliaria",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 56344.43,
+                "dataVencimento": "2023-09-28"
               }
             ]
           }
-        ],
-        "valorCreditos": 250000.00,
-        "valorDebitos": 200000.00
+        ]
       }
     },
     {
-      // TIPO: DACAO_PAGAMENTO (padrão para dação em pagamento)
-      "processoNumero": "35815/2025-76",
-      "dataAssinatura": "2024-09-10",
-      "dataVencimento": "2024-09-10",
-      "modalidadePagamento": "avista",
-      "numeroParcelas": 1,
-      "valorTotal": 800000.00,
-      "valorDesconto": 0.00,
-      "percentualDesconto": 0.0,
-      "valorFinal": 650000.00,
-      "valorEntrada": 0.00,
+      "processoNumero": "76446/2023-93",
+      "dataAssinatura": "2023-09-30",
+      "dataVencimento": "2023-10-31",
+      "valorTotalAcordo": 656758.61,
+      "valorEntrada": 238803.71,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 2,
+      "custas": 195.00,
+      "honorarios": 35810.53,
+      "honorariosMetodoPagamento": "avista",
+      "honorariosParcelas": "",
       "status": "cumprido",
-      "observacoes": "Dação de imóvel para quitação de débitos de IPTU",
+      "observacoes": "",
       "dadosEspecificos": {
-        "inscricoesOferecidas": [
+        "inscricoes": [
           {
-            "numeroInscricao": "IMOVEL-FILODRENDO-90",
-            "tipoInscricao": "imobiliaria",
-            "valor": 800000.00,
-            "dataVencimento": "2024-09-10",
-            "descricao": "Imóvel na Rua Filodrendo, n. 90, Damha I - Campo Grande/MS"
-          }
-        ],
-        "inscricoesCompensar": [
-          {
-            "numeroInscricao": "IMO-35815-2020",
-            "tipoInscricao": "imobiliaria",
+            "numeroInscricao": "264407001",
+            "tipoInscricao": "economica",
             "debitos": [
               {
-                "descricao": "IPTU 2020",
-                "valor": 150000.00,
-                "dataVencimento": "2020-12-31"
-              },
+                "descricao": "Total",
+                "valor": 185187.69,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          },
+          {
+            "numeroInscricao": "264408008",
+            "tipoInscricao": "economica",
+            "debitos": [
               {
-                "descricao": "IPTU 2021",
-                "valor": 160000.00,
-                "dataVencimento": "2021-12-31"
-              },
+                "descricao": "Total",
+                "valor": 119305.04,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          },
+          {
+            "numeroInscricao": "19002112",
+            "tipoInscricao": "economica",
+            "debitos": [
               {
-                "descricao": "IPTU 2022",
-                "valor": 170000.00,
-                "dataVencimento": "2022-12-31"
-              },
+                "descricao": "Total",
+                "valor": 153949.38,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          },
+          {
+            "numeroInscricao": "190002004",
+            "tipoInscricao": "economica",
+            "debitos": [
               {
-                "descricao": "IPTU 2023",
-                "valor": 170000.00,
-                "dataVencimento": "2023-12-31"
+                "descricao": "Total",
+                "valor": 198316.50,
+                "dataVencimento": "2023-09-28"
               }
             ]
           }
-        ],
-        "valorOferecido": 800000.00,
-        "valorCompensar": 650000.00
+        ]
+      }
+    },
+    {
+      "processoNumero": "76432/2023-89",
+      "dataAssinatura": "2023-11-14",
+      "dataVencimento": "2023-09-30",
+      "valorTotalAcordo": 1680701.18,
+      "valorEntrada": 1200000.00,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 1,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "126143001",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 1680701.18,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "106698/2023-17",
+      "dataAssinatura": "2023-12-08",
+      "dataVencimento": "2023-12-13",
+      "valorTotalAcordo": 295339.49,
+      "valorEntrada": "",
+      "metodoPagamento": "avista",
+      "numeroParcelas": "",
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "159116000",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 295339.49,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "107376/2023-78",
+      "dataAssinatura": "2023-12-14",
+      "dataVencimento": "2023-12-15",
+      "valorTotalAcordo": 1098938.48,
+      "valorEntrada": 54946.93,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 60,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "117221008",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 1098938.48,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "109706/2023-41",
+      "dataAssinatura": "2023-12-14",
+      "dataVencimento": "2023-12-15",
+      "valorTotalAcordo": 160445.49,
+      "valorEntrada": "",
+      "metodoPagamento": "avista",
+      "numeroParcelas": "",
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "125510000",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 160445.49,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "111115/2023-06",
+      "dataAssinatura": "2023-12-14",
+      "dataVencimento": "2023-12-15",
+      "valorTotalAcordo": 89434.26,
+      "valorEntrada": "",
+      "metodoPagamento": "avista",
+      "numeroParcelas": "",
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "94752000",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 89434.26,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "76527/2023-93",
+      "dataAssinatura": "2023-12-15",
+      "dataVencimento": "2023-01-25",
+      "valorTotalAcordo": 950927.74,
+      "valorEntrada": 93798.16,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 59,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "91526000",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 950927.74,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "111057/2023-01",
+      "dataAssinatura": "2023-12-22",
+      "dataVencimento": "2023-12-26",
+      "valorTotalAcordo": 221762.38,
+      "valorEntrada": 41758.06,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 24,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "183684000",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 221762.38,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "111802/2023-78",
+      "dataAssinatura": "2024-02-08",
+      "dataVencimento": "2024-02-15",
+      "valorTotalAcordo": 150647.31,
+      "valorEntrada": 13695.41,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 10,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "107416005",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 150647.31,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "55531/2024-53",
+      "dataAssinatura": "2024-07-17",
+      "dataVencimento": "2024-07-24",
+      "valorTotalAcordo": 129921.31,
+      "valorEntrada": "",
+      "metodoPagamento": "avista",
+      "numeroParcelas": "",
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "282041006",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 129921.31,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "57471/2024-02",
+      "dataAssinatura": "2024-07-22",
+      "dataVencimento": "2024-07-29",
+      "valorTotalAcordo": 119848.60,
+      "valorEntrada": "9988,90",
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 11,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "9590100",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 119848.60,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "52828/2024-76",
+      "dataAssinatura": "2024-07-11",
+      "dataVencimento": "2024-07-29",
+      "valorTotalAcordo": 357698.26,
+      "valorEntrada": "5964,45",
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 59,
+      "custas": 105.00,
+      "honorarios": 37054.41,
+      "honorariosMetodoPagamento": "avista",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "67786009",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 357698.26,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "49853/2024-45",
+      "dataAssinatura": "2024-07-24",
+      "dataVencimento": "2024-07-29",
+      "valorTotalAcordo": 1224063.44,
+      "valorEntrada": "20402,59",
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 59,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "219356005",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 1224063.44,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "60339/2024-15",
+      "dataAssinatura": "2024-08-22",
+      "dataVencimento": "2024-08-30",
+      "valorTotalAcordo": 459921.89,
+      "valorEntrada": "",
+      "metodoPagamento": "avista",
+      "numeroParcelas": "",
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "197255005",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 459921.89,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "53641/2024-81",
+      "dataAssinatura": "2024-08-29",
+      "dataVencimento": "2024-08-30",
+      "valorTotalAcordo": 5069825.66,
+      "valorEntrada": 1520442.62,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 96,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "38755013",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 5069825.66,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "53638/2024-76",
+      "dataAssinatura": "2024-08-29",
+      "dataVencimento": "2024-08-30",
+      "valorTotalAcordo": 92365.03,
+      "valorEntrada": 18473.07,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 4,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "40506055",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 92365.03,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "58107/2024-05",
+      "dataAssinatura": "2024-10-16",
+      "dataVencimento": "2024-11-11",
+      "valorTotalAcordo": 438128.70,
+      "valorEntrada": 4326.96,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 99,
+      "custas": 105.00,
+      "honorarios": 18732.76,
+      "honorariosMetodoPagamento": "avista",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "168731000",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 438128.70,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "60375/2024-89",
+      "dataAssinatura": "2024-11-04",
+      "dataVencimento": "2024-11-05",
+      "valorTotalAcordo": 211714.25,
+      "valorEntrada": 105836.57,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 24,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "200714008",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 211714.25,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "99082/2024-19",
+      "dataAssinatura": "2025-03-24",
+      "dataVencimento": "2025-03-31",
+      "valorTotalAcordo": 590947.94,
+      "valorEntrada": 100046.76,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 119,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "129995009",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 590947.94,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "56258/2024-10",
+      "dataAssinatura": "2024-12-10",
+      "dataVencimento": "2024-01-15",
+      "valorTotalAcordo": 311744.07,
+      "valorEntrada": 3148.93,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 98,
+      "custas": 300.00,
+      "honorarios": 26796.61,
+      "honorariosMetodoPagamento": "avista",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "5760170196",
+            "tipoInscricao": "imobiliária",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 311744.07,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "94834/2024-55",
+      "dataAssinatura": "2024-12-16",
+      "dataVencimento": "2024-12-20",
+      "valorTotalAcordo": 129382.19,
+      "valorEntrada": 5073.19,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 100,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "195271003",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 129382.19,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "60421/2024-02",
+      "dataAssinatura": "2025-01-20",
+      "dataVencimento": "2025-02-10",
+      "valorTotalAcordo": 143494.96,
+      "valorEntrada": 1496.56,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 95,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "284411005",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 143494.96,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "101222/2024-62",
+      "dataAssinatura": "2025-02-28",
+      "dataVencimento": "2025-03-10",
+      "valorTotalAcordo": 185216.49,
+      "valorEntrada": 46304.19,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 3,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "119799007",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 185216.49,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "101411/2024-35",
+      "dataAssinatura": "2025-01-10",
+      "dataVencimento": "2025-02-17",
+      "valorTotalAcordo": 596154.48,
+      "valorEntrada": 11984.88,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 96,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "123264002",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 596154.48,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "101206/2024-14",
+      "dataAssinatura": "2025-02-27",
+      "dataVencimento": "2025-03-14",
+      "valorTotalAcordo": 110631.46,
+      "valorEntrada": 22126.34,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 4,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "267650004",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 110631.46,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "101410/2024-72",
+      "dataAssinatura": "2025-03-17",
+      "dataVencimento": "2025-03-25",
+      "valorTotalAcordo": 244788.88,
+      "valorEntrada": 15765.73,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 95,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "116402009",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 15765.73,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "75965/2023-25",
+      "dataAssinatura": "2023-10-30",
+      "dataVencimento": "2023-10-31",
+      "valorTotalAcordo": 257458.20,
+      "valorEntrada": 4290.97,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 59,
+      "custas": 60,
+      "honorarios": 26681.28,
+      "honorariosMetodoPagamento": "avista",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "74555004",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 257458.20,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "76528/2023-56",
+      "dataAssinatura": "2023-10-20",
+      "dataVencimento": "2023-10-30",
+      "valorTotalAcordo": 100328.51,
+      "valorEntrada": "",
+      "metodoPagamento": "avista",
+      "numeroParcelas": "",
+      "custas": 90,
+      "honorarios": 5016.32,
+      "honorariosMetodoPagamento": "avista",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "115487000",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 100328.51,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "97304/2024-78",
+      "dataAssinatura": "2025-02-06",
+      "dataVencimento": "2025-02-17",
+      "valorTotalAcordo": 1730483.13,
+      "valorEntrada": 199873,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 119,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "3184005",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 1730484.13,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "99462/2024-90",
+      "dataAssinatura": "2025-01-31",
+      "dataVencimento": "2025-02-17",
+      "valorTotalAcordo": 1160153.17,
+      "valorEntrada": 19336.84,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 59,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "250528000",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 1160153.17,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "99558/2024-67",
+      "dataAssinatura": "2025-03-13",
+      "dataVencimento": "2025-03-21",
+      "valorTotalAcordo": 115543.86,
+      "valorEntrada": 1210.41,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 95,
+      "custas": 15,
+      "honorarios": 2868,
+      "honorariosMetodoPagamento": "avista",
+      "honorariosParcelas": "",
+      "status": "cumprido",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "97255008",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 115543.86,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "31056/2025-72",
+      "dataAssinatura": "2025-08-05",
+      "dataVencimento": "2025-08-21",
+      "valorTotalAcordo": 1523593.35,
+      "valorEntrada": 25395.73,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 59,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "162638009",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 1523593.35,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "35253/2025-61",
+      "dataAssinatura": "2025-09-01",
+      "dataVencimento": "2025-09-15",
+      "valorTotalAcordo": 556228.90,
+      "valorEntrada": 9272.35,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 59,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "93569008",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 556228.90,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "processoNumero": "37436/2025-11",
+      "dataAssinatura": "2025-09-01",
+      "dataVencimento": "2025-09-15",
+      "valorTotalAcordo": 556228.90,
+      "valorEntrada": 9272.35,
+      "metodoPagamento": "parcelado",
+      "numeroParcelas": 59,
+      "custas": "",
+      "honorarios": "",
+      "honorariosMetodoPagamento": "",
+      "honorariosParcelas": "",
+      "status": "ativo",
+      "observacoes": "",
+      "dadosEspecificos": {
+        "inscricoes": [
+          {
+            "numeroInscricao": "93569008",
+            "tipoInscricao": "economica",
+            "debitos": [
+              {
+                "descricao": "Total",
+                "valor": 556228.90,
+                "dataVencimento": "2023-09-28"
+              }
+            ]
+          }
+        ]
       }
     }
   ],

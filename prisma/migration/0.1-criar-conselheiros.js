@@ -1,6 +1,6 @@
 // node prisma/migration/0.1-criar-conselheiros.js
 
-import { PrismaClient } from '@prisma/client'
+const { PrismaClient } = require('@prisma/client')
 
 const prisma = new PrismaClient()
 
@@ -29,6 +29,7 @@ const conselheiros = [
   { nome: 'Luís Eduardo Costa' },
   { nome: 'Kátia Silene Sarturi Warde' },
   { nome: 'Mariana Rodrigues Moreira' },
+  { nome: 'Paulo Roberto Barros da Silva' },
   { nome: 'Paulo Victor Medeiros Damasceno' },
   { nome: 'Pedro Sol Milhomem Santos Ferreira' },
   { nome: 'Ricardo Vieira Dias' },

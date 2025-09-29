@@ -1,6 +1,6 @@
 // node prisma/migration/3.2-formatar-textos.js
 
-import { PrismaClient } from '@prisma/client';
+const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
@@ -237,7 +237,7 @@ if (require.main === module) {
   main();
 }
 
-export {
+module.exports = {
   formatarTextoTitulo,
   formatarNomesContribuintes,
   formatarHistoricos,

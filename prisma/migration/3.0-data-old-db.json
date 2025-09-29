@@ -2541,8 +2541,8 @@
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
-          "decisao": "Deferimento Parcial",
-          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido parcialmente."
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido."
         }
       ]
     },
@@ -2724,8 +2724,8 @@
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
-          "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos a contraproposta foi deferida."
+          "decisao": "Deferimento Parcial",
+          "textoata": "Por unanimidade de votos a contraproposta foi deferida parcialmente."
         }
       ]
     },
@@ -2846,6 +2846,14 @@
         {
           "numeroprocesso": "111057/2023-01",
           "relator": "Luís Alexandre Holak",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido."
+        },
+        {
+          "numeroprocesso": "111115/2023-06",
+          "relator": "Jorge Takeshi Otubo",
           "revisor": "",
           "resultado": "Julgado",
           "decisao": "Deferimento",
@@ -3409,8 +3417,8 @@
           "relator": "Arthur Vieira de Oliveira Lavôr",
           "revisor": "",
           "resultado": "Julgado",
-          "decisao": "Deferimento",
-          "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
+          "decisao": "Deferimento Parcial",
+          "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido parcialmente."
         }
       ]
     },
@@ -3523,7 +3531,7 @@
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
-          "decisao": "Indeferimento",
+          "decisao": "Deferimento",
           "textoata": "O processo retornou para pauta de julgamento, considerando a apresentação de contraproposta do requerente. Após análise e discussão, por unanimidade de votos, a contraproposta foi indeferida."
         },
         {
@@ -3630,7 +3638,7 @@
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
-          "decisao": "Indeferimento",
+          "decisao": "Deferimento Parcial",
           "textoata": "O processo retornou para a pauta de julgamento considerando a contraproposta apresentada pela requerente. Por unanimidade de votos, a contraproposta foi indeferida."
         },
         {
@@ -3687,7 +3695,7 @@
           "relator": "Luís Alexandre Holak",
           "revisor": "",
           "resultado": "Julgado",
-          "decisao": "Indeferimento",
+          "decisao": "Deferimento Parcial",
           "textoata": "O processo retornou para a pauta de julgamento considerando a contraproposta apresentada pela requerente. Por unanimidade de votos, a contraproposta foi indeferida."
         },
         {
@@ -3725,7 +3733,7 @@
         {
           "numeroprocesso": "42854/2024-50",
           "relator": "Denir de Souza Nantes",
-          "revisor": "Adrianne Cristia Coelho Lobo",
+          "revisor": "Adrianne Cristina Coelho Lobo",
           "resultado": "Julgado",
           "decisao": "Deferimento",
           "textoata": "Em sessão, após o requerente apresentar pedido de reconsideração, o membro relator votou no sentido de não conceder os benefícios do Programa Concilia Campo Grande, voto esse seguido pelos membros Luís Alexandre Holak e Victor Pereira Afonso. De forma contrária, a membra revisora votou no sentido de conceder os benefícios do Programa Concilia Campo Grande, acompanhado pelos membros Cecília Saad Cruz Rizkallah, Jorge Takeshi Otubo e Letícia Sousa de Moura. Por maioria de votos, vence o voto da membra revisora."
@@ -4686,8 +4694,8 @@
           "numeroprocesso": "21905/2025-81",
           "relator": "Pedro Sol Milhomem Santos Ferreira",
           "revisor": "",
-          "resultado": "Julgado",
-          "decisao": "Deferimento",
+          "resultado": "Em Negociação",
+          "decisao": "",
           "textoata": "Por unanimidade de votos, o pedido de compensação foi deferido."
         }
       ]
@@ -4783,8 +4791,8 @@
           "numeroprocesso": "21905/2025-81",
           "relator": "Pedro Sol Milhomem Santos Ferreira",
           "revisor": "",
-          "resultado": "Suspenso",
-          "decisao": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
           "textoata": "O processo foi reincluído em pauta de julgamento em razão de petição apresentada pelo patrono da parte, na qual se requer a sustentação oral na sessão, em face do indeferimento do pleito referente à não incidência de multa moratória na compensação pleiteada. Alega-se, para tanto, que o referido pedido foi formulado em momento anterior ao vencimento da obrigação, motivo pelo qual entende-se indevida a exigência de tais encargos. O colegiado entendeu que a multa moratória deverá ser afastada em relação aos débitos vincendos até a data do protocolo do requerimento. Quanto aos débitos vencidos, cuja exigibilidade se consolidou anteriormente ao julgamento, ou àqueles cujo requerimento tenha sido apresentado posteriormente à referida data, permanece a incidência da multa, por se encontrarem em mora."
         }
       ]
@@ -5391,6 +5399,79 @@
           "resultado": "Suspenso",
           "decisao": "",
           "textoata": "O processo foi retirado de pauta."
+        }
+      ]
+    },
+    {
+      "numeroanoata": "0036/2025",
+      "dataata": "25/09/2025",
+      "presidente": "Ricardo Vieira Dias",
+      "conselheirosparticipantes": [
+        "ADRIANNE CRISTINA COELHO LOBO",
+        "DENIR DE SOUZA NANTES",
+        "ISABELA BATISTA MACHADO SOARES SCARAMAL",
+        "JORGE TAKESHI OTUBO",
+        "KÁTIA SILENE SARTURI WARDE",
+        "LUÍS ALEXANDRE HOLAK",
+        "PEDRO SOL MILHOMEM SANTOS FERREIRA",
+        "VICTOR PEREIRA AFONSO"
+      ],
+      "processos": [
+        {
+          "numeroprocesso": "37530/2025-70",
+          "relator": "Pedro Sol Milhomem Santos Ferreira",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto."
+        },
+        {
+          "numeroprocesso": "35836/2025-91",
+          "relator": "Pedro Sol Milhomem Santos Ferreira",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto."
+        },
+        {
+          "numeroprocesso": "34327/2025-41",
+          "relator": "Luís Alexandre Holak",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto."
+        },
+        {
+          "numeroprocesso": "32969/2025-14",
+          "relator": "Jorge Takeshi Otubo",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto."
+        },
+        {
+          "numeroprocesso": "36927/2025-44",
+          "relator": "Jorge Takeshi Otubo",
+          "revisor": "",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, o pedido de transação foi deferido nos termos do voto."
+        },
+        {
+          "numeroprocesso": "105607/2024-07",
+          "relator": "Adrianne Cristina Coelho Lobo",
+          "revisor": "Denir de Souza Nantes",
+          "resultado": "Julgado",
+          "decisao": "Deferimento",
+          "textoata": "Por unanimidade de votos, vence o voto da membra relatora sendo pelo deferimento do pedido de transação. O membro revisor acompanhou o voto da membra relatora."
+        },
+        {
+          "numeroprocesso": "31348/2025-13 ",
+          "relator": "Isabela Batista Machado Soares Scaramal",
+          "revisor": "Adrianne Cristina Coelho Lobo",
+          "resultado": "Julgado",
+          "decisao": "Indeferimento",
+          "textoata": "Por unanimidade de votos, vence o voto da membra relatora sendo pelo indeferimento do pedido de transação. A membra revisora acompanhou o voto da membra relatora."
         }
       ]
     }

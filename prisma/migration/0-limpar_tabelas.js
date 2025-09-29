@@ -1,6 +1,6 @@
 // node prisma/migration/0-limpar_tabelas.js
 
-import { PrismaClient } from '@prisma/client'
+const { PrismaClient } = require('@prisma/client')
 
 const prisma = new PrismaClient()
 

@@ -1,7 +1,7 @@
 // node prisma/migration/1-migrar_processos.js
 
-import { PrismaClient } from '@prisma/client'
-import { Client } from 'pg'
+const { PrismaClient } = require('@prisma/client')
+const { Client } = require('pg')
 
 const prisma = new PrismaClient()
 
@@ -27,13 +27,18 @@ function mapearTipoProcesso(tipoAntigo) {
 
   const tipo = tipoAntigo.toUpperCase()
 
+  // Tipos que devem ser ignorados
+  if (['PARECER'].includes(tipo)) {
+    return null
+  }
+
   if (['COMPENSACAO', 'COMPENSAÇÃO', 'COMP'].includes(tipo)) {
     return 'COMPENSACAO'
   }
   if (['DACAO', 'DAÇÃO', 'DACAO_PAGAMENTO', 'DACAO EM PAGAMENTO', 'DAÇÃO EM PAGAMENTO'].includes(tipo)) {
     return 'DACAO_PAGAMENTO'
   }
-  if (['TRANSACAO', 'TRANSAÇÃO', 'TRANS_EXCEPCIONAL', 'TRANSACAO_EXCEPCIONAL', 'PARECER'].includes(tipo)) {
+  if (['TRANSACAO', 'TRANSAÇÃO', 'TRANS_EXCEPCIONAL', 'TRANSACAO_EXCEPCIONAL'].includes(tipo)) {
     return 'TRANSACAO_EXCEPCIONAL'
   }
 
@@ -148,8 +153,18 @@ async function migrarProcessos() {
     console.log('\n👥 Migrando contribuintes...')
 
     let contribuintesCriados = 0
+    let processosIgnorados = 0
 
     for (const proc of processosAntigos) {
+      const tipoMapeado = mapearTipoProcesso(proc.tipo_processo)
+
+      // Ignorar processos que retornam null (como PARECER)
+      if (tipoMapeado === null) {
+        processosIgnorados++
+        console.log(`⚠️  Ignorando processo ${proc.numero_processo} do tipo '${proc.tipo_processo}'`)
+        continue
+      }
+
       const contatos = contatosPorProcesso[proc.id_processo] || {}
 
       await prisma.contribuinte.create({
@@ -172,6 +187,7 @@ async function migrarProcessos() {
     }
 
     console.log(`✅ Contribuintes criados: ${contribuintesCriados}`)
+    console.log(`⚠️  Processos ignorados: ${processosIgnorados}`)
 
     // 6. Migrar processos
     console.log('\n📄 Migrando processos...')
@@ -180,6 +196,12 @@ async function migrarProcessos() {
 
     for (const proc of processosAntigos) {
       const tipoMapeado = mapearTipoProcesso(proc.tipo_processo)
+
+      // Ignorar processos que retornam null (como PARECER)
+      if (tipoMapeado === null) {
+        continue
+      }
+
       const dataFinalizacao = proc.processo_concluido ? (() => { const d = new Date(proc.data_atualizacao); d.setHours(12, 0, 0, 0); return d; })() : null
 
       await prisma.processo.create({
@@ -280,6 +302,7 @@ async function migrarProcessos() {
     console.log('================================')
     console.log(`👥 Contribuintes migrados: ${contribuintesCriados}`)
     console.log(`📄 Processos migrados: ${processosCriados}`)
+    console.log(`⚠️  Processos ignorados (PARECER): ${processosIgnorados}`)
     console.log(`📝 Históricos criados: ${historicosCriados}`)
     console.log(`📋 Logs criados: ${logsCriados}`)
 

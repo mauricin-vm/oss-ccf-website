@@ -1,7 +1,7 @@
 // node prisma/migration/2-migrar_historicos.js
 
-import { PrismaClient } from '@prisma/client'
-import { Client } from 'pg'
+const { PrismaClient } = require('@prisma/client')
+const { Client } = require('pg')
 
 const prisma = new PrismaClient()
 
@@ -292,4 +292,4 @@ if (require.main === module) {
     })
 }
 
-export { migrarHistoricos }
+module.exports = { migrarHistoricos }

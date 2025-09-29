@@ -1,8 +1,8 @@
 // node prisma/migration/3.3-migrar_documentos.js
 
-import { PrismaClient } from '@prisma/client'
-import { Client } from 'pg'
-import fs from 'fs'
+const { PrismaClient } = require('@prisma/client')
+const { Client } = require('pg')
+const fs = require('fs')
 
 const prisma = new PrismaClient()
 
@@ -242,4 +242,4 @@ if (require.main === module) {
     })
 }
 
-export { migrarDocumentos }
+module.exports = { migrarDocumentos }
