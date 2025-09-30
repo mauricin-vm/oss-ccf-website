@@ -190,16 +190,21 @@ export async function GET(request: NextRequest) {
 }
 
 // Interfaces para dados específicos (baseado na API antiga)
+interface DebitoItem {
+  id: string
+  descricao: string
+  valorLancado?: number
+  valor?: number
+  dataVencimento?: string | Date
+}
+
 interface InscricaoAcordo {
   id: string
   numeroInscricao: string
   tipoInscricao: string
   valorDebito: number
-  descricaoDebitos: Array<{
-    id: string
-    descricao: string
-    valorLancado: number
-  }>
+  descricaoDebitos?: DebitoItem[]
+  debitos?: DebitoItem[]
 }
 
 interface DadosEspecificos {
@@ -275,7 +280,7 @@ export async function POST(request: NextRequest) {
       if (dadosEsp.inscricoesAcordo) {
         dadosEsp.inscricoesAcordo.forEach((inscricao: InscricaoAcordo) => {
           if (inscricao.descricaoDebitos) {
-            inscricao.descricaoDebitos.forEach((debito: { id: string; descricao: string; valorLancado: number; dataVencimento?: string | Date }) => {
+            inscricao.descricaoDebitos.forEach((debito: DebitoItem) => {
               if (debito.dataVencimento) {
                 const dataVenc = new Date(debito.dataVencimento)
                 dataVenc.setHours(12, 0, 0, 0)
@@ -301,7 +306,7 @@ export async function POST(request: NextRequest) {
       if (dadosEsp.inscricoesCompensarAdicionadas) {
         dadosEsp.inscricoesCompensarAdicionadas.forEach((inscricao: InscricaoAcordo) => {
           if (inscricao.descricaoDebitos) {
-            inscricao.descricaoDebitos.forEach((debito: { id: string; descricao: string; valorLancado: number; dataVencimento?: string | Date }) => {
+            inscricao.descricaoDebitos.forEach((debito: DebitoItem) => {
               if (debito.dataVencimento) {
                 const dataVenc = new Date(debito.dataVencimento)
                 dataVenc.setHours(12, 0, 0, 0)
@@ -520,10 +525,10 @@ export async function POST(request: NextRequest) {
         if (dadosEspecificos.inscricoesAcordo) {
           for (const inscricao of dadosEspecificos.inscricoesAcordo) {
             // Aceitar tanto 'debitos' quanto 'descricaoDebitos'
-            const debitos = (inscricao as any).debitos || inscricao.descricaoDebitos || []
+            const debitos = inscricao.debitos || inscricao.descricaoDebitos || []
 
             const valorDebitos = debitos.reduce(
-              (total: number, debito: any) => {
+              (total: number, debito: DebitoItem) => {
                 const valor = Number(debito?.valorLancado || debito?.valor || 0)
                 return total + valor
               }, 0
@@ -655,10 +660,10 @@ export async function POST(request: NextRequest) {
         if (dadosEspecificos.inscricoesAdicionadas) {
           for (const inscricao of dadosEspecificos.inscricoesAdicionadas) {
             // Aceitar tanto 'debitos' quanto 'descricaoDebitos'
-            const debitos = (inscricao as any).debitos || inscricao.descricaoDebitos || []
+            const debitos = inscricao.debitos || inscricao.descricaoDebitos || []
 
             const valorDebitos = debitos.reduce(
-              (total: number, debito: any) => {
+              (total: number, debito: DebitoItem) => {
                 const valor = Number(debito?.valorLancado || debito?.valor || 0)
                 return total + valor
               }, 0
@@ -794,10 +799,10 @@ export async function POST(request: NextRequest) {
         if (dadosEspecificos.inscricoesCompensarAdicionadas) {
           for (const inscricao of dadosEspecificos.inscricoesCompensarAdicionadas) {
             // Aceitar tanto 'debitos' quanto 'descricaoDebitos'
-            const debitos = (inscricao as any).debitos || inscricao.descricaoDebitos || []
+            const debitos = inscricao.debitos || inscricao.descricaoDebitos || []
 
             const valorDebitos = debitos.reduce(
-              (total: number, debito: any) => {
+              (total: number, debito: DebitoItem) => {
                 const valor = Number(debito?.valorLancado || debito?.valor || 0)
                 return total + valor
               }, 0
