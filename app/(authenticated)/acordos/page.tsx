@@ -156,6 +156,74 @@ export default function AcordosPage() {
     }
   }
 
+  // Função para verificar se acordo está vencido
+  const isVencido = (acordo: Acordo) => {
+    if (acordo.status !== 'ativo') return false
+
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+
+    // Para acordos de transação excepcional, verificar parcelas atrasadas
+    if (acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL') {
+      // Verificar se tem parcelas atrasadas (acordo ou honorários)
+      const temParcelaAtrasada = (acordo.parcelas || []).some(parcela => parcela.status === 'ATRASADO')
+      if (temParcelaAtrasada) return true
+
+      // Verificar se custas estão vencidas e não pagas
+      if (acordo.transacaoDetails?.custasAdvocaticias &&
+          acordo.transacaoDetails.custasDataVencimento &&
+          !acordo.transacaoDetails.custasDataPagamento) {
+        const vencimentoCustas = new Date(acordo.transacaoDetails.custasDataVencimento)
+        vencimentoCustas.setHours(0, 0, 0, 0)
+        if (vencimentoCustas < hoje) return true
+      }
+
+      return false
+    }
+
+    // Para compensação e dação, verificar custas e honorários
+    if (acordo.processo?.tipo === 'COMPENSACAO' || acordo.processo?.tipo === 'DACAO_PAGAMENTO') {
+      const details = acordo.processo?.tipo === 'COMPENSACAO' ? acordo.compensacaoDetails : acordo.dacaoDetails
+
+      if (details) {
+        // Verificar custas vencidas e não pagas
+        if (details.custasAdvocaticias &&
+            details.custasDataVencimento &&
+            !details.custasDataPagamento) {
+          const vencimentoCustas = new Date(details.custasDataVencimento)
+          vencimentoCustas.setHours(0, 0, 0, 0)
+          if (vencimentoCustas < hoje) return true
+        }
+
+        // Verificar honorários vencidos e não pagos
+        if (details.honorariosValor &&
+            details.honorariosDataVencimento &&
+            !details.honorariosDataPagamento) {
+          const vencimentoHonorarios = new Date(details.honorariosDataVencimento)
+          vencimentoHonorarios.setHours(0, 0, 0, 0)
+          if (vencimentoHonorarios < hoje) return true
+        }
+
+        // Verificar parcelas de honorários atrasadas
+        const parcelasHonorarios = acordo.parcelas?.filter(p => p.tipoParcela === 'PARCELA_HONORARIOS') || []
+        const temParcelaAtrasada = parcelasHonorarios.some(parcela => {
+          if (parcela.status === 'PAGO') return false
+          const vencimento = new Date(parcela.dataVencimento)
+          vencimento.setHours(0, 0, 0, 0)
+          return vencimento < hoje
+        })
+        if (temParcelaAtrasada) return true
+      }
+
+      return false
+    }
+
+    // Fallback para outros tipos, usar data de vencimento do acordo
+    const vencimento = new Date(acordo.dataVencimento)
+    vencimento.setHours(0, 0, 0, 0)
+    return vencimento < hoje
+  }
+
   // Filtragem local (client-side)
   const filteredAcordos = acordos.filter((acordo) => {
     // Filtro por texto de busca
@@ -165,7 +233,13 @@ export default function AcordosPage() {
       acordo.id?.toLowerCase().includes(searchTerm.toLowerCase())
 
     // Filtro por status
-    const statusMatch = statusFilter === 'all' || acordo.status === statusFilter
+    let statusMatch = true
+    if (statusFilter === 'vencido') {
+      // Filtro especial para acordos com parcelas/custas/honorários vencidos
+      statusMatch = isVencido(acordo)
+    } else if (statusFilter !== 'all') {
+      statusMatch = acordo.status === statusFilter
+    }
 
     // Filtro por tipo do processo
     const tipoMatch = tipoFilter === 'all' || acordo.processo?.tipo === tipoFilter
@@ -274,18 +348,7 @@ export default function AcordosPage() {
   // Estatísticas baseadas nos acordos filtrados
   const totalAcordos = totalFilteredAcordos
   const acordosAtivos = filteredAcordos.filter(a => a.status === 'ativo').length
-  const acordosVencidos = filteredAcordos.filter(a => {
-    if (a.status !== 'ativo') return false
-
-    // Para acordos de transação excepcional, verificar parcelas atrasadas
-    if (a.processo?.tipo === 'TRANSACAO_EXCEPCIONAL') {
-      return (a.parcelas || []).some(parcela => parcela.status === 'ATRASADO')
-    }
-
-    // Para outros tipos, usar data de vencimento do acordo
-    const hoje = new Date()
-    return new Date(a.dataVencimento) < hoje
-  }).length
+  const acordosVencidos = filteredAcordos.filter(a => isVencido(a)).length
 
   const valorTotalAcordos = filteredAcordos
     .filter(acordo => acordo.status === 'ativo' || acordo.status === 'cumprido')
@@ -391,19 +454,6 @@ export default function AcordosPage() {
       valorPendente: valorTotal - valorPago,
       percentual
     }
-  }
-
-
-  const isVencido = (acordo: Acordo) => {
-    if (acordo.status !== 'ativo') return false
-
-    // Para acordos de transação excepcional, verificar parcelas atrasadas
-    if (acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL') {
-      return (acordo.parcelas || []).some(parcela => parcela.status === 'ATRASADO')
-    }
-
-    // Para outros tipos, usar data de vencimento do acordo
-    return new Date(acordo.dataVencimento) < new Date()
   }
 
   const getDisplayParcelasInfo = (acordo: Acordo) => {
@@ -575,7 +625,6 @@ export default function AcordosPage() {
                       <SelectItem value="cumprido">Cumprido</SelectItem>
                       <SelectItem value="vencido">Vencido</SelectItem>
                       <SelectItem value="cancelado">Cancelado</SelectItem>
-                      <SelectItem value="renegociado">Renegociado</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

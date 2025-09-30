@@ -147,7 +147,12 @@ export async function GET(
       detalhes.push(detalhe)
     }
 
-    return NextResponse.json({ detalhes })
+    // Retornar também créditos e inscrições diretamente para o card "Origem do Acordo"
+    return NextResponse.json({
+      detalhes,
+      creditos: acordo.creditos,
+      inscricoes: acordo.inscricoes
+    })
   } catch (error) {
     console.error('Erro ao buscar detalhes do acordo:', error)
     return NextResponse.json(

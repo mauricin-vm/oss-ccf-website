@@ -519,9 +519,15 @@ export async function POST(request: NextRequest) {
         // Criar inscrições da transação
         if (dadosEspecificos.inscricoesAcordo) {
           for (const inscricao of dadosEspecificos.inscricoesAcordo) {
-            const valorDebitos = inscricao.descricaoDebitos?.reduce(
-              (total: number, debito: { valorLancado?: number }) => total + (Number(debito?.valorLancado) || 0), 0
-            ) || 0
+            // Aceitar tanto 'debitos' quanto 'descricaoDebitos'
+            const debitos = (inscricao as any).debitos || inscricao.descricaoDebitos || []
+
+            const valorDebitos = debitos.reduce(
+              (total: number, debito: any) => {
+                const valor = Number(debito?.valorLancado || debito?.valor || 0)
+                return total + valor
+              }, 0
+            )
 
             const inscricaoCriada = await tx.acordoInscricao.create({
               data: {
@@ -536,11 +542,10 @@ export async function POST(request: NextRequest) {
             })
 
             // Criar débitos da inscrição
-            if (inscricao.descricaoDebitos) {
-              for (const debito of inscricao.descricaoDebitos) {
+            if (debitos && debitos.length > 0) {
+              for (const debito of debitos) {
                 // Converter dataVencimento para Date se for string
-                const debitoCompleto = debito as { id: string; descricao: string; valorLancado: number; dataVencimento?: string | Date }
-                let dataVencimento = debitoCompleto.dataVencimento
+                let dataVencimento = debito.dataVencimento
                 if (typeof dataVencimento === 'string') {
                   dataVencimento = new Date(dataVencimento)
                   dataVencimento.setHours(12, 0, 0, 0) // Ajustar timezone
@@ -549,9 +554,9 @@ export async function POST(request: NextRequest) {
                 await tx.acordoDebito.create({
                   data: {
                     inscricaoId: inscricaoCriada.id,
-                    descricao: debito.descricao,
-                    valorLancado: Number(debito.valorLancado || 0),
-                    dataVencimento: dataVencimento || new Date()
+                    descricao: debito.descricao || 'Débito',
+                    valorLancado: Number(debito.valorLancado || debito.valor || 0),
+                    dataVencimento: dataVencimento || data.dataVencimento || new Date()
                   }
                 })
               }
@@ -649,16 +654,22 @@ export async function POST(request: NextRequest) {
         // Criar inscrições a compensar
         if (dadosEspecificos.inscricoesAdicionadas) {
           for (const inscricao of dadosEspecificos.inscricoesAdicionadas) {
-            const valorDebitos = inscricao.descricaoDebitos?.reduce(
-              (total: number, debito: { valorLancado?: number }) => total + (Number(debito?.valorLancado) || 0), 0
-            ) || 0
+            // Aceitar tanto 'debitos' quanto 'descricaoDebitos'
+            const debitos = (inscricao as any).debitos || inscricao.descricaoDebitos || []
+
+            const valorDebitos = debitos.reduce(
+              (total: number, debito: any) => {
+                const valor = Number(debito?.valorLancado || debito?.valor || 0)
+                return total + valor
+              }, 0
+            )
 
             const inscricaoCriada = await tx.acordoInscricao.create({
               data: {
                 acordoId: acordo.id,
                 numeroInscricao: inscricao.numeroInscricao,
                 tipoInscricao: inscricao.tipoInscricao.toUpperCase() as TipoInscricao,
-                finalidade: 'INCLUIDA_ACORDO',
+                finalidade: 'OFERECIDA_COMPENSACAO',
                 valorTotal: valorDebitos,
                 descricao: null,
                 dataVencimento: null
@@ -666,11 +677,10 @@ export async function POST(request: NextRequest) {
             })
 
             // Criar débitos da inscrição
-            if (inscricao.descricaoDebitos) {
-              for (const debito of inscricao.descricaoDebitos) {
+            if (debitos && debitos.length > 0) {
+              for (const debito of debitos) {
                 // Converter dataVencimento para Date se for string
-                const debitoCompleto = debito as { id: string; descricao: string; valorLancado: number; dataVencimento?: string | Date }
-                let dataVencimento = debitoCompleto.dataVencimento
+                let dataVencimento = debito.dataVencimento
                 if (typeof dataVencimento === 'string') {
                   dataVencimento = new Date(dataVencimento)
                   dataVencimento.setHours(12, 0, 0, 0) // Ajustar timezone
@@ -679,9 +689,9 @@ export async function POST(request: NextRequest) {
                 await tx.acordoDebito.create({
                   data: {
                     inscricaoId: inscricaoCriada.id,
-                    descricao: debito.descricao,
-                    valorLancado: Number(debito.valorLancado || 0),
-                    dataVencimento: dataVencimento || new Date()
+                    descricao: debito.descricao || 'Débito',
+                    valorLancado: Number(debito.valorLancado || debito.valor || 0),
+                    dataVencimento: dataVencimento || data.dataVencimento || new Date()
                   }
                 })
               }
@@ -783,16 +793,22 @@ export async function POST(request: NextRequest) {
         // Criar inscrições a compensar
         if (dadosEspecificos.inscricoesCompensarAdicionadas) {
           for (const inscricao of dadosEspecificos.inscricoesCompensarAdicionadas) {
-            const valorDebitos = inscricao.descricaoDebitos?.reduce(
-              (total: number, debito: { valorLancado?: number }) => total + (Number(debito?.valorLancado) || 0), 0
-            ) || 0
+            // Aceitar tanto 'debitos' quanto 'descricaoDebitos'
+            const debitos = (inscricao as any).debitos || inscricao.descricaoDebitos || []
+
+            const valorDebitos = debitos.reduce(
+              (total: number, debito: any) => {
+                const valor = Number(debito?.valorLancado || debito?.valor || 0)
+                return total + valor
+              }, 0
+            )
 
             const inscricaoCriada = await tx.acordoInscricao.create({
               data: {
                 acordoId: acordo.id,
                 numeroInscricao: inscricao.numeroInscricao,
                 tipoInscricao: inscricao.tipoInscricao.toUpperCase() as TipoInscricao,
-                finalidade: 'INCLUIDA_ACORDO',
+                finalidade: 'OFERECIDA_DACAO',
                 valorTotal: valorDebitos,
                 descricao: null,
                 dataVencimento: null
@@ -800,11 +816,10 @@ export async function POST(request: NextRequest) {
             })
 
             // Criar débitos da inscrição
-            if (inscricao.descricaoDebitos) {
-              for (const debito of inscricao.descricaoDebitos) {
+            if (debitos && debitos.length > 0) {
+              for (const debito of debitos) {
                 // Converter dataVencimento para Date se for string
-                const debitoCompleto = debito as { id: string; descricao: string; valorLancado: number; dataVencimento?: string | Date }
-                let dataVencimento = debitoCompleto.dataVencimento
+                let dataVencimento = debito.dataVencimento
                 if (typeof dataVencimento === 'string') {
                   dataVencimento = new Date(dataVencimento)
                   dataVencimento.setHours(12, 0, 0, 0) // Ajustar timezone
@@ -813,9 +828,9 @@ export async function POST(request: NextRequest) {
                 await tx.acordoDebito.create({
                   data: {
                     inscricaoId: inscricaoCriada.id,
-                    descricao: debito.descricao,
-                    valorLancado: Number(debito.valorLancado || 0),
-                    dataVencimento: dataVencimento || new Date()
+                    descricao: debito.descricao || 'Débito',
+                    valorLancado: Number(debito.valorLancado || debito.valor || 0),
+                    dataVencimento: dataVencimento || data.dataVencimento || new Date()
                   }
                 })
               }

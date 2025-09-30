@@ -317,6 +317,51 @@ async function migrarAcordos() {
               }
             })
 
+            // Criar inscrições do acordo (origem do acordo) - usar dados do JSON
+            if (acordoData.dadosEspecificos?.inscricoes && Array.isArray(acordoData.dadosEspecificos.inscricoes)) {
+              for (const inscricao of acordoData.dadosEspecificos.inscricoes) {
+                const valorTotalDebitos = inscricao.debitos?.reduce(
+                  (total, debito) => total + (parseValue(debito.valor) || 0), 0
+                ) || 0
+
+                const acordoInscricao = await tx.acordoInscricao.create({
+                  data: {
+                    acordoId: acordoBase.id,
+                    numeroInscricao: inscricao.numeroInscricao || 'SEM_NUMERO',
+                    tipoInscricao: (inscricao.tipoInscricao || 'imobiliaria').toUpperCase().replace('Á', 'A'),
+                    finalidade: 'INCLUIDA_ACORDO',
+                    valorTotal: valorTotalDebitos,
+                    descricao: `Inscrição ${inscricao.numeroInscricao || 'sem número'} (Migração)`,
+                    dataVencimento: null
+                  }
+                })
+
+                // Criar débitos da inscrição
+                if (inscricao.debitos && Array.isArray(inscricao.debitos)) {
+                  for (const debito of inscricao.debitos) {
+                    let dataVencimentoDebito = dataVencimento // Usar data de vencimento do acordo como padrão
+                    if (debito.dataVencimento) {
+                      // Tentar converter data no formato DD/MM/YYYY
+                      const partesData = debito.dataVencimento.split('/')
+                      if (partesData.length === 3) {
+                        const [dia, mes, ano] = partesData
+                        dataVencimentoDebito = new Date(`${ano}-${mes}-${dia}T12:00:00`)
+                      }
+                    }
+
+                    await tx.acordoDebito.create({
+                      data: {
+                        inscricaoId: acordoInscricao.id,
+                        descricao: debito.descricao || 'Débito',
+                        valorLancado: parseValue(debito.valor) || 0,
+                        dataVencimento: dataVencimentoDebito
+                      }
+                    })
+                  }
+                }
+              }
+            }
+
             // Criar parcelas para transação
             await criarParcelasTransacaoMigracao(tx, acordoBase.id, {
               valorTotalProposto: valorFinal,
@@ -345,6 +390,75 @@ async function migrarAcordos() {
               }
             })
 
+            // Criar créditos do acordo (origem - créditos oferecidos) - usar dados do JSON
+            if (acordoData.dadosEspecificos?.creditos && Array.isArray(acordoData.dadosEspecificos.creditos)) {
+              for (const credito of acordoData.dadosEspecificos.creditos) {
+                let dataVencimentoCredito = null
+                if (credito.dataVencimento) {
+                  const partesData = credito.dataVencimento.split('/')
+                  if (partesData.length === 3) {
+                    const [dia, mes, ano] = partesData
+                    dataVencimentoCredito = new Date(`${ano}-${mes}-${dia}T12:00:00`)
+                  }
+                }
+
+                await tx.acordoCredito.create({
+                  data: {
+                    acordoId: acordoBase.id,
+                    tipoCredito: (credito.tipo || 'PRECATORIO').toUpperCase(),
+                    numeroCredito: credito.numero || 'SEM_NUMERO',
+                    valor: parseValue(credito.valor) || 0,
+                    descricao: credito.descricao || credito.tipo || 'Crédito (Migração)',
+                    dataVencimento: dataVencimentoCredito
+                  }
+                })
+              }
+            }
+
+            // Criar inscrições a compensar (origem - débitos) - usar dados do JSON
+            if (acordoData.dadosEspecificos?.inscricoes && Array.isArray(acordoData.dadosEspecificos.inscricoes)) {
+              for (const inscricao of acordoData.dadosEspecificos.inscricoes) {
+                const valorTotalDebitos = inscricao.debitos?.reduce(
+                  (total, debito) => total + (parseValue(debito.valor) || 0), 0
+                ) || 0
+
+                const acordoInscricao = await tx.acordoInscricao.create({
+                  data: {
+                    acordoId: acordoBase.id,
+                    numeroInscricao: inscricao.numeroInscricao || 'SEM_NUMERO',
+                    tipoInscricao: (inscricao.tipoInscricao || 'imobiliaria').toUpperCase().replace('Á', 'A'),
+                    finalidade: 'OFERECIDA_COMPENSACAO',
+                    valorTotal: valorTotalDebitos,
+                    descricao: `Inscrição ${inscricao.numeroInscricao || 'sem número'} (Migração)`,
+                    dataVencimento: null
+                  }
+                })
+
+                // Criar débitos da inscrição
+                if (inscricao.debitos && Array.isArray(inscricao.debitos)) {
+                  for (const debito of inscricao.debitos) {
+                    let dataVencimentoDebito = dataVencimento // Usar data de vencimento do acordo como padrão
+                    if (debito.dataVencimento) {
+                      const partesData = debito.dataVencimento.split('/')
+                      if (partesData.length === 3) {
+                        const [dia, mes, ano] = partesData
+                        dataVencimentoDebito = new Date(`${ano}-${mes}-${dia}T12:00:00`)
+                      }
+                    }
+
+                    await tx.acordoDebito.create({
+                      data: {
+                        inscricaoId: acordoInscricao.id,
+                        descricao: debito.descricao || 'Débito',
+                        valorLancado: parseValue(debito.valor) || 0,
+                        dataVencimento: dataVencimentoDebito
+                      }
+                    })
+                  }
+                }
+              }
+            }
+
           } else if (processo.tipo === 'DACAO_PAGAMENTO') {
             const valorOferecido = parseValue(acordoData.dadosEspecificos?.valorOferecido) || valorOriginal
             const valorCompensar = parseValue(acordoData.dadosEspecificos?.valorCompensar) || valorFinal
@@ -363,6 +477,76 @@ async function migrarAcordos() {
                 honorariosDataVencimento: null
               }
             })
+
+            // Criar créditos do acordo como DACAO_IMOVEL (origem - inscrições oferecidas) - usar dados do JSON
+            if (acordoData.dadosEspecificos?.inscricoesOferecidas && Array.isArray(acordoData.dadosEspecificos.inscricoesOferecidas)) {
+              for (const inscricaoOferecida of acordoData.dadosEspecificos.inscricoesOferecidas) {
+                let dataVencimentoCredito = null
+                if (inscricaoOferecida.dataVencimento) {
+                  const partesData = inscricaoOferecida.dataVencimento.split('/')
+                  if (partesData.length === 3) {
+                    const [dia, mes, ano] = partesData
+                    dataVencimentoCredito = new Date(`${ano}-${mes}-${dia}T12:00:00`)
+                  }
+                }
+
+                await tx.acordoCredito.create({
+                  data: {
+                    acordoId: acordoBase.id,
+                    tipoCredito: 'DACAO_IMOVEL',
+                    numeroCredito: inscricaoOferecida.numeroInscricao || inscricaoOferecida.numero || 'SEM_NUMERO',
+                    valor: parseValue(inscricaoOferecida.valor) || 0,
+                    descricao: inscricaoOferecida.descricao || `Dação ${inscricaoOferecida.numeroInscricao || ''} (Migração)`,
+                    dataVencimento: dataVencimentoCredito
+                  }
+                })
+              }
+            }
+
+            // Criar inscrições a compensar (origem - débitos) - usar dados do JSON
+            const inscricoesCompensarDacao = acordoData.dadosEspecificos?.inscricoesCompensar || acordoData.dadosEspecificos?.inscricoes
+            if (inscricoesCompensarDacao && Array.isArray(inscricoesCompensarDacao)) {
+              for (const inscricao of inscricoesCompensarDacao) {
+                const valorTotalDebitos = inscricao.debitos?.reduce(
+                  (total, debito) => total + (parseValue(debito.valor) || 0), 0
+                ) || 0
+
+                const acordoInscricao = await tx.acordoInscricao.create({
+                  data: {
+                    acordoId: acordoBase.id,
+                    numeroInscricao: inscricao.numeroInscricao || 'SEM_NUMERO',
+                    tipoInscricao: (inscricao.tipoInscricao || 'imobiliaria').toUpperCase().replace('Á', 'A'),
+                    finalidade: 'OFERECIDA_DACAO',
+                    valorTotal: valorTotalDebitos,
+                    descricao: `Inscrição ${inscricao.numeroInscricao || 'sem número'} (Migração)`,
+                    dataVencimento: null
+                  }
+                })
+
+                // Criar débitos da inscrição
+                if (inscricao.debitos && Array.isArray(inscricao.debitos)) {
+                  for (const debito of inscricao.debitos) {
+                    let dataVencimentoDebito = dataVencimento // Usar data de vencimento do acordo como padrão
+                    if (debito.dataVencimento) {
+                      const partesData = debito.dataVencimento.split('/')
+                      if (partesData.length === 3) {
+                        const [dia, mes, ano] = partesData
+                        dataVencimentoDebito = new Date(`${ano}-${mes}-${dia}T12:00:00`)
+                      }
+                    }
+
+                    await tx.acordoDebito.create({
+                      data: {
+                        inscricaoId: acordoInscricao.id,
+                        descricao: debito.descricao || 'Débito',
+                        valorLancado: parseValue(debito.valor) || 0,
+                        dataVencimento: dataVencimentoDebito
+                      }
+                    })
+                  }
+                }
+              }
+            }
           }
 
           // Atualizar status do processo

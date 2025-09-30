@@ -123,10 +123,10 @@ interface InscricaoDetalhe {
   id: string
   numeroInscricao: string
   tipoInscricao: string
-  valorDebito: number
-  valorTotal?: number
-  descricaoDebitos: DebitoDetalhe[]
-  debitos?: DebitoDetalhe[]
+  valorDebito?: number
+  valorTotal: number
+  descricaoDebitos?: DebitoDetalhe[]
+  debitos: DebitoDetalhe[]
 }
 
 interface DebitoDetalhe {
@@ -1661,7 +1661,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                     {tipoProcesso === 'COMPENSACAO' ? 'Créditos Oferecidos' : 'Inscrições Oferecidas'}
                   </h5>
                   <div className="space-y-3">
-                    {detalhesAcordo?.creditos.map((credito: Credito, idx: number) => (
+                    {detalhesAcordo?.creditos?.map((credito: Credito, idx: number) => (
                       <div key={credito.id || `credito-${idx}`} className="p-3 bg-green-50 rounded-lg border border-green-200">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -1695,7 +1695,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                           Total {tipoProcesso === 'COMPENSACAO' ? 'dos Créditos' : 'das Inscrições Oferecidas'}:
                         </span>
                         <span className="text-sm font-bold text-green-900">
-                          R$ {detalhesAcordo?.creditos.reduce((total: number, credito: Credito) => total + Number(credito.valor || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          R$ {detalhesAcordo?.creditos?.reduce((total: number, credito: Credito) => total + Number(credito.valor || 0), 0)?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
                         </span>
                       </div>
                     </div>
@@ -1711,7 +1711,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                     {tipoProcesso === 'TRANSACAO_EXCEPCIONAL' ? 'Inscrições Incluídas' : 'Inscrições a Compensar'}
                   </h5>
                   <div className="space-y-3">
-                    {detalhesAcordo?.inscricoes.map((inscricao: InscricaoDetalhe, idx: number) => (
+                    {detalhesAcordo?.inscricoes?.map((inscricao: InscricaoDetalhe, idx: number) => (
                       <div key={inscricao.id || `inscricao-${idx}`} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -1735,7 +1735,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                           <div className="mt-3 pt-3 border-t border-blue-300">
                             <h6 className="text-xs font-medium text-blue-700 mb-2">Débitos:</h6>
                             <div className="space-y-2">
-                              {inscricao.descricaoDebitos.map((debito: DebitoDetalhe, idx: number) => (
+                              {inscricao.debitos?.map((debito: DebitoDetalhe, idx: number) => (
                                 <div key={debito.id || `debito-${idx}`} className="flex items-center justify-between text-xs bg-white p-2 rounded">
                                   <span className="text-gray-700">{debito.descricao}</span>
                                   <div className="text-right">
@@ -1761,7 +1761,7 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                           Total das Inscrições:
                         </span>
                         <span className="text-sm font-bold text-blue-900">
-                          R$ {detalhesAcordo?.inscricoes.reduce((total: number, inscricao: InscricaoDetalhe) => total + Number(inscricao.valorDebito || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          R$ {detalhesAcordo?.inscricoes?.reduce((total: number, inscricao: InscricaoDetalhe) => total + Number(inscricao.valorTotal || 0), 0)?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
                         </span>
                       </div>
                     </div>
