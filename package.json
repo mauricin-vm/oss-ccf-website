@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
-    "start": "next start",
+    "start": "next start --port 3003",
     "lint": "eslint",
     "db:clear": "tsx prisma/clear-database.ts"
   },

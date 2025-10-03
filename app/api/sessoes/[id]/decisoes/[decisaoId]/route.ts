@@ -10,6 +10,7 @@ type StatusProcesso = 'RECEPCIONADO' | 'EM_ANALISE' | 'AGUARDANDO_DOCUMENTOS' | 
 function getTituloHistoricoDecisao(tipoResultado: string): string {
   switch (tipoResultado) {
     case 'SUSPENSO': return 'Processo Suspenso'
+    case 'EM_NEGOCIACAO': return 'Processo em Negociação'
     case 'PEDIDO_VISTA': return 'Pedido de Vista'
     case 'PEDIDO_DILIGENCIA': return 'Pedido de Diligência'
     case 'JULGADO': return 'Processo Julgado'
@@ -20,6 +21,8 @@ function getDescricaoHistoricoDecisao(data: Record<string, unknown>): string {
   switch (data.tipoResultado) {
     case 'SUSPENSO':
       return `Processo suspenso durante sessão de julgamento${data.motivoSuspensao ? `. Motivo: ${data.motivoSuspensao}` : '.'}`
+    case 'EM_NEGOCIACAO':
+      return `Processo em negociação de acordo${data.detalhesNegociacao ? `. Detalhes: ${data.detalhesNegociacao}` : '.'}`
     case 'PEDIDO_VISTA':
       return `Pedido de vista solicitado por ${data.conselheiroPedidoVista}${data.observacoes ? `. Observação: ${data.observacoes}` : '.'}`
     case 'PEDIDO_DILIGENCIA':
@@ -56,7 +59,7 @@ const votoSchema = z.object({
 })
 const atualizarDecisaoSchema = z.object({
   processoId: z.string().min(1, 'Processo é obrigatório'),
-  tipoResultado: z.enum(['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO']).refine(val => ['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'JULGADO'].includes(val), {
+  tipoResultado: z.enum(['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'EM_NEGOCIACAO', 'JULGADO']).refine(val => ['SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA', 'EM_NEGOCIACAO', 'JULGADO'].includes(val), {
     message: 'Tipo de resultado é obrigatório'
   }),
   // Para JULGADO
@@ -65,6 +68,8 @@ const atualizarDecisaoSchema = z.object({
   observacoes: z.string().optional(),
   // Para SUSPENSO
   motivoSuspensao: z.string().optional(),
+  // Para EM_NEGOCIACAO
+  detalhesNegociacao: z.string().optional(),
   // Para PEDIDO_VISTA
   conselheiroPedidoVista: z.string().optional(),
   prazoVista: z.string().optional(),
@@ -231,6 +236,7 @@ export async function PUT(
           tipoDecisao: data.tipoResultado === 'JULGADO' ? (data.tipoDecisao || null) : null,
           observacoes: data.observacoes || '',
           motivoSuspensao: data.motivoSuspensao || null,
+          detalhesNegociacao: data.detalhesNegociacao || null,
           conselheiroPedidoVista: data.conselheiroPedidoVista || null,
           prazoVista: data.prazoVista ? new Date(data.prazoVista) : null,
           especificacaoDiligencia: data.especificacaoDiligencia || null,
@@ -246,11 +252,14 @@ export async function PUT(
           }
         }
       })
-      // Remover votos existentes e criar novos se fornecidos
+
+      // Sempre remover votos existentes primeiro
       await tx.voto.deleteMany({
         where: { decisaoId: decisaoId }
       })
-      if (data.votos && data.votos.length > 0) {
+
+      // Criar novos votos APENAS se o tipo de resultado for JULGADO e houver votos fornecidos
+      if (data.tipoResultado === 'JULGADO' && data.votos && data.votos.length > 0) {
         await tx.voto.createMany({
           data: data.votos.map(voto => ({
             decisaoId: decisaoId,

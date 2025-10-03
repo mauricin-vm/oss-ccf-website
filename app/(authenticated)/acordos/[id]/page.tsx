@@ -23,6 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import Link from 'next/link'
 import { SessionUser } from '@/types'
 import AcordoActions from '@/components/acordo/acordo-actions'
@@ -198,6 +199,9 @@ export default function AcordoPage({ params }: AcordoPageProps) {
     dataPagamento: ''
   })
   const [processandoConclusao, setProcessandoConclusao] = useState(false)
+  const [showEditObservacoesModal, setShowEditObservacoesModal] = useState(false)
+  const [formEdicaoObservacoes, setFormEdicaoObservacoes] = useState('')
+  const [salvandoObservacoes, setSalvandoObservacoes] = useState(false)
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -609,6 +613,55 @@ export default function AcordoPage({ params }: AcordoPageProps) {
       toast.error(errorMessage)
     } finally {
       setProcessandoPagamento(false)
+    }
+  }
+
+  // Funções para edição de observações
+  const handleAbrirEdicaoObservacoes = () => {
+    setFormEdicaoObservacoes((acordo?.observacoes as string) || '')
+    setShowEditObservacoesModal(true)
+  }
+
+  const handleCancelarEdicaoObservacoes = () => {
+    setShowEditObservacoesModal(false)
+    setFormEdicaoObservacoes('')
+  }
+
+  const handleSalvarObservacoes = async () => {
+    if (!acordo?.id) return
+
+    try {
+      setSalvandoObservacoes(true)
+
+      const response = await fetch(`/api/acordos/${acordo.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          observacoes: formEdicaoObservacoes
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        const errorMessage = errorData.error || 'Erro ao atualizar observações'
+        toast.error(errorMessage)
+        return
+      }
+
+      toast.success('Observações atualizadas com sucesso!')
+
+      // Recarregar dados do acordo
+      await loadAcordo()
+
+      handleCancelarEdicaoObservacoes()
+    } catch (error) {
+      console.error('Erro ao atualizar observações:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar observações'
+      toast.error(errorMessage)
+    } finally {
+      setSalvandoObservacoes(false)
     }
   }
 
@@ -1303,16 +1356,33 @@ export default function AcordoPage({ params }: AcordoPageProps) {
             </div>
 
             {/* Observações do Acordo */}
-            {(acordo.observacoes as string) && (
-              <div className="border-t pt-4">
-                <div className="space-y-2">
+            <div className="border-t pt-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-gray-900">Observações do Acordo</h4>
+                  {user.role !== 'VISUALIZADOR' && acordo.status !== 'cancelado' && acordo.status !== 'cumprido' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleAbrirEdicaoObservacoes}
+                      className="h-8 text-gray-900 hover:text-gray-700 hover:bg-gray-100 cursor-pointer"
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Editar
+                    </Button>
+                  )}
+                </div>
+                {(acordo.observacoes as string) ? (
                   <p className="text-sm text-gray-600 leading-relaxed">
                     {acordo.observacoes as string}
                   </p>
-                </div>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">
+                    Nenhuma observação registrada.
+                  </p>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -2154,6 +2224,69 @@ export default function AcordoPage({ params }: AcordoPageProps) {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Edição de Observações */}
+      <Dialog open={showEditObservacoesModal} onOpenChange={handleCancelarEdicaoObservacoes}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5 text-blue-600" />
+              Editar Observações
+            </DialogTitle>
+            <DialogDescription>
+              Edite as observações do acordo. Deixe em branco para remover as observações.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="observacoes-edit">Observações</Label>
+              <Textarea
+                id="observacoes-edit"
+                value={formEdicaoObservacoes}
+                onChange={(e) => setFormEdicaoObservacoes(e.target.value)}
+                placeholder="Digite as observações do acordo..."
+                rows={10}
+                disabled={salvandoObservacoes}
+                className="resize-none min-h-[240px]"
+              />
+              <p className="text-xs text-gray-500">
+                Informações adicionais sobre o acordo que possam ser relevantes.
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancelarEdicaoObservacoes}
+                disabled={salvandoObservacoes}
+                className="cursor-pointer"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSalvarObservacoes}
+                disabled={salvandoObservacoes}
+                className="cursor-pointer"
+              >
+                {salvandoObservacoes ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Salvar Alterações
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

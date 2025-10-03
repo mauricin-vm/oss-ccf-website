@@ -304,7 +304,11 @@ model ProcessoPauta {
   prazoVista        DateTime?
   prazoDiligencia   Int?
   observacoesSessao String?         @db.Text
-  
+
+  // Presidente substituto (quando presidente da sessão é relator/revisor)
+  presidenteSubstitutoId  String?
+  presidenteSubstituto    Conselheiro?  @relation("ProcessoPautaPresidenteSubstituto", fields: [presidenteSubstitutoId], references: [id])
+
   @@unique([processoId, pautaId])
   @@index([processoId])
   @@index([pautaId])
@@ -624,7 +628,8 @@ model Conselheiro {
   sessoes           SessaoJulgamento[] @relation("SessaoConselheiro")
   sessoesPresididas SessaoJulgamento[] @relation("SessaoPresidente")
   votos             Voto[]
-  
+  processosPautaPresididos ProcessoPauta[] @relation("ProcessoPautaPresidenteSubstituto")
+
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 }

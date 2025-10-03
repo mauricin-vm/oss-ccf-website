@@ -791,7 +791,6 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                                 {/* Botão de edição - apenas para admins e processos julgados */}
                                 {(session?.user as SessionUser)?.role === 'ADMIN' &&
                                  processo?.status === 'JULGADO' &&
-                                 decisao.tipoResultado === 'JULGADO' &&
                                  decisao.sessao?.id && (
                                   <Link href={`/sessoes/${decisao.sessao.id}/decisoes/${decisao.id}/editar?from=process`}>
                                     <Button
@@ -904,35 +903,47 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                               )}
 
                               {/* Voto do Presidente se houve empate */}
-                              {decisao.sessao?.presidente && (decisao.votos || []).find((voto: ProcessoVoto) =>
-                                voto.conselheiroId === decisao.sessao?.presidente?.id ||
-                                voto.nomeVotante === decisao.sessao?.presidente?.nome
-                              ) && (
+                              {(() => {
+                                // Encontrar o ProcessoPauta correspondente para obter o presidenteSubstituto
+                                const processoPauta = (processo.pautas || []).find((p: ProcessoPautaWithDetails) =>
+                                  p.pauta?.id === decisao.sessao?.pauta?.id
+                                )
+
+                                // Determinar o presidente correto para esta decisão
+                                const presidenteDoProcesso = processoPauta?.presidenteSubstituto || decisao.sessao?.presidente
+
+                                if (!presidenteDoProcesso) return null
+
+                                // Verificar se existe voto deste presidente
+                                const votoPresidente = (decisao.votos || []).find((voto: ProcessoVoto) =>
+                                  voto.conselheiroId === presidenteDoProcesso.id ||
+                                  voto.nomeVotante === presidenteDoProcesso.nome
+                                )
+
+                                if (!votoPresidente) return null
+
+                                return (
                                   <Card className="p-3 mt-4 border-yellow-300 bg-yellow-50">
                                     <div className="font-medium text-gray-800 mb-2 text-sm flex items-center gap-2">
                                       ⚖️ Voto de Desempate - Presidente
+                                      {processoPauta?.presidenteSubstituto && (
+                                        <span className="text-xs font-normal text-yellow-700">(Substituto)</span>
+                                      )}
                                     </div>
                                     <div className="flex items-center justify-between text-xs">
                                       <div className="flex items-center gap-2">
                                         <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700">
                                           Presidente
                                         </Badge>
-                                        <span className="truncate font-medium">{decisao.sessao.presidente.nome}</span>
+                                        <span className="truncate font-medium">{presidenteDoProcesso.nome}</span>
                                       </div>
-                                      <span className={`font-medium text-xs ${
-                                        getPosicaoVotoInfo(String((decisao.votos || []).find((voto: ProcessoVoto) =>
-                                          voto.conselheiroId === decisao.sessao?.presidente?.id ||
-                                          voto.nomeVotante === decisao.sessao?.presidente?.nome
-                                        )?.posicaoVoto || '')).color
-                                      }`}>
-                                        {(decisao.votos || []).find((voto: ProcessoVoto) =>
-                                          voto.conselheiroId === decisao.sessao?.presidente?.id ||
-                                          voto.nomeVotante === decisao.sessao?.presidente?.nome
-                                        )?.posicaoVoto}
+                                      <span className={`font-medium text-xs ${getPosicaoVotoInfo(String(votoPresidente.posicaoVoto || '')).color}`}>
+                                        {votoPresidente.posicaoVoto}
                                       </span>
                                     </div>
                                   </Card>
-                                )}
+                                )
+                              })()}
 
                               <p className="text-xs text-gray-500 mt-2">
                                 Registrada em {new Date(decisao.dataDecisao).toLocaleString('pt-BR')}

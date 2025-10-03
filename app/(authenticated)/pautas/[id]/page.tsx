@@ -25,12 +25,15 @@ import {
   AlertCircle,
   Trash2,
   Plus,
-  X
+  X,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react'
 import Link from 'next/link'
 import { SessionUser, PautaWithRelations, ProcessoWithRelations } from '@/types'
 import { User as PrismaUser } from '@prisma/client'
 import { toast } from 'sonner'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 
 import PautaActions from '@/components/pauta/pauta-actions'
 import { formatLocalDate } from '@/lib/utils/date'
@@ -166,6 +169,13 @@ export default function PautaDetalhesPage({
   }
 
   const handleSelectProcess = async (processo: ProcessoWithRelations) => {
+    // Validar status do processo
+    const statusPermitidos = ['RECEPCIONADO', 'EM_ANALISE', 'EM_NEGOCIACAO', 'SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA']
+    if (!statusPermitidos.includes(processo.status)) {
+      toast.warning(`Processo com status "${getStatusInfo(processo.status).label}" não pode ser incluído em pauta`)
+      return
+    }
+
     setSelectedProcess(processo)
 
     // Preencher automaticamente com conselheiro correto para distribuição
@@ -269,6 +279,59 @@ export default function PautaDetalhesPage({
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleReorderProcesso = async (startIndex: number, endIndex: number) => {
+    if (!pauta) return
+
+    // Criar cópia do array de processos
+    const processosOrdenados = Array.from(pauta.processos)
+    const [removed] = processosOrdenados.splice(startIndex, 1)
+    processosOrdenados.splice(endIndex, 0, removed)
+
+    // Atualizar ordens
+    const processosComNovaOrdem = processosOrdenados.map((processo, index) => ({
+      ...processo,
+      ordem: index + 1
+    }))
+
+    // Atualizar estado local imediatamente para feedback visual
+    setPauta({
+      ...pauta,
+      processos: processosComNovaOrdem
+    })
+
+    // Salvar no backend
+    try {
+      const response = await fetch(`/api/pautas/${id}/processos/ordem`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          processosOrdem: processosComNovaOrdem.map((p, index) => ({
+            processoId: p.processo.id,
+            ordem: index + 1
+          }))
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao atualizar ordem dos processos')
+      }
+
+      toast.success('Ordem dos processos atualizada')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao atualizar ordem')
+      // Reverter mudança em caso de erro
+      handleEditSuccess()
+    }
+  }
+
+  const onDragEnd = (result: { destination?: { index: number } | null; source: { index: number } }) => {
+    if (!result.destination) return
+    handleReorderProcesso(result.source.index, result.destination.index)
   }
 
   if (!session) {
@@ -520,77 +583,139 @@ export default function PautaDetalhesPage({
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {pauta.processos.map((processoPauta) => {
-                  const processo = processoPauta.processo
-                  const foiJulgado = (pauta.sessao as Record<string, unknown>)?.decisoes ? ((pauta.sessao as Record<string, unknown>).decisoes as Record<string, unknown>[]).some((d: Record<string, unknown>) => d.processoId === processo.id) : false
+              <DragDropContext onDragEnd={onDragEnd}>
+                <Droppable droppableId="processos-pauta">
+                  {(provided) => (
+                    <div
+                      {...provided.droppableProps}
+                      ref={provided.innerRef}
+                      className="space-y-4"
+                    >
+                      {pauta.processos.map((processoPauta, index) => {
+                        const processo = processoPauta.processo
+                        const foiJulgado = (pauta.sessao as Record<string, unknown>)?.decisoes ? ((pauta.sessao as Record<string, unknown>).decisoes as Record<string, unknown>[]).some((d: Record<string, unknown>) => d.processoId === processo.id) : false
 
-                  return (
-                    <div key={processoPauta.id} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-2 flex-1">
-                          <div className="flex items-center gap-3">
-                            <span className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 rounded-full font-bold text-sm">
-                              {processoPauta.ordem}
-                            </span>
-                            <Link
-                              href={`/processos/${processo.id}`}
-                              className="font-semibold text-lg hover:text-blue-600 transition-colors"
-                            >
-                              {processo.numero}
-                            </Link>
-                            <Badge className={getStatusInfo(processo.status).color}>
-                              {getStatusInfo(processo.status).label}
-                            </Badge>
-                          </div>
+                        return (
+                          <Draggable
+                            key={processoPauta.id}
+                            draggableId={processoPauta.id}
+                            index={index}
+                            isDragDisabled={pauta.status !== 'aberta' || !canEdit || foiJulgado}
+                          >
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className={`border rounded-lg p-4 ${snapshot.isDragging ? 'shadow-lg bg-blue-50' : ''}`}
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="space-y-2 flex-1">
+                                    <div className="flex items-center gap-3">
+                                      {canEdit && pauta.status === 'aberta' && !foiJulgado && (
+                                        <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                                          <span className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 rounded-full font-bold text-sm">
+                                            {processoPauta.ordem}
+                                          </span>
+                                        </div>
+                                      )}
+                                      {(!canEdit || pauta.status !== 'aberta' || foiJulgado) && (
+                                        <span className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 rounded-full font-bold text-sm">
+                                          {processoPauta.ordem}
+                                        </span>
+                                      )}
+                                      <Link
+                                        href={`/processos/${processo.id}`}
+                                        className="font-semibold text-lg hover:text-blue-600 transition-colors"
+                                      >
+                                        {processo.numero}
+                                      </Link>
+                                      <Badge className={getStatusInfo(processo.status).color}>
+                                        {getStatusInfo(processo.status).label}
+                                      </Badge>
+                                    </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4" />
-                              <span>{processo.contribuinte.nome}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <FileText className="h-4 w-4" />
-                              <span>{tipoProcessoMap[processo.tipo as keyof typeof tipoProcessoMap]}</span>
-                            </div>
-                          </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                                      <div className="flex items-center gap-2">
+                                        <User className="h-4 w-4" />
+                                        <span>{processo.contribuinte.nome}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <FileText className="h-4 w-4" />
+                                        <span>{tipoProcessoMap[processo.tipo as keyof typeof tipoProcessoMap]}</span>
+                                      </div>
+                                    </div>
 
-                          {(processoPauta.distribuidoPara as string) && (
-                            <div className="text-sm">
-                              <strong>Distribuição:</strong> {processoPauta.distribuidoPara as string}
-                            </div>
-                          )}
+                                    {(processoPauta.distribuidoPara as string) && (
+                                      <div className="text-sm">
+                                        <strong>Distribuição:</strong> {processoPauta.distribuidoPara as string}
+                                      </div>
+                                    )}
 
-                          {/* Última tramitação */}
-                          {processo.tramitacoes && processo.tramitacoes.length > 0 && (
-                            <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                              <strong>Última tramitação:</strong> {processo.tramitacoes[0].setorOrigem} → {processo.tramitacoes[0].setorDestino}
-                              {((processo.tramitacoes[0] as Record<string, unknown>).usuario as Record<string, unknown>) && (
-                                <span> (por {((processo.tramitacoes[0] as Record<string, unknown>).usuario as Record<string, unknown>).name as string})</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                                    {/* Última tramitação */}
+                                    {processo.tramitacoes && processo.tramitacoes.length > 0 && (
+                                      <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                                        <strong>Última tramitação:</strong> {processo.tramitacoes[0].setorOrigem} → {processo.tramitacoes[0].setorDestino}
+                                        {((processo.tramitacoes[0] as Record<string, unknown>).usuario as Record<string, unknown>) && (
+                                          <span> (por {((processo.tramitacoes[0] as Record<string, unknown>).usuario as Record<string, unknown>).name as string})</span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
 
-                        {/* Ações do Processo */}
-                        {canEdit && pauta.status === 'aberta' && !foiJulgado && (
-                          <div className="flex flex-col gap-2 ml-4">
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleRemoveProcesso(processo.id, processo.numero)}
-                              className="cursor-pointer"
-                              disabled={loading}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
+                                  {/* Ações do Processo */}
+                                  {canEdit && pauta.status === 'aberta' && !foiJulgado && (
+                                    <div className="flex gap-2 ml-4">
+                                      <div className="flex flex-col gap-1">
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleReorderProcesso(index, index - 1)}
+                                          disabled={index === 0}
+                                          className="p-1 h-6 w-6 cursor-pointer hover:bg-gray-100 disabled:cursor-not-allowed"
+                                          title="Mover para cima"
+                                        >
+                                          <ChevronUp className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleReorderProcesso(index, index + 1)}
+                                          disabled={index === pauta.processos.length - 1}
+                                          className="p-1 h-6 w-6 cursor-pointer hover:bg-gray-100 disabled:cursor-not-allowed"
+                                          title="Mover para baixo"
+                                        >
+                                          <ChevronDown className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                      <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => handleRemoveProcesso(processo.id, processo.numero)}
+                                        className="cursor-pointer"
+                                        disabled={loading}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        )
+                      })}
+                      {provided.placeholder}
                     </div>
-                  )
-                })}
-              </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
+              {canEdit && pauta.status === 'aberta' && pauta.processos.length > 1 && (
+                <p className="text-xs text-gray-500 mt-4">
+                  💡 Dica: Arraste os processos ou use os botões ↑↓ para reordenar a sequência de julgamento
+                </p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

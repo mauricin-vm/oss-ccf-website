@@ -62,16 +62,13 @@ export async function POST(
       )
     }
     // Verificar se o processo pode ser incluído
-    const statusPermitidos = ['EM_ANALISE', 'SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA']
-    const statusJulgados = ['JULGADO', 'EM_CUMPRIMENTO', 'CONCLUIDO']
-    if (!statusPermitidos.includes(processo.status) && !statusJulgados.includes(processo.status)) {
+    const statusPermitidos = ['RECEPCIONADO', 'EM_ANALISE', 'EM_NEGOCIACAO', 'SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA']
+    if (!statusPermitidos.includes(processo.status)) {
       return NextResponse.json(
         { error: 'Processo não pode ser incluído em pauta com este status' },
         { status: 400 }
       )
     }
-    // Verificar se é repautamento de processo já julgado
-    const isRepautamentoJulgado = statusJulgados.includes(processo.status)
     // Buscar distribuição anterior do processo
     const ultimaDistribuicao = await prisma.processoPauta.findFirst({
       where: { processoId },
@@ -170,19 +167,13 @@ export async function POST(
         data: { status: 'EM_PAUTA' }
       })
       // Criar histórico no processo
-      let tituloHistorico = 'Processo incluído em pauta'
-      let tipoHistorico = 'PAUTA'
-      if (isRepautamentoJulgado) {
-        tituloHistorico = 'Processo repautado'
-        tipoHistorico = 'REPAUTAMENTO'
-      }
       await tx.historicoProcesso.create({
         data: {
           processoId,
           usuarioId: user.id,
-          titulo: tituloHistorico,
-          descricao: `Processo incluído na ${pauta.numero} agendada para ${new Date(pauta.dataPauta.getTime() + pauta.dataPauta.getTimezoneOffset() * 60000).toLocaleDateString('pt-BR')}${observacaoDistribuicao}${isRepautamentoJulgado ? ' (ATENÇÃO: Processo já foi julgado anteriormente)' : ''}`,
-          tipo: tipoHistorico
+          titulo: 'Processo incluído em pauta',
+          descricao: `Processo incluído na ${pauta.numero} agendada para ${new Date(pauta.dataPauta.getTime() + pauta.dataPauta.getTimezoneOffset() * 60000).toLocaleDateString('pt-BR')}${observacaoDistribuicao}`,
+          tipo: 'PAUTA'
         }
       })
       // Criar tramitação para o processo (apenas se houver distribuição)

@@ -123,6 +123,7 @@ export default async function EditarDecisaoPage({ params, searchParams }: Editar
               tipoDecisao: decisao.tipoDecisao,
               observacoes: decisao.observacoes,
               motivoSuspensao: decisao.motivoSuspensao,
+              detalhesNegociacao: decisao.detalhesNegociacao,
               conselheiroPedidoVista: decisao.conselheiroPedidoVista,
               prazoVista: decisao.prazoVista ? decisao.prazoVista.toString() : undefined,
               especificacaoDiligencia: decisao.especificacaoDiligencia,

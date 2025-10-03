@@ -13,7 +13,6 @@ import {
   BarChart3,
   Users,
   LogOut,
-  ChevronRight,
   Building2,
   Shield,
   Activity,
@@ -32,6 +31,12 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
   const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(false)
 
+  const TramitacoesIcon = () => (
+    <div className="h-5 w-4 flex items-center justify-center font-bold text-xs">
+      T
+    </div>
+  )
+
   const menuItems = [
     {
       title: 'Dashboard',
@@ -48,7 +53,7 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
     {
       title: 'Tramitações',
       href: '/tramitacoes',
-      icon: ChevronRight,
+      icon: TramitacoesIcon,
       roles: ['ADMIN', 'FUNCIONARIO']
     },
     {
@@ -110,11 +115,11 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
     // }
   ]
 
-  const filteredMenuItems = menuItems.filter(item => 
+  const filteredMenuItems = menuItems.filter(item =>
     item.roles.includes(userRole)
   )
 
-  const filteredAdminItems = adminItems.filter(item => 
+  const filteredAdminItems = adminItems.filter(item =>
     item.roles.includes(userRole)
   )
 
@@ -142,7 +147,7 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
           {filteredMenuItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href
-            
+
             return (
               <Link
                 key={item.href}
@@ -175,7 +180,7 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
               {filteredAdminItems.map((item) => {
                 const Icon = item.icon
                 const isActive = pathname === item.href
-                
+
                 return (
                   <Link
                     key={item.href}

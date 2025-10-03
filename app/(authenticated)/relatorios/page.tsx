@@ -253,6 +253,7 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
     (async () => {
       const acordosCompDacao = await prisma.acordo.findMany({
         where: {
+          status: { in: ['ativo', 'cumprido'] },
           processo: {
             tipo: { in: ['COMPENSACAO', 'DACAO_PAGAMENTO'] }
           },
@@ -291,6 +292,7 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
     (async () => {
       const acordosTransacao = await prisma.acordo.findMany({
         where: {
+          status: { in: ['ativo', 'cumprido'] },
           processo: {
             tipo: 'TRANSACAO_EXCEPCIONAL'
           },
@@ -308,16 +310,15 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
       })
 
       return acordosTransacao.reduce((total, acordo) => {
-        if (acordo.transacao) {
-          // Usar valorTotalProposto + custas + honorários (como na API)
-          const valorProposto = Number(acordo.transacao.valorTotalProposto || 0)
-          const custasAdvocaticias = Number(acordo.transacao.custasAdvocaticias || 0)
-          const honorarios = Number(acordo.transacao.honorariosValor || 0)
+        // Usar mesma lógica da página de listagem: soma de TODAS as parcelas + custas
+        const valorParcelas = acordo.parcelas.reduce((sum, parcela) => {
+          return sum + Number(parcela.valor || 0)
+        }, 0)
 
-          const valorTotal = valorProposto + custasAdvocaticias + honorarios
-          return total + valorTotal
-        }
-        return total
+        const custasAdvocaticias = Number(acordo.transacao?.custasAdvocaticias || 0)
+        const valorTotal = valorParcelas + custasAdvocaticias
+
+        return total + valorTotal
       }, 0)
     })(),
 
@@ -473,6 +474,7 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
         }),
         prisma.acordo.findMany({
           where: {
+            status: { in: ['ativo', 'cumprido'] },
             processo: { tipo },
             ...acordoDateFilter
           },
@@ -503,14 +505,13 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
           const valorHonorarios = Number(acordo.dacao.honorariosValor || 0)
           return total + valorOferecido + valorCustas + valorHonorarios
         } else if (tipo === 'TRANSACAO_EXCEPCIONAL') {
-          if (acordo.transacao) {
-            // Usar valorTotalProposto + custas + honorários (como na API)
-            const valorProposto = Number(acordo.transacao.valorTotalProposto || 0)
-            const custasAdvocaticias = Number(acordo.transacao.custasAdvocaticias || 0)
-            const honorarios = Number(acordo.transacao.honorariosValor || 0)
-            return total + valorProposto + custasAdvocaticias + honorarios
-          }
-          return total
+          // Usar mesma lógica da página de listagem: soma de TODAS as parcelas + custas
+          const valorParcelas = acordo.parcelas?.reduce((sum, parcela) => {
+            return sum + Number(parcela.valor || 0)
+          }, 0) || 0
+
+          const custasAdvocaticias = Number(acordo.transacao?.custasAdvocaticias || 0)
+          return total + valorParcelas + custasAdvocaticias
         } else {
           return total + Number((acordo as { valorFinal?: number }).valorFinal || 0)
         }
@@ -611,6 +612,7 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
             // Buscar acordos de compensação e dação
             const acordosCompDacao = await prisma.acordo.findMany({
               where: {
+                status: { in: ['ativo', 'cumprido'] },
                 processo: {
                   tipo: { in: ['COMPENSACAO', 'DACAO_PAGAMENTO'] },
                   decisoes: {
@@ -648,6 +650,7 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
             // Buscar acordos de transação excepcional
             const acordosTransacao = await prisma.acordo.findMany({
               where: {
+                status: { in: ['ativo', 'cumprido'] },
                 processo: {
                   tipo: 'TRANSACAO_EXCEPCIONAL',
                   decisoes: {
@@ -668,14 +671,13 @@ async function getDashboardData(filters?: { dataInicio?: Date, dataFim?: Date })
             })
 
             const valorTransacao = acordosTransacao.reduce((total, acordo) => {
-              if (acordo.transacao) {
-                // Usar valorTotalProposto + custas + honorários (como na API)
-                const valorProposto = Number(acordo.transacao.valorTotalProposto || 0)
-                const custasAdvocaticias = Number(acordo.transacao.custasAdvocaticias || 0)
-                const honorarios = Number(acordo.transacao.honorariosValor || 0)
-                return total + valorProposto + custasAdvocaticias + honorarios
-              }
-              return total
+              // Usar mesma lógica da página de listagem: soma de TODAS as parcelas + custas
+              const valorParcelas = acordo.parcelas?.reduce((sum, parcela) => {
+                return sum + Number(parcela.valor || 0)
+              }, 0) || 0
+
+              const custasAdvocaticias = Number(acordo.transacao?.custasAdvocaticias || 0)
+              return total + valorParcelas + custasAdvocaticias
             }, 0)
 
             valorTotalCorreto = Number(valorCompDacao || 0) + Number(valorTransacao || 0)

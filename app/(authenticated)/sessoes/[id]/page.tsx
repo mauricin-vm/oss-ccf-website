@@ -64,6 +64,14 @@ async function getSessao(id: string) {
                     }
                   }
                 }
+              },
+              presidenteSubstituto: {
+                select: {
+                  id: true,
+                  nome: true,
+                  email: true,
+                  cargo: true
+                }
               }
             },
             orderBy: { ordem: 'asc' }
@@ -630,34 +638,42 @@ export default async function SessaoPage({ params }: SessaoPageProps) {
                           )}
 
                           {/* Voto do Presidente se houve empate */}
-                          {sessao.presidente && decisao.votos.find((voto: Record<string, unknown>) =>
-                            voto.conselheiroId === sessao.presidente?.id ||
-                            voto.nomeVotante === sessao.presidente?.nome
-                          ) && (
+                          {(() => {
+                            // Determinar o presidente correto para este processo
+                            const presidenteDoProcesso = processoPauta.presidenteSubstituto || sessao.presidente
+
+                            if (!presidenteDoProcesso) return null
+
+                            // Verificar se existe voto deste presidente
+                            const votoPresidente = decisao.votos.find((voto: Record<string, unknown>) =>
+                              voto.conselheiroId === presidenteDoProcesso.id ||
+                              voto.nomeVotante === presidenteDoProcesso.nome
+                            )
+
+                            if (!votoPresidente) return null
+
+                            return (
                               <Card className="p-3 mt-4 border-yellow-300 bg-yellow-50">
                                 <div className="font-medium text-gray-800 mb-2 text-sm flex items-center gap-2">
                                   ⚖️ Voto de Desempate - Presidente
+                                  {processoPauta.presidenteSubstituto && (
+                                    <span className="text-xs font-normal text-yellow-700">(Substituto)</span>
+                                  )}
                                 </div>
                                 <div className="flex items-center justify-between text-xs">
                                   <div className="flex items-center gap-2">
                                     <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700">
                                       Presidente
                                     </Badge>
-                                    <span className="truncate font-medium">{sessao.presidente.nome}</span>
+                                    <span className="truncate font-medium">{presidenteDoProcesso.nome}</span>
                                   </div>
-                                  <span className={`font-medium text-xs ${getPosicaoVotoInfo(String(decisao.votos.find((voto: Record<string, unknown>) =>
-                                    voto.conselheiroId === sessao.presidente?.id ||
-                                    voto.nomeVotante === sessao.presidente?.nome
-                                  )?.posicaoVoto || '')).color
-                                    }`}>
-                                    {decisao.votos.find((voto: Record<string, unknown>) =>
-                                      voto.conselheiroId === sessao.presidente?.id ||
-                                      voto.nomeVotante === sessao.presidente?.nome
-                                    )?.posicaoVoto}
+                                  <span className={`font-medium text-xs ${getPosicaoVotoInfo(String(votoPresidente.posicaoVoto || '')).color}`}>
+                                    {votoPresidente.posicaoVoto}
                                   </span>
                                 </div>
                               </Card>
-                            )}
+                            )
+                          })()}
 
                           <p className="text-xs text-gray-500 mt-2">
                             Registrada em {new Date(decisao.dataDecisao).toLocaleString('pt-BR')}

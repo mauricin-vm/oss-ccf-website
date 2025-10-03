@@ -259,6 +259,13 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
       return // Já foi adicionado
     }
 
+    // Validar status do processo
+    const statusPermitidos = ['RECEPCIONADO', 'EM_ANALISE', 'EM_NEGOCIACAO', 'SUSPENSO', 'PEDIDO_VISTA', 'PEDIDO_DILIGENCIA']
+    if (!statusPermitidos.includes(processo.status)) {
+      toast.warning(`Processo com status "${getStatusInfo(processo.status).label}" não pode ser incluído em pauta`)
+      return
+    }
+
     const conselheiroParaDistribuicao = getConselheiroParaDistribuicao(processo)
 
     setSelectedProcessos(prev => [...prev, {

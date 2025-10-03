@@ -431,6 +431,12 @@ export interface ProcessoPautaWithDetails {
     numero: string
     dataPauta: string
   }
+  presidenteSubstituto?: {
+    id: string
+    nome: string
+    email?: string
+    cargo?: string
+  }
 }
 
 export interface ProcessoHistorico {

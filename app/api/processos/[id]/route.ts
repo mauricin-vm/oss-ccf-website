@@ -53,7 +53,15 @@ export async function GET(
         },
         pautas: {
           include: {
-            pauta: true
+            pauta: true,
+            presidenteSubstituto: {
+              select: {
+                id: true,
+                nome: true,
+                email: true,
+                cargo: true
+              }
+            }
           },
           orderBy: { pauta: { dataPauta: 'desc' } }
         },

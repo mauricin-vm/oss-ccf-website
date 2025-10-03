@@ -89,10 +89,10 @@ export default function VotacaoModal({
   const relatoresData = relatoresRevisores.length > 0
     ? relatoresRevisores
     : [
-        ...(processo.relator ? [{ nome: processo.relator, tipo: 'RELATOR' as const }] : []),
-        ...(processo.revisores || []).map(revisor => ({ nome: revisor, tipo: 'REVISOR' as const })),
-        ...revisoresAdicionais.map(revisor => ({ nome: revisor, tipo: 'REVISOR' as const }))
-      ]
+      ...(processo.relator ? [{ nome: processo.relator, tipo: 'RELATOR' as const }] : []),
+      ...(processo.revisores || []).map(revisor => ({ nome: revisor, tipo: 'REVISOR' as const })),
+      ...revisoresAdicionais.map(revisor => ({ nome: revisor, tipo: 'REVISOR' as const }))
+    ]
 
   useEffect(() => {
     if (isOpen) {
@@ -104,8 +104,10 @@ export default function VotacaoModal({
       setVotoPresidente(null)
       setTemEmpate(false)
 
-      // Filtrar conselheiros excluindo relatores e revisores
+      // Filtrar conselheiros excluindo relatores, revisores e presidente
       const conselheirosParaVotar = conselheiros.filter(conselheiro => {
+        // Excluir o presidente (não vota na etapa 2, apenas em caso de empate)
+        if (presidente && conselheiro.id === presidente.id) return false
         // Excluir o relator atual
         if (conselheiro.nome === processo.relator) return false
         // Excluir revisores originais do processo
@@ -119,6 +121,7 @@ export default function VotacaoModal({
         posicao: 'DEFERIDO' as const
       })))
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, conselheiros, processo.relator, processo.revisores])
 
   // Preparar lista inicial de relatores/revisores apenas uma vez quando o modal abre
@@ -127,9 +130,9 @@ export default function VotacaoModal({
       const relatoresIniciais = relatoresRevisores.length > 0
         ? relatoresRevisores
         : [
-            ...(processo.relator ? [{ nome: processo.relator, tipo: 'RELATOR' as const }] : []),
-            ...(processo.revisores || []).map(revisor => ({ nome: revisor, tipo: 'REVISOR' as const }))
-          ]
+          ...(processo.relator ? [{ nome: processo.relator, tipo: 'RELATOR' as const }] : []),
+          ...(processo.revisores || []).map(revisor => ({ nome: revisor, tipo: 'REVISOR' as const }))
+        ]
 
       setVotosRelatores(relatoresIniciais.map(r => ({
         nome: r.nome,
@@ -340,8 +343,10 @@ export default function VotacaoModal({
   }
 
   const renderEtapa1 = () => {
-    // Obter conselheiros disponíveis para ser revisor (excluir relator e revisores já adicionados)
+    // Obter conselheiros disponíveis para ser revisor (excluir presidente, relator e revisores já adicionados)
     const conselheirosDisponiveis = conselheiros.filter(conselheiro => {
+      // Excluir o presidente
+      if (presidente && conselheiro.id === presidente.id) return false
       // Excluir o relator atual
       if (conselheiro.nome === processo.relator) return false
       // Excluir revisores originais do processo
@@ -502,8 +507,8 @@ export default function VotacaoModal({
               <p className="text-sm text-gray-500 mt-1">Adicione revisores ou pule para a próxima etapa</p>
             </div>
           )}
+        </div>
       </div>
-    </div>
     )
   }
 
@@ -516,7 +521,7 @@ export default function VotacaoModal({
 
     // Mapear cada coluna com os relatores que votaram assim
     const colunasComRelatores = colunas.map(posicao => {
-      const relatoresComEssePosicao = votosRelatores.filter(r => 
+      const relatoresComEssePosicao = votosRelatores.filter(r =>
         resolverPosicaoVoto(r) === posicao
       )
       return { posicao, relatores: relatoresComEssePosicao }
@@ -725,17 +730,16 @@ export default function VotacaoModal({
                       id={`presidente-${posicao}`}
                       className={
                         posicao === 'DEFERIDO' ? 'border-green-600 text-green-600' :
-                        posicao === 'INDEFERIDO' ? 'border-red-600 text-red-600' :
-                        'border-yellow-600 text-yellow-600'
+                          posicao === 'INDEFERIDO' ? 'border-red-600 text-red-600' :
+                            'border-yellow-600 text-yellow-600'
                       }
                     />
                     <Label
                       htmlFor={`presidente-${posicao}`}
-                      className={`font-medium ${
-                        posicao === 'DEFERIDO' ? 'text-green-700' :
+                      className={`font-medium ${posicao === 'DEFERIDO' ? 'text-green-700' :
                         posicao === 'INDEFERIDO' ? 'text-red-700' :
-                        'text-yellow-700'
-                      }`}
+                          'text-yellow-700'
+                        }`}
                     >
                       {posicao}
                     </Label>
@@ -761,7 +765,7 @@ export default function VotacaoModal({
     if (nomes.length === 0) return ''
     if (nomes.length === 1) return nomes[0]
     if (nomes.length === 2) return `${nomes[0]} e ${nomes[1]}`
-    
+
     const todosExcetoUltimo = nomes.slice(0, -1).join(', ')
     const ultimo = nomes[nomes.length - 1]
     return `${todosExcetoUltimo} e ${ultimo}`
@@ -894,11 +898,10 @@ export default function VotacaoModal({
                   <span className="font-medium text-sm">{presidente.nome}</span>
                 </div>
                 <span className="text-lg">→</span>
-                <span className={`font-bold text-sm px-3 py-1 rounded-full ${
-                  votoPresidente === 'DEFERIDO' ? 'bg-green-100 text-green-700' :
+                <span className={`font-bold text-sm px-3 py-1 rounded-full ${votoPresidente === 'DEFERIDO' ? 'bg-green-100 text-green-700' :
                   votoPresidente === 'INDEFERIDO' ? 'bg-red-100 text-red-700' :
-                  'bg-yellow-100 text-yellow-700'
-                }`}>
+                    'bg-yellow-100 text-yellow-700'
+                  }`}>
                   {votoPresidente}
                 </span>
               </div>

@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Gavel, Clock, Pause, Search, CheckCircle, Users, DollarSign } from 'lucide-react'
+import { Loader2, Gavel, Clock, Pause, Search, CheckCircle, Users, DollarSign, AlertTriangle } from 'lucide-react'
 import VotacaoModal from '@/components/modals/votacao-modal'
 import { toast } from 'sonner'
 
@@ -170,6 +170,8 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
   const [showVotacaoModal, setShowVotacaoModal] = useState(false)
   const [votacaoResultado, setVotacaoResultado] = useState<ResultadoVotacaoDecisao | null>(null)
   const [presidente, setPresidente] = useState<{ id: string; nome: string; email?: string; cargo?: string } | null>(null)
+  const [presidenteSubstituto, setPresidenteSubstituto] = useState<{ id: string; nome: string; email?: string; cargo?: string } | null>(null)
+  const [temConflitoPreidente, setTemConflitoPresidente] = useState(false)
 
   const {
     register,
@@ -367,6 +369,31 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
     fetchDados()
   }, [sessaoId, searchParams, setValue])
 
+  // Detectar conflito de interesse quando processo é selecionado
+  useEffect(() => {
+    if (!selectedProcesso || !presidente) {
+      setTemConflitoPresidente(false)
+      setPresidenteSubstituto(null)
+      return
+    }
+
+    // Verificar se o presidente é relator ou revisor do processo
+    const relator = selectedProcesso.relator
+    const revisores = selectedProcesso.revisores || []
+
+    const presidenteEhRelator = relator && relator === presidente.nome
+    const presidenteEhRevisor = revisores.some(rev => rev === presidente.nome)
+
+    const temConflito = presidenteEhRelator || presidenteEhRevisor
+
+    setTemConflitoPresidente(temConflito)
+
+    // Limpar presidente substituto se não houver mais conflito
+    if (!temConflito) {
+      setPresidenteSubstituto(null)
+    }
+  }, [selectedProcesso, presidente])
+
   const onSubmit = async (data: DecisaoInput) => {
     setIsLoading(true)
 
@@ -377,12 +404,20 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
       return
     }
 
+    // Validar presidente substituto se houver conflito
+    if (temConflitoPreidente && !presidenteSubstituto) {
+      toast.warning('É necessário selecionar um presidente substituto para presidir este julgamento.')
+      setIsLoading(false)
+      return
+    }
+
     try {
       const payload = {
         ...data,
         // Limpar tipoDecisao se não for JULGADO
         tipoDecisao: data.tipoResultado === 'JULGADO' ? data.tipoDecisao : undefined,
-        votos: votos.length > 0 ? votos : undefined
+        votos: votos.length > 0 ? votos : undefined,
+        presidenteSubstitutoId: presidenteSubstituto?.id || undefined
       }
 
       const response = await fetch(`/api/sessoes/${sessaoId}/decisoes`, {
@@ -627,6 +662,60 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Presidente Substituto - Conflito de Interesse */}
+      {temConflitoPreidente && selectedProcesso && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-800">
+              <AlertTriangle className="h-5 w-5" />
+              Conflito de Interesse Detectado
+            </CardTitle>
+            <CardDescription className="text-amber-700">
+              O presidente {presidente?.nome} é {selectedProcesso.relator === presidente?.nome ? 'relator' : 'revisor'} deste processo.
+              Selecione um conselheiro para presidir este julgamento.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="presidenteSubstituto" className="text-amber-900">
+                Presidente Substituto <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={presidenteSubstituto?.id || ''}
+                onValueChange={(value) => {
+                  const conselheiro = conselheiros.find(c => c.id === value)
+                  setPresidenteSubstituto(conselheiro || null)
+                }}
+              >
+                <SelectTrigger className="w-full bg-white">
+                  <SelectValue placeholder="Selecione um conselheiro para presidir este julgamento..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {conselheiros
+                    .filter(conselheiro => {
+                      // Excluir o presidente atual
+                      if (conselheiro.id === presidente?.id) return false
+                      // Excluir relator
+                      if (conselheiro.nome === selectedProcesso.relator) return false
+                      // Excluir revisores
+                      if (selectedProcesso.revisores && selectedProcesso.revisores.includes(conselheiro.nome)) return false
+                      return true
+                    })
+                    .map((conselheiro) => (
+                      <SelectItem key={conselheiro.id} value={conselheiro.id}>
+                        {conselheiro.nome}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-amber-700">
+                Este conselheiro presidirá apenas o julgamento deste processo e terá o voto de desempate, caso necessário.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tipo de Resultado */}
       {selectedProcesso && (
@@ -1115,7 +1204,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
             ...(selectedProcesso.relator ? [{ nome: selectedProcesso.relator, tipo: 'RELATOR' as const }] : []),
             ...(selectedProcesso.revisores ? selectedProcesso.revisores.map(revisor => ({ nome: revisor, tipo: 'REVISOR' as const })) : [])
           ]}
-          presidente={presidente}
+          presidente={presidenteSubstituto || presidente}
         />
       )}
     </form>

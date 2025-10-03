@@ -156,72 +156,75 @@ export default function AcordosPage() {
     }
   }
 
-  // Função para verificar se acordo está vencido
+  // Função para calcular status da parcela dinamicamente (como na página de detalhes)
+  const calcularStatusParcela = (dataVencimento: string, dataPagamento?: string) => {
+    if (dataPagamento) {
+      return 'PAGO'
+    }
+
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+    const vencimento = new Date(dataVencimento)
+    vencimento.setHours(0, 0, 0, 0)
+
+    if (vencimento < hoje) {
+      return 'ATRASADO'
+    }
+
+    return 'PENDENTE'
+  }
+
+  // Função para verificar se acordo está vencido (mesma lógica da página de detalhes)
   const isVencido = (acordo: Acordo) => {
     if (acordo.status !== 'ativo') return false
 
     const hoje = new Date()
     hoje.setHours(0, 0, 0, 0)
 
-    // Para acordos de transação excepcional, verificar parcelas atrasadas
-    if (acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL') {
-      // Verificar se tem parcelas atrasadas (acordo ou honorários)
-      const temParcelaAtrasada = (acordo.parcelas || []).some(parcela => parcela.status === 'ATRASADO')
-      if (temParcelaAtrasada) return true
+    // Verificar se há parcelas vencidas (ATRASADO) - calculando dinamicamente
+    const temParcelaVencida = (acordo.parcelas || []).some(parcela =>
+      calcularStatusParcela(parcela.dataVencimento, parcela.pagamentos.length > 0 ? 'pago' : undefined) === 'ATRASADO'
+    )
 
-      // Verificar se custas estão vencidas e não pagas
-      if (acordo.transacaoDetails?.custasAdvocaticias &&
-          acordo.transacaoDetails.custasDataVencimento &&
-          !acordo.transacaoDetails.custasDataPagamento) {
-        const vencimentoCustas = new Date(acordo.transacaoDetails.custasDataVencimento)
-        vencimentoCustas.setHours(0, 0, 0, 0)
-        if (vencimentoCustas < hoje) return true
-      }
+    // Verificar se há custas vencidas (custas com data de vencimento passada e sem data de pagamento)
+    let temCustasVencida = false
+    let custasDataVencimento = null
+    let custasDataPagamento = null
 
-      return false
-    }
-
-    // Para compensação e dação, verificar custas e honorários
-    if (acordo.processo?.tipo === 'COMPENSACAO' || acordo.processo?.tipo === 'DACAO_PAGAMENTO') {
-      const details = acordo.processo?.tipo === 'COMPENSACAO' ? acordo.compensacaoDetails : acordo.dacaoDetails
-
-      if (details) {
-        // Verificar custas vencidas e não pagas
-        if (details.custasAdvocaticias &&
-            details.custasDataVencimento &&
-            !details.custasDataPagamento) {
-          const vencimentoCustas = new Date(details.custasDataVencimento)
+    // Buscar detalhes de custas baseado no tipo de processo
+    if (acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' && acordo.transacaoDetails) {
+      custasDataVencimento = acordo.transacaoDetails.custasDataVencimento
+      custasDataPagamento = acordo.transacaoDetails.custasDataPagamento
+      if (acordo.transacaoDetails.custasAdvocaticias && acordo.transacaoDetails.custasAdvocaticias > 0) {
+        if (custasDataVencimento && !custasDataPagamento) {
+          const vencimentoCustas = new Date(custasDataVencimento)
           vencimentoCustas.setHours(0, 0, 0, 0)
-          if (vencimentoCustas < hoje) return true
+          temCustasVencida = vencimentoCustas < hoje
         }
-
-        // Verificar honorários vencidos e não pagos
-        if (details.honorariosValor &&
-            details.honorariosDataVencimento &&
-            !details.honorariosDataPagamento) {
-          const vencimentoHonorarios = new Date(details.honorariosDataVencimento)
-          vencimentoHonorarios.setHours(0, 0, 0, 0)
-          if (vencimentoHonorarios < hoje) return true
-        }
-
-        // Verificar parcelas de honorários atrasadas
-        const parcelasHonorarios = acordo.parcelas?.filter(p => p.tipoParcela === 'PARCELA_HONORARIOS') || []
-        const temParcelaAtrasada = parcelasHonorarios.some(parcela => {
-          if (parcela.status === 'PAGO') return false
-          const vencimento = new Date(parcela.dataVencimento)
-          vencimento.setHours(0, 0, 0, 0)
-          return vencimento < hoje
-        })
-        if (temParcelaAtrasada) return true
       }
-
-      return false
+    } else if (acordo.processo?.tipo === 'COMPENSACAO' && acordo.compensacaoDetails) {
+      custasDataVencimento = acordo.compensacaoDetails.custasDataVencimento
+      custasDataPagamento = acordo.compensacaoDetails.custasDataPagamento
+      if (acordo.compensacaoDetails.custasAdvocaticias && acordo.compensacaoDetails.custasAdvocaticias > 0) {
+        if (custasDataVencimento && !custasDataPagamento) {
+          const vencimentoCustas = new Date(custasDataVencimento)
+          vencimentoCustas.setHours(0, 0, 0, 0)
+          temCustasVencida = vencimentoCustas < hoje
+        }
+      }
+    } else if (acordo.processo?.tipo === 'DACAO_PAGAMENTO' && acordo.dacaoDetails) {
+      custasDataVencimento = acordo.dacaoDetails.custasDataVencimento
+      custasDataPagamento = acordo.dacaoDetails.custasDataPagamento
+      if (acordo.dacaoDetails.custasAdvocaticias && acordo.dacaoDetails.custasAdvocaticias > 0) {
+        if (custasDataVencimento && !custasDataPagamento) {
+          const vencimentoCustas = new Date(custasDataVencimento)
+          vencimentoCustas.setHours(0, 0, 0, 0)
+          temCustasVencida = vencimentoCustas < hoje
+        }
+      }
     }
 
-    // Fallback para outros tipos, usar data de vencimento do acordo
-    const vencimento = new Date(acordo.dataVencimento)
-    vencimento.setHours(0, 0, 0, 0)
-    return vencimento < hoje
+    return temParcelaVencida || temCustasVencida
   }
 
   // Filtragem local (client-side)

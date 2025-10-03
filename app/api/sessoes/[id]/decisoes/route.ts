@@ -91,7 +91,9 @@ const decisaoSchema = z.object({
   // Texto da ata específico do processo
   ataTexto: z.string().min(1, 'Texto da ata é obrigatório'),
   // Votos
-  votos: z.array(votoSchema).optional()
+  votos: z.array(votoSchema).optional(),
+  // Presidente Substituto (em caso de conflito de interesse)
+  presidenteSubstitutoId: z.string().optional()
 }).superRefine((data, ctx) => {
   // Validações específicas por tipo de resultado
   if (data.tipoResultado === 'PEDIDO_DILIGENCIA') {
@@ -295,7 +297,8 @@ export async function POST(
         motivoSuspensao: data.motivoSuspensao || null,
         prazoVista: data.prazoVista ? new Date(data.prazoVista) : null,
         prazoDiligencia: data.prazoDiligencia ? parseInt(data.prazoDiligencia) : null,
-        observacoesSessao: data.observacoes
+        observacoesSessao: data.observacoes,
+        presidenteSubstitutoId: data.presidenteSubstitutoId || null
       }
       // Atualizar revisores baseado no tipo de resultado
       if (data.tipoResultado === 'PEDIDO_VISTA' && data.conselheiroPedidoVista) {
