@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
+import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { SessionUser } from '@/types'
 
@@ -426,6 +427,10 @@ export async function POST(
         }
       }
     })
+
+    // Revalidar a página de detalhes da sessão para mostrar a decisão adicionada
+    revalidatePath(`/sessoes/${id}`)
+
     return NextResponse.json(decisao, { status: 201 })
   } catch (error) {
     console.error('Erro ao registrar decisão:', error)

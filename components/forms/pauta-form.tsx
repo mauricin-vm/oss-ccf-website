@@ -349,21 +349,6 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="numero">Número da Pauta <span className="text-red-500">*</span></Label>
-              <Input
-                id="numero"
-                {...register('numero')}
-                onChange={(e) => {
-                  setValue('numero', e.target.value)
-                  clearFieldError('numero')
-                }}
-                onFocus={() => clearFieldError('numero')}
-                disabled={isLoading}
-                className={errors.numero ? 'border-red-500 focus-visible:ring-red-500' : ''}
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="dataPauta">Data da Pauta <span className="text-red-500">*</span></Label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -378,16 +363,36 @@ export default function PautaForm({ onSuccess }: PautaFormProps) {
                       return new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
                     }
                   })}
-                  onChange={() => {
-                    // Para inputs do tipo date, devemos deixar o React Hook Form lidar com a conversão
-                    // O setValue não é necessário aqui pois o register já cuida da sincronização
+                  onChange={(e) => {
                     clearFieldError('dataPauta')
+                    // Atualizar número da pauta automaticamente baseado na data selecionada
+                    const dateValue = e.target.value
+                    if (dateValue) {
+                      const [year, month, day] = dateValue.split('-')
+                      const numero = `Pauta ${day}-${month}-${year}`
+                      setValue('numero', numero)
+                    }
                   }}
                   onFocus={() => clearFieldError('dataPauta')}
                   className={`pl-10 ${errors.dataPauta ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   disabled={isLoading}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="numero">Número da Pauta <span className="text-red-500">*</span></Label>
+              <Input
+                id="numero"
+                {...register('numero')}
+                onChange={(e) => {
+                  setValue('numero', e.target.value)
+                  clearFieldError('numero')
+                }}
+                onFocus={() => clearFieldError('numero')}
+                disabled={isLoading}
+                className={errors.numero ? 'border-red-500 focus-visible:ring-red-500' : ''}
+              />
             </div>
           </div>
 

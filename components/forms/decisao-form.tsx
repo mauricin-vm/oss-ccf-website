@@ -439,6 +439,7 @@ export default function DecisaoForm({ sessaoId, onSuccess }: DecisaoFormProps) {
         onSuccess()
       } else {
         router.push(`/sessoes/${sessaoId}`)
+        router.refresh()
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro inesperado'

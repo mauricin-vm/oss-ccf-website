@@ -122,6 +122,7 @@ export default function AcordosPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [tipoFilter, setTipoFilter] = useState('all')
   const [modalidadeFilter, setModalidadeFilter] = useState('all')
+  const [valorOrdem, setValorOrdem] = useState<'none' | 'asc' | 'desc'>('none')
   const [showFilters, setShowFilters] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(15)
@@ -253,17 +254,10 @@ export default function AcordosPage() {
     return searchMatch && statusMatch && tipoMatch && modalidadeMatch
   })
 
-  // Paginação local
-  const totalFilteredAcordos = filteredAcordos.length
-  const totalPages = Math.ceil(totalFilteredAcordos / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedAcordos = filteredAcordos.slice(startIndex, endIndex)
-
   // Reset para primeira página quando filtros mudarem
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, statusFilter, tipoFilter, modalidadeFilter])
+  }, [searchTerm, statusFilter, tipoFilter, modalidadeFilter, valorOrdem])
 
   const canCreate = user?.role === 'ADMIN' || user?.role === 'FUNCIONARIO'
 
@@ -348,17 +342,6 @@ export default function AcordosPage() {
     return Number(acordo.valorFinal) || 0
   }
 
-  // Estatísticas baseadas nos acordos filtrados
-  const totalAcordos = totalFilteredAcordos
-  const acordosAtivos = filteredAcordos.filter(a => a.status === 'ativo').length
-  const acordosVencidos = filteredAcordos.filter(a => isVencido(a)).length
-
-  const valorTotalAcordos = filteredAcordos
-    .filter(acordo => acordo.status === 'ativo' || acordo.status === 'cumprido')
-    .reduce((total, acordo) => {
-      return total + getValorAcordo(acordo)
-    }, 0)
-
   const getProgressoPagamento = (acordo: Acordo) => {
     const tipoProcesso = acordo.processo?.tipo
 
@@ -366,98 +349,169 @@ export default function AcordosPage() {
     if (tipoProcesso === 'TRANSACAO_EXCEPCIONAL') {
       const parcelas = acordo.parcelas || []
 
-      // Calcular valor total das parcelas (acordo + honorários)
-      const valorTotalParcelas = parcelas.reduce((total: number, parcela) => {
+      // Separar parcelas do acordo das parcelas de honorários
+      const parcelasAcordo = parcelas.filter(p => p.tipoParcela === 'PARCELA_ACORDO' || p.tipoParcela === 'ENTRADA')
+      const parcelasHonorarios = parcelas.filter(p => p.tipoParcela === 'PARCELA_HONORARIOS')
+
+      // Calcular valor do acordo (sem custas/honorários)
+      const valorAcordo = parcelasAcordo.reduce((total: number, parcela) => {
         return total + Number(parcela.valor || 0)
       }, 0)
 
-      // Adicionar custas (se existir)
+      // Calcular valor de custas + honorários
       const custasAdvocaticias = acordo.transacaoDetails?.custasAdvocaticias || 0
-      const valorTotalGeral = valorTotalParcelas + custasAdvocaticias
+      const valorHonorarios = parcelasHonorarios.reduce((total: number, parcela) => {
+        return total + Number(parcela.valor || 0)
+      }, 0)
+      const valorCustasHonorarios = custasAdvocaticias + valorHonorarios
 
-      // Calcular valor pago de todas as parcelas (acordo + honorários)
-      let valorPago = parcelas.reduce((total: number, parcela) => {
+      // Total geral
+      const valorTotalGeral = valorAcordo + valorCustasHonorarios
+
+      // Calcular valor pago do acordo
+      const valorPagoAcordo = parcelasAcordo.reduce((total: number, parcela) => {
         const pagamentos = parcela.pagamentos || []
         return total + pagamentos.reduce((subtotal: number, pagamento) => {
           return subtotal + Number(pagamento.valorPago || 0)
         }, 0)
       }, 0)
 
+      // Calcular valor pago de custas + honorários
+      let valorPagoCustasHonorarios = 0
+
       // Adicionar custas se foram pagas
       if (acordo.transacaoDetails?.custasDataPagamento && custasAdvocaticias > 0) {
-        valorPago += custasAdvocaticias
+        valorPagoCustasHonorarios += custasAdvocaticias
       }
 
-      const percentual = valorTotalGeral > 0 ? Math.round((valorPago / valorTotalGeral) * 100) : 0
+      // Adicionar honorários pagos
+      valorPagoCustasHonorarios += parcelasHonorarios.reduce((total: number, parcela) => {
+        const pagamentos = parcela.pagamentos || []
+        return total + pagamentos.reduce((subtotal: number, pagamento) => {
+          return subtotal + Number(pagamento.valorPago || 0)
+        }, 0)
+      }, 0)
+
+      const valorPagoTotal = valorPagoAcordo + valorPagoCustasHonorarios
+      const percentual = valorTotalGeral > 0 ? Math.round((valorPagoTotal / valorTotalGeral) * 100) : 0
 
       return {
+        valorAcordo,
+        valorCustasHonorarios,
         valorTotal: valorTotalGeral,
-        valorPago,
-        valorPendente: valorTotalGeral - valorPago,
+        valorPago: valorPagoAcordo, // Apenas do acordo, sem custas/honorários
+        valorPendente: valorAcordo - valorPagoAcordo, // Apenas do acordo, sem custas/honorários
         percentual
       }
     }
 
     // Para compensação e dação, calcular como na página de detalhes
     let valorOfertado = 0
-    let valorCompensado = 0
+    let valorAcordo = 0
     let valorCustasHonorarios = 0
     let valorTotal = 0
 
     if (tipoProcesso === 'COMPENSACAO' && acordo.compensacaoDetails) {
       valorOfertado = Number(acordo.compensacaoDetails.valorTotalCreditos || 0)
-      valorCompensado = Number(acordo.compensacaoDetails.valorTotalDebitos || 0)
+      valorAcordo = Number(acordo.compensacaoDetails.valorTotalDebitos || 0) // valor compensado
       valorCustasHonorarios = Number(acordo.compensacaoDetails.custasAdvocaticias || 0) + Number(acordo.compensacaoDetails.honorariosValor || 0)
-      valorTotal = valorCompensado + valorCustasHonorarios
+      valorTotal = valorAcordo + valorCustasHonorarios
     } else if (tipoProcesso === 'DACAO_PAGAMENTO' && acordo.dacaoDetails) {
       valorOfertado = Number(acordo.dacaoDetails.valorTotalOferecido || 0)
-      valorCompensado = Number(acordo.dacaoDetails.valorTotalCompensar || 0)
+      valorAcordo = Number(acordo.dacaoDetails.valorTotalCompensar || 0) // valor compensado
       valorCustasHonorarios = Number(acordo.dacaoDetails.custasAdvocaticias || 0) + Number(acordo.dacaoDetails.honorariosValor || 0)
       valorTotal = valorOfertado + valorCustasHonorarios
     } else {
       // Fallback para casos sem detalhes
       valorTotal = getValorAcordo(acordo)
+      valorAcordo = valorTotal
     }
 
-    // Calcular valores pagos baseado em custas, parcelas de honorários e status
-    let valorPago = 0
+    // Para compensação e dação, o "acordo" é cumprido via compensação, não via pagamento
+    // O que é pago são custas e honorários
+    // Então "Pago" e "Pendente" referem-se ao valor do acordo (compensado)
+    let valorPagoAcordo = 0
 
     if (acordo.status === 'cumprido') {
-      valorPago = valorTotal
+      valorPagoAcordo = valorAcordo // Acordo foi cumprido via compensação
+    }
+
+    // Calcular total pago (incluindo custas e honorários) para o percentual
+    let valorPagoTotal = valorPagoAcordo
+
+    if (acordo.status === 'cumprido') {
+      valorPagoTotal = valorTotal
     } else {
       // Verificar se custas foram pagas
       const details = tipoProcesso === 'COMPENSACAO' ? acordo.compensacaoDetails : acordo.dacaoDetails
       if (details?.custasDataPagamento && details.custasAdvocaticias > 0) {
-        valorPago += Number(details.custasAdvocaticias)
+        valorPagoTotal += Number(details.custasAdvocaticias)
       }
 
       // Verificar parcelas de honorários pagas
       const parcelasHonorarios = acordo.parcelas?.filter(p => p.tipoParcela === 'PARCELA_HONORARIOS') || []
       parcelasHonorarios.forEach(parcela => {
         if (parcela.status === 'PAGO') {
-          valorPago += Number(parcela.valor)
+          valorPagoTotal += Number(parcela.valor)
         } else {
           // Somar pagamentos parciais
           const pagamentos = parcela.pagamentos || []
-          valorPago += pagamentos.reduce((total: number, pagamento) => {
+          valorPagoTotal += pagamentos.reduce((total: number, pagamento) => {
             return total + Number(pagamento.valorPago || 0)
           }, 0)
         }
       })
     }
 
-    const percentual = valorTotal > 0 ? Math.round((valorPago / valorTotal) * 100) : 0
+    const percentual = valorTotal > 0 ? Math.round((valorPagoTotal / valorTotal) * 100) : 0
 
     return {
       valorOfertado,
-      valorCompensado,
+      valorAcordo,
       valorCustasHonorarios,
       valorTotal,
-      valorPago,
-      valorPendente: valorTotal - valorPago,
+      valorPago: valorPagoAcordo, // Apenas do acordo (compensado), sem custas/honorários
+      valorPendente: valorAcordo - valorPagoAcordo, // Apenas do acordo, sem custas/honorários
       percentual
     }
   }
+
+  // Ordenação por valor
+  const sortedAcordos = [...filteredAcordos].sort((a, b) => {
+    if (valorOrdem === 'none') return 0
+
+    const valorA = getProgressoPagamento(a).valorTotal
+    const valorB = getProgressoPagamento(b).valorTotal
+
+    if (valorOrdem === 'asc') {
+      return valorA - valorB
+    } else {
+      return valorB - valorA
+    }
+  })
+
+  // Paginação local
+  const totalFilteredAcordos = sortedAcordos.length
+  const totalPages = Math.ceil(totalFilteredAcordos / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedAcordos = sortedAcordos.slice(startIndex, endIndex)
+
+  // Estatísticas baseadas nos acordos filtrados
+  const totalAcordos = totalFilteredAcordos
+  const acordosAtivos = sortedAcordos.filter(a => a.status === 'ativo').length
+  const acordosVencidos = sortedAcordos.filter(a => isVencido(a)).length
+
+  // Calcular valores totais separados (acordo vs custas/honorários)
+  const { valorTotalAcordos, valorTotalCustasHonorarios } = filteredAcordos
+    .filter(acordo => acordo.status === 'ativo' || acordo.status === 'cumprido')
+    .reduce((totais, acordo) => {
+      const progresso = getProgressoPagamento(acordo)
+      return {
+        valorTotalAcordos: totais.valorTotalAcordos + (progresso.valorAcordo || 0),
+        valorTotalCustasHonorarios: totais.valorTotalCustasHonorarios + (progresso.valorCustasHonorarios || 0)
+      }
+    }, { valorTotalAcordos: 0, valorTotalCustasHonorarios: 0 })
 
   const getDisplayParcelasInfo = (acordo: Acordo) => {
     const totalParcelas = (acordo.parcelas || []).length
@@ -597,7 +651,7 @@ export default function AcordosPage() {
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder="Buscar por processo, contribuinte ou número do acordo..."
+                    placeholder="Buscar por processo ou contribuinte..."
                     className="pl-10"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -615,7 +669,7 @@ export default function AcordosPage() {
             </div>
 
             {showFilters && (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 pt-4 border-t">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Status</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -661,6 +715,20 @@ export default function AcordosPage() {
                   </Select>
                 </div>
 
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Ordenar por Valor</label>
+                  <Select value={valorOrdem} onValueChange={(value: 'none' | 'asc' | 'desc') => setValorOrdem(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sem ordenação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem ordenação</SelectItem>
+                      <SelectItem value="asc">Menor para Maior</SelectItem>
+                      <SelectItem value="desc">Maior para Menor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="flex items-end">
                   <Button
                     variant="outline"
@@ -669,6 +737,7 @@ export default function AcordosPage() {
                       setStatusFilter('all')
                       setTipoFilter('all')
                       setModalidadeFilter('all')
+                      setValorOrdem('none')
                       toast.info('Filtros limpos')
                     }}
                     className="cursor-pointer"
@@ -684,7 +753,7 @@ export default function AcordosPage() {
       </Card>
 
       {/* Estatísticas */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-2">
@@ -721,15 +790,28 @@ export default function AcordosPage() {
           </CardContent>
         </Card>
 
-
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-blue-600" />
               <div>
-                <p className="text-sm font-medium text-gray-600">Valor Total</p>
+                <p className="text-sm font-medium text-gray-600">Valor Total do Acordo</p>
                 <p className="text-2xl font-bold">
                   {valorTotalAcordos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-orange-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-600">Valor Cust./Hon.</p>
+                <p className="text-2xl font-bold">
+                  {valorTotalCustasHonorarios.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
@@ -816,7 +898,7 @@ export default function AcordosPage() {
                                 />
                               </div>
                               {acordo.processo?.tipo === 'TRANSACAO_EXCEPCIONAL' ? (
-                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                <div className="grid grid-cols-5 gap-2 text-xs">
                                   <div>
                                     <span className="text-gray-500">Pago:</span>
                                     <p className="font-medium text-green-600">
@@ -830,6 +912,18 @@ export default function AcordosPage() {
                                     </p>
                                   </div>
                                   <div>
+                                    <span className="text-gray-500">Acordo:</span>
+                                    <p className="font-medium text-purple-600">
+                                      {formatarMoeda(progresso.valorAcordo || 0)}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">Cust./Hon.:</span>
+                                    <p className="font-medium text-orange-600">
+                                      {formatarMoeda(progresso.valorCustasHonorarios || 0)}
+                                    </p>
+                                  </div>
+                                  <div>
                                     <span className="text-gray-500">Total:</span>
                                     <p className="font-medium text-blue-600">
                                       {formatarMoeda(progresso.valorTotal)}
@@ -837,25 +931,28 @@ export default function AcordosPage() {
                                   </div>
                                 </div>
                               ) : (
-                                <div className="grid grid-cols-4 gap-2 text-xs">
+                                <div className="grid grid-cols-5 gap-2 text-xs">
                                   <div>
-                                    <span className="text-gray-500">
-                                      {acordo.processo?.tipo === 'COMPENSACAO' ? 'Ofertado:' :
-                                       acordo.processo?.tipo === 'DACAO_PAGAMENTO' ? 'Ofertado:' : 'Total:'}
-                                    </span>
+                                    <span className="text-gray-500">Pago:</span>
                                     <p className="font-medium text-green-600">
-                                      {formatarMoeda(progresso.valorOfertado || progresso.valorTotal)}
+                                      {formatarMoeda(progresso.valorPago)}
                                     </p>
                                   </div>
                                   <div>
-                                    <span className="text-gray-500">Compensado:</span>
-                                    <p className="font-medium text-red-600">
-                                      {formatarMoeda(progresso.valorCompensado || 0)}
+                                    <span className="text-gray-500">Pendente:</span>
+                                    <p className="font-medium text-amber-600">
+                                      {formatarMoeda(progresso.valorPendente)}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">Acordo:</span>
+                                    <p className="font-medium text-purple-600">
+                                      {formatarMoeda(progresso.valorAcordo || 0)}
                                     </p>
                                   </div>
                                   <div>
                                     <span className="text-gray-500">Cust./Hon.:</span>
-                                    <p className="font-medium text-amber-600">
+                                    <p className="font-medium text-orange-600">
                                       {formatarMoeda(progresso.valorCustasHonorarios || 0)}
                                     </p>
                                   </div>

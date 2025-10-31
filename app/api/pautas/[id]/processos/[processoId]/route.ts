@@ -34,9 +34,9 @@ export async function DELETE(
     if (!pauta) {
       return NextResponse.json({ error: 'Pauta não encontrada' }, { status: 404 })
     }
-    if (pauta.status !== 'aberta') {
+    if (pauta.status === 'fechada') {
       return NextResponse.json(
-        { error: 'Apenas pautas abertas podem ser modificadas' },
+        { error: 'Não é possível remover processos de pautas com sessão finalizada' },
         { status: 400 }
       )
     }
@@ -45,6 +45,23 @@ export async function DELETE(
     if (!processoPauta) {
       return NextResponse.json(
         { error: 'Processo não está incluído nesta pauta' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar se o processo tem decisão registrada na sessão desta pauta
+    const sessao = await prisma.sessaoJulgamento.findUnique({
+      where: { pautaId },
+      include: {
+        decisoes: {
+          where: { processoId }
+        }
+      }
+    })
+
+    if (sessao && sessao.decisoes.length > 0) {
+      return NextResponse.json(
+        { error: 'Não é possível remover processo que já possui decisão registrada na sessão' },
         { status: 400 }
       )
     }

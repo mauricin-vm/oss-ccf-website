@@ -79,15 +79,17 @@ export default async function EditarDecisaoPage({ params, searchParams }: Editar
   // Verificar se a sessão está ativa
   const isActive = !decisao.sessao?.dataFim
 
-  // Se a sessão não está ativa, só permite acesso se:
-  // - Veio da página do processo E o processo está JULGADO
-  if (!isActive && !(fromProcess && decisao.processo.status === 'JULGADO')) {
-    redirect(`/sessoes/${id}`)
-  }
+  // Status que não permitem edição (processos que não passaram por julgamento ou já foram finalizados)
+  const statusNaoEditaveis = ['RECEPCIONADO', 'EM_ANALISE', 'EM_CUMPRIMENTO', 'CONCLUIDO', 'FINALIZADO']
 
-  // Verificar se o processo tem status JULGADO (apenas estes podem ser editados)
-  if (decisao.processo.status !== 'JULGADO') {
-    redirect(`/processos/${decisao.processoId}`)
+  // Lógica de acesso:
+  // 1. Se a sessão está ATIVA: pode editar qualquer decisão (acesso via sessão)
+  // 2. Se a sessão está FINALIZADA: só pode editar se veio da página do processo E o processo passou por julgamento
+  if (!isActive) {
+    // Sessão finalizada - só permite se veio do processo E processo passou por julgamento
+    if (!(fromProcess && !statusNaoEditaveis.includes(decisao.processo.status))) {
+      redirect(`/sessoes/${id}`)
+    }
   }
 
   // Buscar o processo na pauta para obter relator e revisores

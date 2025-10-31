@@ -463,9 +463,11 @@ export default function EditarDecisaoForm({
       if (fromProcess) {
         // Redirecionar de volta para a página do processo
         router.push(`/processos/${decisaoAtual.processoId}`)
+        router.refresh()
       } else {
         // Comportamento original - redirecionar para a sessão
         router.push(`/sessoes/${sessaoId}`)
+        router.refresh()
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro inesperado'

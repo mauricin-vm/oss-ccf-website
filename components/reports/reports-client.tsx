@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -38,6 +39,8 @@ interface ReportsClientProps {
     sessoesAtivas: number
     acordosVencidos: number
     valores: {
+      acordos: number
+      custasHonorarios: number
       totalAcordos: number
       recebido: number
     }
@@ -48,8 +51,9 @@ interface ReportsClientProps {
       mes: number
       ano: number
       valor: number
-      acordos: { valor: number; quantidade: number }
-      parcelas: { valor: number; quantidade: number }
+      compensacao: { valor: number; quantidade: number }
+      dacao: { valor: number; quantidade: number }
+      transacao: { valor: number; quantidade: number }
       total: { valor: number; quantidade: number }
     }>
   }
@@ -63,6 +67,20 @@ interface ReportsClientProps {
 
 export function ReportsClient({ initialData, relatóriosRecentes }: ReportsClientProps) {
   const { filters, setFilters, activeFiltersCount, data: dashboardData } = useReportFilters(initialData)
+
+  // Estado para controlar quais tipos de processo estão visíveis no gráfico
+  const [tiposVisiveis, setTiposVisiveis] = useState({
+    compensacao: true,
+    dacao: true,
+    transacao: true
+  })
+
+  const toggleTipo = (tipo: 'compensacao' | 'dacao' | 'transacao') => {
+    setTiposVisiveis(prev => ({
+      ...prev,
+      [tipo]: !prev[tipo]
+    }))
+  }
 
   // const getStatusProcessoLabel = (status: string) => {
   //   const labels: Record<string, string> = {
@@ -107,15 +125,18 @@ export function ReportsClient({ initialData, relatóriosRecentes }: ReportsClien
   //   return labels[tipo] || tipo
   // }
 
-  const totalAcordos = Number(activeFiltersCount > 0
-    ? (dashboardData.valores?.totalAcordos || 0)
-    : (initialData.valores?.totalAcordos || 0))
+  const valorAcordos = Number(activeFiltersCount > 0
+    ? (dashboardData.valores?.acordos || 0)
+    : (initialData.valores?.acordos || 0))
+  const valorCustasHonorarios = Number(activeFiltersCount > 0
+    ? (dashboardData.valores?.custasHonorarios || 0)
+    : (initialData.valores?.custasHonorarios || 0))
   const recebido = Number(activeFiltersCount > 0
     ? (dashboardData.valores?.recebido || 0)
     : (initialData.valores?.recebido || 0))
 
-  const percentualRecebido = totalAcordos > 0
-    ? Math.round((recebido / totalAcordos) * 100)
+  const percentualRecebido = valorAcordos > 0
+    ? Math.round((recebido / valorAcordos) * 100)
     : 0
 
   // Calcular totais (usar dados diretos como o card de Sessões)
@@ -300,13 +321,7 @@ export function ReportsClient({ initialData, relatóriosRecentes }: ReportsClien
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <p className="text-sm text-gray-600">Valor Total dos Acordos</p>
-              <p className="text-2xl font-bold text-blue-600">
-                R$ {totalAcordos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="text-center">
               <p className="text-sm text-gray-600">Valor Recebido</p>
               <p className="text-2xl font-bold text-green-600">
@@ -316,7 +331,19 @@ export function ReportsClient({ initialData, relatóriosRecentes }: ReportsClien
             <div className="text-center">
               <p className="text-sm text-gray-600">Valor Pendente</p>
               <p className="text-2xl font-bold text-yellow-600">
-                R$ {(totalAcordos - recebido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {(valorAcordos - recebido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Valor dos Acordos</p>
+              <p className="text-2xl font-bold text-purple-600">
+                R$ {valorAcordos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Custas/Honorários</p>
+              <p className="text-2xl font-bold text-orange-600">
+                R$ {valorCustasHonorarios.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
           </div>
@@ -359,16 +386,46 @@ export function ReportsClient({ initialData, relatóriosRecentes }: ReportsClien
       {/* Gráfico de Evolução Mensal */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-blue-600" />
-            Evolução da Arrecadação
-          </CardTitle>
-          <CardDescription>
-            {activeFiltersCount > 0
-              ? 'Performance de recuperação no período filtrado'
-              : 'Performance de recuperação nos últimos 12 meses'
-            }
-          </CardDescription>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+                Evolução da Arrecadação
+              </CardTitle>
+              <CardDescription>
+                {activeFiltersCount > 0
+                  ? 'Performance de recuperação no período filtrado'
+                  : 'Performance de recuperação nos últimos 12 meses'
+                }
+              </CardDescription>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant={tiposVisiveis.compensacao ? "default" : "outline"}
+                size="sm"
+                onClick={() => toggleTipo('compensacao')}
+                className={tiposVisiveis.compensacao ? "bg-green-500 hover:bg-green-600 cursor-pointer" : "cursor-pointer"}
+              >
+                Compensação
+              </Button>
+              <Button
+                variant={tiposVisiveis.dacao ? "default" : "outline"}
+                size="sm"
+                onClick={() => toggleTipo('dacao')}
+                className={tiposVisiveis.dacao ? "bg-blue-500 hover:bg-blue-600 cursor-pointer" : "cursor-pointer"}
+              >
+                Dação
+              </Button>
+              <Button
+                variant={tiposVisiveis.transacao ? "default" : "outline"}
+                size="sm"
+                onClick={() => toggleTipo('transacao')}
+                className={tiposVisiveis.transacao ? "bg-orange-500 hover:bg-orange-600 cursor-pointer" : "cursor-pointer"}
+              >
+                Transação
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <LineChartEvolucao
@@ -376,6 +433,7 @@ export function ReportsClient({ initialData, relatóriosRecentes }: ReportsClien
               ? (dashboardData.evolucaoMensal || [])
               : (initialData.evolucaoMensal || [])
             }
+            tiposVisiveis={tiposVisiveis}
           />
         </CardContent>
       </Card>

@@ -749,7 +749,10 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                 <div className="space-y-3">
                   {processo.decisoes
                     .sort((a: ProcessoDecisao, b: ProcessoDecisao) => {
-                      return new Date(a.dataDecisao).getTime() - new Date(b.dataDecisao).getTime()
+                      // Ordenar pela data da pauta em ordem crescente
+                      const dataPautaA = a.sessao?.pauta?.dataPauta ? new Date(a.sessao.pauta.dataPauta).getTime() : 0
+                      const dataPautaB = b.sessao?.pauta?.dataPauta ? new Date(b.sessao.pauta.dataPauta).getTime() : 0
+                      return dataPautaA - dataPautaB
                     })
                     .map((decisao: ProcessoDecisao, index: number) => {
                       const processoPauta = processo.pautas?.find((p: ProcessoPautaWithDetails) => p.pauta?.id === decisao.sessao?.pauta?.id)
@@ -788,9 +791,10 @@ export default function ProcessoDetalhesPage({ params }: Props) {
                             </div>
                             <div className="text-right space-y-2">
                               <div className="flex items-center gap-2">
-                                {/* Botão de edição - apenas para admins e processos julgados */}
+                                {/* Botão de edição - apenas para admins e processos que passaram por julgamento */}
                                 {(session?.user as SessionUser)?.role === 'ADMIN' &&
-                                 processo?.status === 'JULGADO' &&
+                                 processo?.status &&
+                                 !['RECEPCIONADO', 'EM_ANALISE', 'EM_CUMPRIMENTO', 'CONCLUIDO', 'FINALIZADO'].includes(processo.status) &&
                                  decisao.sessao?.id && (
                                   <Link href={`/sessoes/${decisao.sessao.id}/decisoes/${decisao.id}/editar?from=process`}>
                                     <Button

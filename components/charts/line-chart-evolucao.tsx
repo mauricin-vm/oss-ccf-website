@@ -15,11 +15,15 @@ interface LineChartEvolucaoProps {
     mes: number
     ano: number
     valor: number
-    acordos: {
+    compensacao: {
       valor: number
       quantidade: number
     }
-    parcelas: {
+    dacao: {
+      valor: number
+      quantidade: number
+    }
+    transacao: {
       valor: number
       quantidade: number
     }
@@ -28,9 +32,14 @@ interface LineChartEvolucaoProps {
       quantidade: number
     }
   }>
+  tiposVisiveis: {
+    compensacao: boolean
+    dacao: boolean
+    transacao: boolean
+  }
 }
 
-export function LineChartEvolucao({ data }: LineChartEvolucaoProps) {
+export function LineChartEvolucao({ data, tiposVisiveis }: LineChartEvolucaoProps) {
   const getMesLabel = (mes: number) => {
     const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
     return meses[mes]
@@ -42,8 +51,12 @@ export function LineChartEvolucao({ data }: LineChartEvolucaoProps) {
     mesNumero: item.mes,
     ano: item.ano,
     valor: item.valor,
-    acordos: item.acordos,
-    parcelas: item.parcelas,
+    compensacao: item.compensacao.valor,
+    dacao: item.dacao.valor,
+    transacao: item.transacao.valor,
+    compensacaoQtd: item.compensacao.quantidade,
+    dacaoQtd: item.dacao.quantidade,
+    transacaoQtd: item.transacao.quantidade,
     total: item.total
   })) : []
 
@@ -67,46 +80,103 @@ export function LineChartEvolucao({ data }: LineChartEvolucaoProps) {
             tickFormatter={(value) => `R$ ${(value / 1000000).toFixed(1)}M`}
           />
           <Tooltip
-            formatter={(value: number, name: string, props: { payload?: { acordos?: { valor: number; quantidade: number }; parcelas?: { valor: number; quantidade: number }; total?: { valor: number; quantidade: number }; mes: string } }) => {
-              const data = props.payload
-              return [
-                <div key="content" className="space-y-2">
-                  <div className="text-green-600 font-medium">
-                    Valor Total: R$ {value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            content={({ active, payload, label }) => {
+              if (active && payload && payload.length) {
+                const compensacao = payload.find(p => p.dataKey === 'compensacao')?.value as number || 0
+                const dacao = payload.find(p => p.dataKey === 'dacao')?.value as number || 0
+                const transacao = payload.find(p => p.dataKey === 'transacao')?.value as number || 0
+
+                // Calcular total apenas dos tipos visíveis
+                let total = 0
+                if (tiposVisiveis.compensacao) total += compensacao
+                if (tiposVisiveis.dacao) total += dacao
+                if (tiposVisiveis.transacao) total += transacao
+
+                return (
+                  <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
+                    <p className="font-medium text-gray-700 mb-2">{label}</p>
+                    <div className="space-y-1 text-sm">
+                      {tiposVisiveis.compensacao && (
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="flex items-center gap-1">
+                            <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                            Compensação:
+                          </span>
+                          <span className="font-medium text-green-600">
+                            R$ {compensacao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
+                      {tiposVisiveis.dacao && (
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="flex items-center gap-1">
+                            <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                            Dação:
+                          </span>
+                          <span className="font-medium text-blue-600">
+                            R$ {dacao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
+                      {tiposVisiveis.transacao && (
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="flex items-center gap-1">
+                            <span className="w-3 h-3 rounded-full bg-orange-500"></span>
+                            Transação:
+                          </span>
+                          <span className="font-medium text-orange-600">
+                            R$ {transacao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
+                      {(tiposVisiveis.compensacao || tiposVisiveis.dacao || tiposVisiveis.transacao) && (
+                        <div className="border-t border-gray-200 mt-2 pt-2 flex items-center justify-between gap-4">
+                          <span className="font-semibold">Total:</span>
+                          <span className="font-bold text-gray-900">
+                            R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="space-y-1 text-sm">
-                    <div>
-                      Acordos: R$ {data?.acordos?.valor?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-                      <span className="text-gray-500"> ({data?.acordos?.quantidade || 0} acordos)</span>
-                    </div>
-                    <div>
-                      Parcelas: R$ {data?.parcelas?.valor?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-                      <span className="text-gray-500"> ({data?.parcelas?.quantidade || 0} parcelas)</span>
-                    </div>
-                    <div className="border-t pt-1">
-                      Total de Itens: {data?.total?.quantidade || 0}
-                    </div>
-                  </div>
-                </div>,
-                null
-              ]
-            }}
-            contentStyle={{
-              backgroundColor: 'white',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              padding: '12px'
+                )
+              }
+              return null
             }}
           />
-          <Line
-            type="monotone"
-            dataKey="valor"
-            stroke="#10b981"
-            strokeWidth={3}
-            dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
-            activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2 }}
-            name="Arrecadação Mensal"
-          />
+          {tiposVisiveis.compensacao && (
+            <Line
+              type="monotone"
+              dataKey="compensacao"
+              stroke="#10b981"
+              strokeWidth={2}
+              dot={{ fill: '#10b981', strokeWidth: 2, r: 3 }}
+              activeDot={{ r: 5 }}
+              name="Compensação"
+            />
+          )}
+          {tiposVisiveis.dacao && (
+            <Line
+              type="monotone"
+              dataKey="dacao"
+              stroke="#3b82f6"
+              strokeWidth={2}
+              dot={{ fill: '#3b82f6', strokeWidth: 2, r: 3 }}
+              activeDot={{ r: 5 }}
+              name="Dação"
+            />
+          )}
+          {tiposVisiveis.transacao && (
+            <Line
+              type="monotone"
+              dataKey="transacao"
+              stroke="#f59e0b"
+              strokeWidth={2}
+              dot={{ fill: '#f59e0b', strokeWidth: 2, r: 3 }}
+              activeDot={{ r: 5 }}
+              name="Transação"
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
     </div>

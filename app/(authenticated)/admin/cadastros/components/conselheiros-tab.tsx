@@ -34,7 +34,9 @@ interface Conselheiro {
   email?: string
   telefone?: string
   cargo?: string
+  matricula?: string
   origem?: string
+  sigla?: string
   ativo: boolean
   createdAt: string
   updatedAt: string
@@ -46,7 +48,9 @@ const createConselheiroSchema = z.object({
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   telefone: z.string().optional(),
   cargo: z.string().optional(),
+  matricula: z.string().optional(),
   origem: z.string().optional(),
+  sigla: z.string().optional(),
   ativo: z.boolean()
 })
 
@@ -55,7 +59,9 @@ const editConselheiroSchema = z.object({
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   telefone: z.string().optional(),
   cargo: z.string().optional(),
+  matricula: z.string().optional(),
   origem: z.string().optional(),
+  sigla: z.string().optional(),
   ativo: z.boolean()
 })
 
@@ -89,7 +95,9 @@ export default function ConselheirosTab() {
       email: '',
       telefone: '',
       cargo: '',
+      matricula: '',
       origem: '',
+      sigla: '',
       ativo: true
     }
   })
@@ -243,7 +251,9 @@ export default function ConselheirosTab() {
     setEditValue('email', conselheiro.email || '')
     setEditValue('telefone', conselheiro.telefone || '')
     setEditValue('cargo', conselheiro.cargo || '')
+    setEditValue('matricula', conselheiro.matricula || '')
     setEditValue('origem', conselheiro.origem || '')
+    setEditValue('sigla', conselheiro.sigla || '')
     setEditValue('ativo', conselheiro.ativo)
     setShowEditDialog(true)
   }
@@ -293,7 +303,7 @@ export default function ConselheirosTab() {
               Novo Conselheiro
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>Criar Novo Conselheiro</DialogTitle>
               <DialogDescription>
@@ -313,44 +323,72 @@ export default function ConselheirosTab() {
                   className={createErrors.nome ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="create-email">Email</Label>
-                <Input
-                  id="create-email"
-                  type="email"
-                  {...createRegister('email')}
-                  disabled={isCreating}
-                  placeholder="email@exemplo.com"
-                  className={createErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="create-email">Email</Label>
+                  <Input
+                    id="create-email"
+                    type="email"
+                    {...createRegister('email')}
+                    disabled={isCreating}
+                    placeholder="email@exemplo.com"
+                    className={createErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="create-telefone">Telefone</Label>
+                  <Input
+                    id="create-telefone"
+                    {...createRegister('telefone')}
+                    disabled={isCreating}
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="create-telefone">Telefone</Label>
-                <Input
-                  id="create-telefone"
-                  {...createRegister('telefone')}
-                  disabled={isCreating}
-                  placeholder="(00) 00000-0000"
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="create-cargo">Cargo</Label>
+                  <Input
+                    id="create-cargo"
+                    {...createRegister('cargo')}
+                    disabled={isCreating}
+                    placeholder="Ex: Conselheiro Titular"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="create-matricula">Matrícula</Label>
+                  <Input
+                    id="create-matricula"
+                    {...createRegister('matricula')}
+                    disabled={isCreating}
+                    placeholder="Matrícula do conselheiro"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="create-cargo">Cargo</Label>
-                <Input
-                  id="create-cargo"
-                  {...createRegister('cargo')}
-                  disabled={isCreating}
-                  placeholder="Ex: Conselheiro Titular, Conselheiro Suplente"
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="create-origem">Origem</Label>
+                  <Input
+                    id="create-origem"
+                    {...createRegister('origem')}
+                    disabled={isCreating}
+                    placeholder="Ex: Secretaria da Fazenda"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="create-sigla">Sigla</Label>
+                  <Input
+                    id="create-sigla"
+                    {...createRegister('sigla')}
+                    disabled={isCreating}
+                    placeholder="Ex: SEFAZ"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="create-origem">Origem (Setor/Órgão/Entidade)</Label>
-                <Input
-                  id="create-origem"
-                  {...createRegister('origem')}
-                  disabled={isCreating}
-                  placeholder="Ex: Secretaria da Fazenda, OAB, Sindicato dos Contadores"
-                />
-              </div>
+
               <div className="flex items-center space-x-2">
                 <Switch
                   id="create-ativo"
@@ -558,7 +596,7 @@ export default function ConselheirosTab() {
 
       {/* Dialog de Edição */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Editar Conselheiro</DialogTitle>
             <DialogDescription>
@@ -578,44 +616,72 @@ export default function ConselheirosTab() {
                 className={editErrors.nome ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-email">Email</Label>
-              <Input
-                id="edit-email"
-                type="email"
-                {...editRegister('email')}
-                disabled={isEditing}
-                placeholder="email@exemplo.com"
-                className={editErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
-              />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  {...editRegister('email')}
+                  disabled={isEditing}
+                  placeholder="email@exemplo.com"
+                  className={editErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-telefone">Telefone</Label>
+                <Input
+                  id="edit-telefone"
+                  {...editRegister('telefone')}
+                  disabled={isEditing}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-telefone">Telefone</Label>
-              <Input
-                id="edit-telefone"
-                {...editRegister('telefone')}
-                disabled={isEditing}
-                placeholder="(00) 00000-0000"
-              />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-cargo">Cargo</Label>
+                <Input
+                  id="edit-cargo"
+                  {...editRegister('cargo')}
+                  disabled={isEditing}
+                  placeholder="Ex: Conselheiro Titular"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-matricula">Matrícula</Label>
+                <Input
+                  id="edit-matricula"
+                  {...editRegister('matricula')}
+                  disabled={isEditing}
+                  placeholder="Matrícula do conselheiro"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-cargo">Cargo</Label>
-              <Input
-                id="edit-cargo"
-                {...editRegister('cargo')}
-                disabled={isEditing}
-                placeholder="Ex: Conselheiro Titular, Conselheiro Suplente"
-              />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-origem">Origem</Label>
+                <Input
+                  id="edit-origem"
+                  {...editRegister('origem')}
+                  disabled={isEditing}
+                  placeholder="Ex: Secretaria da Fazenda"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-sigla">Sigla</Label>
+                <Input
+                  id="edit-sigla"
+                  {...editRegister('sigla')}
+                  disabled={isEditing}
+                  placeholder="Ex: SEFAZ"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-origem">Origem (Setor/Órgão/Entidade)</Label>
-              <Input
-                id="edit-origem"
-                {...editRegister('origem')}
-                disabled={isEditing}
-                placeholder="Ex: Secretaria da Fazenda, OAB, Sindicato dos Contadores"
-              />
-            </div>
+
             <div className="flex items-center space-x-2">
               <Switch
                 id="edit-ativo"

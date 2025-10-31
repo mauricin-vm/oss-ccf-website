@@ -778,99 +778,133 @@ export default function AcordoPage({ params }: AcordoPageProps) {
   }
 
   const getProgressoPagamento = () => {
-    // Para transação excepcional, usar a lógica original
+    // Para transação excepcional, separar valores do acordo de custas/honorários
     if (tipoProcesso === 'TRANSACAO_EXCEPCIONAL') {
       const parcelas = acordo.parcelas || []
 
-      // Calcular valor total das parcelas (acordo + honorários)
-      const valorTotalParcelas = parcelas.reduce((total: number, parcela: Parcela) => {
+      // Separar parcelas do acordo das parcelas de honorários
+      const parcelasAcordo = parcelas.filter(p => p.tipoParcela === 'PARCELA_ACORDO' || p.tipoParcela === 'ENTRADA')
+      const parcelasHonorarios = parcelas.filter(p => p.tipoParcela === 'PARCELA_HONORARIOS')
+
+      // Calcular valor do acordo (sem custas/honorários)
+      const valorAcordo = parcelasAcordo.reduce((total: number, parcela: Parcela) => {
         return total + Number(parcela.valor || 0)
       }, 0)
 
-      // Adicionar custas (se existir)
+      // Calcular valor de custas + honorários
       const custasAdvocaticias = acordo.transacaoDetails?.custasAdvocaticias || 0
-      const valorTotalGeral = valorTotalParcelas + custasAdvocaticias
+      const valorHonorarios = parcelasHonorarios.reduce((total: number, parcela: Parcela) => {
+        return total + Number(parcela.valor || 0)
+      }, 0)
+      const valorCustasHonorarios = custasAdvocaticias + valorHonorarios
 
-      // Calcular valor pago de todas as parcelas (acordo + honorários)
-      let valorPago = parcelas.reduce((total: number, parcela: Parcela) => {
+      // Total geral
+      const valorTotalGeral = valorAcordo + valorCustasHonorarios
+
+      // Calcular valor pago do acordo
+      const valorPagoAcordo = parcelasAcordo.reduce((total: number, parcela: Parcela) => {
         const pagamentos = parcela.pagamentos || []
         return total + pagamentos.reduce((subtotal: number, pagamento: Pagamento) => {
           return subtotal + Number(pagamento.valorPago || 0)
         }, 0)
       }, 0)
 
+      // Calcular valor pago de custas + honorários
+      let valorPagoCustasHonorarios = 0
+
       // Adicionar custas se foram pagas
       if (acordo.transacaoDetails?.custasDataPagamento && custasAdvocaticias > 0) {
-        valorPago += custasAdvocaticias
+        valorPagoCustasHonorarios += custasAdvocaticias
       }
 
-      const percentual = valorTotalGeral > 0 ? Math.round((valorPago / valorTotalGeral) * 100) : 0
+      // Adicionar honorários pagos
+      valorPagoCustasHonorarios += parcelasHonorarios.reduce((total: number, parcela: Parcela) => {
+        const pagamentos = parcela.pagamentos || []
+        return total + pagamentos.reduce((subtotal: number, pagamento: Pagamento) => {
+          return subtotal + Number(pagamento.valorPago || 0)
+        }, 0)
+      }, 0)
+
+      const valorPagoTotal = valorPagoAcordo + valorPagoCustasHonorarios
+      const percentual = valorTotalGeral > 0 ? Math.round((valorPagoTotal / valorTotalGeral) * 100) : 0
 
       return {
+        valorAcordo,
+        valorCustasHonorarios,
         valorTotal: valorTotalGeral,
-        valorPago,
-        valorPendente: valorTotalGeral - valorPago,
+        valorPago: valorPagoAcordo, // Apenas do acordo, sem custas/honorários
+        valorPendente: valorAcordo - valorPagoAcordo, // Apenas do acordo, sem custas/honorários
         percentual
       }
     }
 
     // Para compensação e dação, calcular como na página de listagem
     let valorOfertado = 0
-    let valorCompensado = 0
+    let valorAcordo = 0
     let valorCustasHonorarios = 0
     let valorTotal = 0
 
     if (tipoProcesso === 'COMPENSACAO' && acordo.compensacaoDetails) {
       valorOfertado = Number(acordo.compensacaoDetails.valorTotalCreditos || 0)
-      valorCompensado = Number(acordo.compensacaoDetails.valorTotalDebitos || 0)
+      valorAcordo = Number(acordo.compensacaoDetails.valorTotalDebitos || 0) // valor compensado
       valorCustasHonorarios = Number(acordo.compensacaoDetails.custasAdvocaticias || 0) + Number(acordo.compensacaoDetails.honorariosValor || 0)
-      valorTotal = valorCompensado + valorCustasHonorarios
+      valorTotal = valorAcordo + valorCustasHonorarios
     } else if (tipoProcesso === 'DACAO_PAGAMENTO' && acordo.dacaoDetails) {
       valorOfertado = Number(acordo.dacaoDetails.valorTotalOferecido || 0)
-      valorCompensado = Number(acordo.dacaoDetails.valorTotalCompensar || 0)
+      valorAcordo = Number(acordo.dacaoDetails.valorTotalCompensar || 0) // valor compensado
       valorCustasHonorarios = Number(acordo.dacaoDetails.custasAdvocaticias || 0) + Number(acordo.dacaoDetails.honorariosValor || 0)
       valorTotal = valorOfertado + valorCustasHonorarios
     } else {
       // Fallback para casos sem detalhes
       valorTotal = getValorAcordo()
+      valorAcordo = valorTotal
     }
 
-    // Calcular valores pagos baseado em custas, parcelas de honorários e status
-    let valorPago = 0
+    // Para compensação e dação, o "acordo" é cumprido via compensação, não via pagamento
+    // O que é pago são custas e honorários
+    // Então "Pago" e "Pendente" referem-se ao valor do acordo (compensado)
+    let valorPagoAcordo = 0
 
     if (acordo.status === 'cumprido') {
-      valorPago = valorTotal
+      valorPagoAcordo = valorAcordo // Acordo foi cumprido via compensação
+    }
+
+    // Calcular total pago (incluindo custas e honorários) para o percentual
+    let valorPagoTotal = valorPagoAcordo
+
+    if (acordo.status === 'cumprido') {
+      valorPagoTotal = valorTotal
     } else {
       // Verificar se custas foram pagas
       const details = tipoProcesso === 'COMPENSACAO' ? acordo.compensacaoDetails : acordo.dacaoDetails
       if (details?.custasDataPagamento && details.custasAdvocaticias > 0) {
-        valorPago += Number(details.custasAdvocaticias)
+        valorPagoTotal += Number(details.custasAdvocaticias)
       }
 
       // Verificar parcelas de honorários pagas
       const parcelasHonorarios = acordo.parcelas?.filter(p => p.tipoParcela === 'PARCELA_HONORARIOS') || []
       parcelasHonorarios.forEach(parcela => {
         if (parcela.status === 'PAGO') {
-          valorPago += Number(parcela.valor)
+          valorPagoTotal += Number(parcela.valor)
         } else {
           // Somar pagamentos parciais
           const pagamentos = parcela.pagamentos || []
-          valorPago += pagamentos.reduce((total: number, pagamento: Pagamento) => {
+          valorPagoTotal += pagamentos.reduce((total: number, pagamento: Pagamento) => {
             return total + Number(pagamento.valorPago || 0)
           }, 0)
         }
       })
     }
 
-    const percentual = valorTotal > 0 ? Math.round((valorPago / valorTotal) * 100) : 0
+    const percentual = valorTotal > 0 ? Math.round((valorPagoTotal / valorTotal) * 100) : 0
 
     return {
       valorOfertado,
-      valorCompensado,
+      valorAcordo,
       valorCustasHonorarios,
       valorTotal,
-      valorPago,
-      valorPendente: valorTotal - valorPago,
+      valorPago: valorPagoAcordo, // Apenas do acordo (compensado), sem custas/honorários
+      valorPendente: valorAcordo - valorPagoAcordo, // Apenas do acordo, sem custas/honorários
       percentual
     }
   }
@@ -1272,24 +1306,36 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                 />
               </div>
               {temParcelas && (
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <p className="text-lg font-bold text-blue-600">
-                      R$ {(progresso?.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-xs text-gray-600">Total</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-yellow-600">
-                      R$ {(progresso?.valorPendente || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-xs text-gray-600">Pendente</p>
-                  </div>
+                <div className="grid grid-cols-5 gap-4 text-center">
                   <div>
                     <p className="text-lg font-bold text-green-600">
                       R$ {(progresso?.valorPago || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                     <p className="text-xs text-gray-600">Pago</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-amber-600">
+                      R$ {(progresso?.valorPendente || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-xs text-gray-600">Pendente</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-purple-600">
+                      R$ {(progresso?.valorAcordo || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-xs text-gray-600">Acordo</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-orange-600">
+                      R$ {(progresso?.valorCustasHonorarios || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-xs text-gray-600">Cust./Hon.</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-blue-600">
+                      R$ {(progresso?.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-xs text-gray-600">Total</p>
                   </div>
                 </div>
               )}
@@ -1301,25 +1347,25 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                         <p className="text-lg font-bold text-green-600">
                           R$ {Number(acordo.compensacaoDetails.valorTotalCreditos || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-xs text-gray-600">Valor Total Ofertado</p>
+                        <p className="text-xs text-gray-600">Ofertado</p>
                       </div>
                       <div>
-                        <p className="text-lg font-bold text-red-600">
+                        <p className="text-lg font-bold text-purple-600">
                           R$ {Number(acordo.compensacaoDetails.valorTotalDebitos || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-xs text-gray-600">Valor Total Compensado</p>
+                        <p className="text-xs text-gray-600">Acordo</p>
                       </div>
                       <div>
-                        <p className="text-lg font-bold text-amber-600">
+                        <p className="text-lg font-bold text-orange-600">
                           R$ {(Number(acordo.compensacaoDetails.custasAdvocaticias || 0) + Number(acordo.compensacaoDetails.honorariosValor || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-xs text-gray-600">Valor Total de Cust./Honor.</p>
+                        <p className="text-xs text-gray-600">Cust./Hon.</p>
                       </div>
                       <div>
                         <p className="text-lg font-bold text-blue-600">
                           R$ {(Number(acordo.compensacaoDetails.valorTotalDebitos || 0) + Number(acordo.compensacaoDetails.custasAdvocaticias || 0) + Number(acordo.compensacaoDetails.honorariosValor || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-xs text-gray-600">Valor Total do Acordo</p>
+                        <p className="text-xs text-gray-600">Total</p>
                       </div>
                     </>
                   )}
@@ -1329,25 +1375,25 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                         <p className="text-lg font-bold text-green-600">
                           R$ {Number(acordo.dacaoDetails.valorTotalOferecido || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-xs text-gray-600">Valor Total Ofertado</p>
+                        <p className="text-xs text-gray-600">Ofertado</p>
                       </div>
                       <div>
-                        <p className="text-lg font-bold text-red-600">
+                        <p className="text-lg font-bold text-purple-600">
                           R$ {Number(acordo.dacaoDetails.valorTotalCompensar || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-xs text-gray-600">Valor Total Compensado</p>
+                        <p className="text-xs text-gray-600">Acordo</p>
                       </div>
                       <div>
-                        <p className="text-lg font-bold text-amber-600">
+                        <p className="text-lg font-bold text-orange-600">
                           R$ {(Number(acordo.dacaoDetails.custasAdvocaticias || 0) + Number(acordo.dacaoDetails.honorariosValor || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-xs text-gray-600">Valor Total de Cust./Honor.</p>
+                        <p className="text-xs text-gray-600">Cust./Hon.</p>
                       </div>
                       <div>
                         <p className="text-lg font-bold text-blue-600">
                           R$ {(Number(acordo.dacaoDetails.valorTotalOferecido || 0) + Number(acordo.dacaoDetails.custasAdvocaticias || 0) + Number(acordo.dacaoDetails.honorariosValor || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-xs text-gray-600">Valor Total do Acordo</p>
+                        <p className="text-xs text-gray-600">Total</p>
                       </div>
                     </>
                   )}
@@ -1386,6 +1432,343 @@ export default function AcordoPage({ params }: AcordoPageProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Origem do Acordo */}
+      {(detalhesAcordo && ((detalhesAcordo.creditos?.length ?? 0) > 0 || (detalhesAcordo.inscricoes?.length ?? 0) > 0)) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5" />
+              Origem do Acordo
+            </CardTitle>
+            <CardDescription>
+              {tipoProcesso === 'COMPENSACAO' ? 'Créditos oferecidos e inscrições a compensar' :
+                tipoProcesso === 'DACAO_PAGAMENTO' ? 'Inscrições oferecidas e inscrições a compensar' :
+                  'Inscrições e débitos que originaram este acordo'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+
+              {/* Créditos para compensação e dação */}
+              {detalhesAcordo?.creditos && detalhesAcordo?.creditos.length > 0 && (
+                <div className="mb-6">
+                  <h5 className="text-sm font-medium text-green-700 mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    {tipoProcesso === 'COMPENSACAO' ? 'Créditos Oferecidos' : 'Inscrições Oferecidas'}
+                  </h5>
+                  <div className="space-y-3">
+                    {detalhesAcordo?.creditos?.map((credito: Credito, idx: number) => (
+                      <div key={credito.id || `credito-${idx}`} className="p-3 bg-green-50 rounded-lg border border-green-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <div>
+                              <p className="font-medium text-sm text-green-900">{credito.numeroCredito}</p>
+                              <p className="text-xs text-green-700 capitalize">
+                                {credito.tipoCredito?.replace('_', ' ').toLowerCase()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            {tipoProcesso === 'DACAO_PAGAMENTO' && (
+                              <p className="text-xs text-green-600 mb-1">Valor Avaliado para Fins de Dação</p>
+                            )}
+                            <p className="text-sm font-medium text-green-900">
+                              R$ {Number(credito.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </p>
+                            {credito.dataVencimento && (
+                              <p className="text-xs text-green-600">
+                                Venc: {formatarData(credito.dataVencimento)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {credito.descricao && (
+                          <p className="text-xs text-green-600 mt-1">{credito.descricao}</p>
+                        )}
+                      </div>
+                    ))}
+                    <div className="p-3 bg-green-100 rounded-lg border border-green-300">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-green-800">
+                          {tipoProcesso === 'COMPENSACAO' ? 'Total dos Créditos:' :
+                           tipoProcesso === 'DACAO_PAGAMENTO' ? 'Valor Total Avaliado para Fins de Dação:' :
+                           'Total das Inscrições Oferecidas:'}
+                        </span>
+                        <span className="text-sm font-bold text-green-900">
+                          R$ {detalhesAcordo?.creditos?.reduce((total: number, credito: Credito) => total + Number(credito.valor || 0), 0)?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Inscrições a compensar */}
+              {detalhesAcordo?.inscricoes && detalhesAcordo?.inscricoes.length > 0 && (
+                <div className="mb-6">
+                  <h5 className="text-sm font-medium text-blue-700 mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    {tipoProcesso === 'TRANSACAO_EXCEPCIONAL' ? 'Inscrições Incluídas' :
+                     tipoProcesso === 'DACAO_PAGAMENTO' ? 'Débitos a Compensar' :
+                     'Inscrições a Compensar'}
+                  </h5>
+                  <div className="space-y-3">
+                    {detalhesAcordo?.inscricoes?.map((inscricao: InscricaoDetalhe, idx: number) => (
+                      <div key={inscricao.id || `inscricao-${idx}`} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <div>
+                              <p className="font-medium text-sm text-blue-900">{inscricao.numeroInscricao}</p>
+                              <p className="text-xs text-blue-700 capitalize">
+                                {inscricao.tipoInscricao === 'IMOBILIARIA' ? 'Imobiliária' : 'Econômica'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-blue-900">
+                              Total: R$ {Number(inscricao.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Débitos da inscrição */}
+                        {inscricao.debitos && inscricao.debitos.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-blue-300">
+                            <h6 className="text-xs font-medium text-blue-700 mb-2">Débitos:</h6>
+                            <div className="space-y-2">
+                              {inscricao.debitos?.map((debito: DebitoDetalhe, idx: number) => (
+                                <div key={debito.id || `debito-${idx}`} className="flex items-center justify-between text-xs bg-white p-2 rounded">
+                                  <span className="text-gray-700">{debito.descricao}</span>
+                                  <div className="text-right">
+                                    <span className="font-medium text-gray-900">
+                                      R$ {Number(debito.valorLancado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                    {debito.dataVencimento && (
+                                      <div className="text-gray-500">
+                                        Venc: {formatarData(debito.dataVencimento)}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    <div className="p-3 bg-blue-100 rounded-lg border border-blue-300">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-blue-800">
+                          {tipoProcesso === 'DACAO_PAGAMENTO' ? 'Total de Débitos:' : 'Total das Inscrições:'}
+                        </span>
+                        <span className="text-sm font-bold text-blue-900">
+                          R$ {detalhesAcordo?.inscricoes?.reduce((total: number, inscricao: InscricaoDetalhe) => total + Number(inscricao.valorTotal || 0), 0)?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Verificar se tem detalhes */}
+              {/* {detalhesAcordo?.detalhes && Array.isArray(detalhesAcordo.detalhes) && detalhesAcordo.detalhes.length > 0 ? (
+                detalhesAcordo.detalhes.map((detalhe: DetalheAcordo) => (
+                  <div key={detalhe.id} className="border rounded-lg p-4">
+
+                    {detalhe.tipo === 'transacao' && (
+                      <>
+                        <div className="mb-6">
+                          <h5 className="text-sm font-medium text-blue-700 mb-3 flex items-center gap-2">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            Inscrições Incluídas
+                          </h5>
+                          {detalhe.inscricoes && Array.isArray(detalhe.inscricoes) && detalhe.inscricoes.length > 0 ? (
+                            <div className="space-y-3">
+                              {detalhe.inscricoes.map((inscricao: InscricaoDetalhe, idx: number) => (
+                                <div key={inscricao.id || `inscricao-${idx}`} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                      <div>
+                                        <p className="font-medium text-sm text-blue-900">{inscricao.numeroInscricao}</p>
+                                        <p className="text-xs text-blue-700 capitalize">
+                                          {inscricao.tipoInscricao === 'imobiliaria' ? 'Imobiliária' : 'Econômica'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-sm font-medium text-blue-900">
+                                        Total: R$ {(isNaN(Number(inscricao.valorDebito)) ? 0 : Number(inscricao.valorDebito || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  {inscricao.descricaoDebitos && Array.isArray(inscricao.descricaoDebitos) && inscricao.descricaoDebitos.length > 0 && (
+                                    <div className="mt-3 pt-3 border-t border-blue-300">
+                                      <h6 className="text-xs font-medium text-blue-700 mb-2">Débitos Incluídos:</h6>
+                                      <div className="space-y-2">
+                                        {inscricao.descricaoDebitos.map((debito: DebitoDetalhe, idx: number) => (
+                                          <div key={debito.id || `debito-${idx}`} className="flex items-center justify-between text-xs bg-white p-2 rounded">
+                                            <span className="text-gray-700">{debito.descricao}</span>
+                                            <div className="text-right">
+                                              <span className="font-medium text-gray-900">
+                                                R$ {(isNaN(Number(debito.valorLancado)) ? 0 : Number(debito.valorLancado || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                              </span>
+                                              {debito.dataVencimento && (
+                                                <div className="text-gray-500">
+                                                  Venc: {new Date(debito.dataVencimento).toLocaleDateString('pt-BR')}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                              <div className="p-3 bg-blue-100 rounded-lg border border-blue-300">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-medium text-blue-800">Total das Inscrições:</span>
+                                  <span className="text-sm font-bold text-blue-900">
+                                    R$ {(detalhe.inscricoes && Array.isArray(detalhe.inscricoes)
+                                      ? detalhe.inscricoes.reduce((total: number, inscricao: InscricaoDetalhe) => {
+                                        const valor = Number(inscricao.valorDebito || 0)
+                                        return total + (isNaN(valor) ? 0 : valor)
+                                      }, 0)
+                                      : 0
+                                    ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500">Nenhuma inscrição encontrada.</p>
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    {detalhe.tipo === 'dacao' && (
+                      <>
+                        <div className="mb-6">
+                          <h5 className="text-sm font-medium text-green-700 mb-3 flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            Inscrições Oferecidas
+                          </h5>
+                          {(() => {
+                            try {
+                              const observacoes = detalhe.observacoes
+                              if (observacoes) {
+                                const dadosDacao = JSON.parse(observacoes) as DadosDacao
+                                if (dadosDacao.inscricoesOferecidas && Array.isArray(dadosDacao.inscricoesOferecidas)) {
+                                  return (
+                                    <div className="space-y-3">
+                                      {dadosDacao.inscricoesOferecidas.map((inscricao: InscricaoOferecida, idx: number) => (
+                                        <div key={inscricao.id || `inscricao-oferecida-${idx}`} className="p-3 bg-green-50 rounded-lg border border-green-200">
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                              <div>
+                                                <p className="font-medium text-sm text-green-900">{inscricao.numeroInscricao}</p>
+                                                <p className="text-xs text-green-700 capitalize">
+                                                  {inscricao.tipoInscricao === 'imobiliaria' ? 'Imobiliária' : 'Econômica'}
+                                                </p>
+                                              </div>
+                                            </div>
+                                            <div className="text-right">
+                                              <p className="text-xs text-green-600 mb-1">Valor Avaliado para Fins de Dação</p>
+                                              <p className="text-sm font-medium text-green-900">
+                                                R$ {(isNaN(Number(inscricao.valor)) ? 0 : Number(inscricao.valor || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                              </p>
+                                              {inscricao.dataVencimento && String(inscricao.dataVencimento) !== '' ? (
+                                                <p className="text-xs text-green-600">
+                                                  Venc: {new Date(inscricao.dataVencimento).toLocaleDateString('pt-BR')}
+                                                </p>
+                                              ) : null}
+                                            </div>
+                                          </div>
+                                          {inscricao.descricao && (
+                                            <p className="text-xs text-green-600 mt-1">{inscricao.descricao}</p>
+                                          )}
+                                        </div>
+                                      ))}
+                                      <div className="p-3 bg-green-100 rounded-lg border border-green-300">
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-sm font-medium text-green-800">Valor Total Avaliado para Fins de Dação:</span>
+                                          <span className="text-sm font-bold text-green-900">
+                                            R$ {Number(dadosDacao.valorTotalOferecido || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )
+                                }
+                              }
+                            } catch {
+                              // Se não conseguir fazer parse ou não tiver dados
+                            }
+                            return (
+                              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                                <p className="text-sm text-green-700">
+                                  As inscrições configuradas no momento da criação do acordo foram utilizadas para esta dação.
+                                </p>
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      </>
+                    )}
+
+
+                    {detalhe.imovel && (
+                      <div className="mt-4">
+                        <h5 className="text-sm font-medium text-gray-700 mb-2">Imóvel:</h5>
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <p className="font-medium text-sm">{detalhe.imovel.matricula}</p>
+                          <p className="text-xs text-gray-600">{detalhe.imovel.endereco}</p>
+                          <p className="text-sm font-medium mt-1">
+                            Valor Avaliado: R$ {(isNaN(Number(detalhe.imovel.valorAvaliado)) ? 0 : Number(detalhe.imovel.valorAvaliado || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {detalhe.credito && (
+                      <div className="mt-4">
+                        <h5 className="text-sm font-medium text-gray-700 mb-2">Crédito:</h5>
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <p className="font-medium text-sm">{detalhe.credito.numero}</p>
+                          <p className="text-xs text-gray-600 capitalize">{detalhe.credito.tipo.replace('_', ' ')}</p>
+                          <p className="text-sm font-medium mt-1">
+                            Valor: R$ {(isNaN(Number(detalhe.credito.valor)) ? 0 : Number(detalhe.credito.valor || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                // Mostrar mensagem apenas se não há créditos nem inscrições
+                !detalhesAcordo?.creditos?.length && !detalhesAcordo?.inscricoes?.length && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Receipt className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                    <p>Nenhum detalhe específico encontrado para este acordo.</p>
+                    <p className="text-sm mt-1">
+                      {tipoProcesso === 'COMPENSACAO' ? 'Créditos e inscrições não foram configurados.' :
+                        tipoProcesso === 'DACAO_PAGAMENTO' ? 'Inscrições oferecidas e a compensar não foram configuradas.' :
+                          'As inscrições podem não ter sido configuradas ou carregadas.'}
+                    </p>
+                  </div>
+                )
+              )} */}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Custas e Honorários - para todos os tipos de acordo */}
       {((temParcelas && acordo.transacaoDetails && (acordo.transacaoDetails.custasAdvocaticias > 0 || acordo.transacaoDetails.honorariosValor > 0)) ||
@@ -1701,335 +2084,6 @@ export default function AcordoPage({ params }: AcordoPageProps) {
                     </div>
                   )
                 })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Origem do Acordo */}
-      {(detalhesAcordo && ((detalhesAcordo.creditos?.length ?? 0) > 0 || (detalhesAcordo.inscricoes?.length ?? 0) > 0)) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5" />
-              Origem do Acordo
-            </CardTitle>
-            <CardDescription>
-              {tipoProcesso === 'COMPENSACAO' ? 'Créditos oferecidos e inscrições a compensar' :
-                tipoProcesso === 'DACAO_PAGAMENTO' ? 'Inscrições oferecidas e inscrições a compensar' :
-                  'Inscrições e débitos que originaram este acordo'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-
-              {/* Créditos para compensação e dação */}
-              {detalhesAcordo?.creditos && detalhesAcordo?.creditos.length > 0 && (
-                <div className="mb-6">
-                  <h5 className="text-sm font-medium text-green-700 mb-3 flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    {tipoProcesso === 'COMPENSACAO' ? 'Créditos Oferecidos' : 'Inscrições Oferecidas'}
-                  </h5>
-                  <div className="space-y-3">
-                    {detalhesAcordo?.creditos?.map((credito: Credito, idx: number) => (
-                      <div key={credito.id || `credito-${idx}`} className="p-3 bg-green-50 rounded-lg border border-green-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <div>
-                              <p className="font-medium text-sm text-green-900">{credito.numeroCredito}</p>
-                              <p className="text-xs text-green-700 capitalize">
-                                {credito.tipoCredito?.replace('_', ' ').toLowerCase()}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-medium text-green-900">
-                              R$ {Number(credito.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </p>
-                            {credito.dataVencimento && (
-                              <p className="text-xs text-green-600">
-                                Venc: {formatarData(credito.dataVencimento)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        {credito.descricao && (
-                          <p className="text-xs text-green-600 mt-1">{credito.descricao}</p>
-                        )}
-                      </div>
-                    ))}
-                    <div className="p-3 bg-green-100 rounded-lg border border-green-300">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-green-800">
-                          Total {tipoProcesso === 'COMPENSACAO' ? 'dos Créditos' : 'das Inscrições Oferecidas'}:
-                        </span>
-                        <span className="text-sm font-bold text-green-900">
-                          R$ {detalhesAcordo?.creditos?.reduce((total: number, credito: Credito) => total + Number(credito.valor || 0), 0)?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Inscrições a compensar */}
-              {detalhesAcordo?.inscricoes && detalhesAcordo?.inscricoes.length > 0 && (
-                <div className="mb-6">
-                  <h5 className="text-sm font-medium text-blue-700 mb-3 flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    {tipoProcesso === 'TRANSACAO_EXCEPCIONAL' ? 'Inscrições Incluídas' : 'Inscrições a Compensar'}
-                  </h5>
-                  <div className="space-y-3">
-                    {detalhesAcordo?.inscricoes?.map((inscricao: InscricaoDetalhe, idx: number) => (
-                      <div key={inscricao.id || `inscricao-${idx}`} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                            <div>
-                              <p className="font-medium text-sm text-blue-900">{inscricao.numeroInscricao}</p>
-                              <p className="text-xs text-blue-700 capitalize">
-                                {inscricao.tipoInscricao === 'IMOBILIARIA' ? 'Imobiliária' : 'Econômica'}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-medium text-blue-900">
-                              Total: R$ {Number(inscricao.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Débitos da inscrição */}
-                        {inscricao.debitos && inscricao.debitos.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-blue-300">
-                            <h6 className="text-xs font-medium text-blue-700 mb-2">Débitos:</h6>
-                            <div className="space-y-2">
-                              {inscricao.debitos?.map((debito: DebitoDetalhe, idx: number) => (
-                                <div key={debito.id || `debito-${idx}`} className="flex items-center justify-between text-xs bg-white p-2 rounded">
-                                  <span className="text-gray-700">{debito.descricao}</span>
-                                  <div className="text-right">
-                                    <span className="font-medium text-gray-900">
-                                      R$ {Number(debito.valorLancado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </span>
-                                    {debito.dataVencimento && (
-                                      <div className="text-gray-500">
-                                        Venc: {formatarData(debito.dataVencimento)}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    <div className="p-3 bg-blue-100 rounded-lg border border-blue-300">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-blue-800">
-                          Total das Inscrições:
-                        </span>
-                        <span className="text-sm font-bold text-blue-900">
-                          R$ {detalhesAcordo?.inscricoes?.reduce((total: number, inscricao: InscricaoDetalhe) => total + Number(inscricao.valorTotal || 0), 0)?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Verificar se tem detalhes */}
-              {/* {detalhesAcordo?.detalhes && Array.isArray(detalhesAcordo.detalhes) && detalhesAcordo.detalhes.length > 0 ? (
-                detalhesAcordo.detalhes.map((detalhe: DetalheAcordo) => (
-                  <div key={detalhe.id} className="border rounded-lg p-4">
-
-                    {detalhe.tipo === 'transacao' && (
-                      <>
-                        <div className="mb-6">
-                          <h5 className="text-sm font-medium text-blue-700 mb-3 flex items-center gap-2">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                            Inscrições Incluídas
-                          </h5>
-                          {detalhe.inscricoes && Array.isArray(detalhe.inscricoes) && detalhe.inscricoes.length > 0 ? (
-                            <div className="space-y-3">
-                              {detalhe.inscricoes.map((inscricao: InscricaoDetalhe, idx: number) => (
-                                <div key={inscricao.id || `inscricao-${idx}`} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                      <div>
-                                        <p className="font-medium text-sm text-blue-900">{inscricao.numeroInscricao}</p>
-                                        <p className="text-xs text-blue-700 capitalize">
-                                          {inscricao.tipoInscricao === 'imobiliaria' ? 'Imobiliária' : 'Econômica'}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <p className="text-sm font-medium text-blue-900">
-                                        Total: R$ {(isNaN(Number(inscricao.valorDebito)) ? 0 : Number(inscricao.valorDebito || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  {inscricao.descricaoDebitos && Array.isArray(inscricao.descricaoDebitos) && inscricao.descricaoDebitos.length > 0 && (
-                                    <div className="mt-3 pt-3 border-t border-blue-300">
-                                      <h6 className="text-xs font-medium text-blue-700 mb-2">Débitos Incluídos:</h6>
-                                      <div className="space-y-2">
-                                        {inscricao.descricaoDebitos.map((debito: DebitoDetalhe, idx: number) => (
-                                          <div key={debito.id || `debito-${idx}`} className="flex items-center justify-between text-xs bg-white p-2 rounded">
-                                            <span className="text-gray-700">{debito.descricao}</span>
-                                            <div className="text-right">
-                                              <span className="font-medium text-gray-900">
-                                                R$ {(isNaN(Number(debito.valorLancado)) ? 0 : Number(debito.valorLancado || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                              </span>
-                                              {debito.dataVencimento && (
-                                                <div className="text-gray-500">
-                                                  Venc: {new Date(debito.dataVencimento).toLocaleDateString('pt-BR')}
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                              <div className="p-3 bg-blue-100 rounded-lg border border-blue-300">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-sm font-medium text-blue-800">Total das Inscrições:</span>
-                                  <span className="text-sm font-bold text-blue-900">
-                                    R$ {(detalhe.inscricoes && Array.isArray(detalhe.inscricoes)
-                                      ? detalhe.inscricoes.reduce((total: number, inscricao: InscricaoDetalhe) => {
-                                        const valor = Number(inscricao.valorDebito || 0)
-                                        return total + (isNaN(valor) ? 0 : valor)
-                                      }, 0)
-                                      : 0
-                                    ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <p className="text-sm text-gray-500">Nenhuma inscrição encontrada.</p>
-                          )}
-                        </div>
-                      </>
-                    )}
-
-                    {detalhe.tipo === 'dacao' && (
-                      <>
-                        <div className="mb-6">
-                          <h5 className="text-sm font-medium text-green-700 mb-3 flex items-center gap-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            Inscrições Oferecidas
-                          </h5>
-                          {(() => {
-                            try {
-                              const observacoes = detalhe.observacoes
-                              if (observacoes) {
-                                const dadosDacao = JSON.parse(observacoes) as DadosDacao
-                                if (dadosDacao.inscricoesOferecidas && Array.isArray(dadosDacao.inscricoesOferecidas)) {
-                                  return (
-                                    <div className="space-y-3">
-                                      {dadosDacao.inscricoesOferecidas.map((inscricao: InscricaoOferecida, idx: number) => (
-                                        <div key={inscricao.id || `inscricao-oferecida-${idx}`} className="p-3 bg-green-50 rounded-lg border border-green-200">
-                                          <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                              <div>
-                                                <p className="font-medium text-sm text-green-900">{inscricao.numeroInscricao}</p>
-                                                <p className="text-xs text-green-700 capitalize">
-                                                  {inscricao.tipoInscricao === 'imobiliaria' ? 'Imobiliária' : 'Econômica'}
-                                                </p>
-                                              </div>
-                                            </div>
-                                            <div className="text-right">
-                                              <p className="text-sm font-medium text-green-900">
-                                                R$ {(isNaN(Number(inscricao.valor)) ? 0 : Number(inscricao.valor || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                              </p>
-                                              {inscricao.dataVencimento && String(inscricao.dataVencimento) !== '' ? (
-                                                <p className="text-xs text-green-600">
-                                                  Venc: {new Date(inscricao.dataVencimento).toLocaleDateString('pt-BR')}
-                                                </p>
-                                              ) : null}
-                                            </div>
-                                          </div>
-                                          {inscricao.descricao && (
-                                            <p className="text-xs text-green-600 mt-1">{inscricao.descricao}</p>
-                                          )}
-                                        </div>
-                                      ))}
-                                      <div className="p-3 bg-green-100 rounded-lg border border-green-300">
-                                        <div className="flex justify-between items-center">
-                                          <span className="text-sm font-medium text-green-800">Total das Inscrições Oferecidas:</span>
-                                          <span className="text-sm font-bold text-green-900">
-                                            R$ {Number(dadosDacao.valorTotalOferecido || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )
-                                }
-                              }
-                            } catch {
-                              // Se não conseguir fazer parse ou não tiver dados
-                            }
-                            return (
-                              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                                <p className="text-sm text-green-700">
-                                  As inscrições configuradas no momento da criação do acordo foram utilizadas para esta dação.
-                                </p>
-                              </div>
-                            )
-                          })()}
-                        </div>
-                      </>
-                    )}
-
-
-                    {detalhe.imovel && (
-                      <div className="mt-4">
-                        <h5 className="text-sm font-medium text-gray-700 mb-2">Imóvel:</h5>
-                        <div className="p-3 bg-gray-50 rounded-lg">
-                          <p className="font-medium text-sm">{detalhe.imovel.matricula}</p>
-                          <p className="text-xs text-gray-600">{detalhe.imovel.endereco}</p>
-                          <p className="text-sm font-medium mt-1">
-                            Valor Avaliado: R$ {(isNaN(Number(detalhe.imovel.valorAvaliado)) ? 0 : Number(detalhe.imovel.valorAvaliado || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {detalhe.credito && (
-                      <div className="mt-4">
-                        <h5 className="text-sm font-medium text-gray-700 mb-2">Crédito:</h5>
-                        <div className="p-3 bg-gray-50 rounded-lg">
-                          <p className="font-medium text-sm">{detalhe.credito.numero}</p>
-                          <p className="text-xs text-gray-600 capitalize">{detalhe.credito.tipo.replace('_', ' ')}</p>
-                          <p className="text-sm font-medium mt-1">
-                            Valor: R$ {(isNaN(Number(detalhe.credito.valor)) ? 0 : Number(detalhe.credito.valor || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))
-              ) : (
-                // Mostrar mensagem apenas se não há créditos nem inscrições
-                !detalhesAcordo?.creditos?.length && !detalhesAcordo?.inscricoes?.length && (
-                  <div className="text-center py-8 text-gray-500">
-                    <Receipt className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                    <p>Nenhum detalhe específico encontrado para este acordo.</p>
-                    <p className="text-sm mt-1">
-                      {tipoProcesso === 'COMPENSACAO' ? 'Créditos e inscrições não foram configurados.' :
-                        tipoProcesso === 'DACAO_PAGAMENTO' ? 'Inscrições oferecidas e a compensar não foram configuradas.' :
-                          'As inscrições podem não ter sido configuradas ou carregadas.'}
-                    </p>
-                  </div>
-                )
-              )} */}
             </div>
           </CardContent>
         </Card>

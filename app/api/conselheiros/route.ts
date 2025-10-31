@@ -9,7 +9,9 @@ const conselheiroDtoSchema = z.object({
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   telefone: z.string().optional(),
   cargo: z.string().optional(),
+  matricula: z.string().optional(),
   origem: z.string().optional(),
+  sigla: z.string().optional(),
   ativo: z.boolean().default(true)
 })
 // GET - Listar conselheiros
@@ -40,7 +42,9 @@ export async function GET(request: NextRequest) {
         email: true,
         telefone: true,
         cargo: true,
+        matricula: true,
         origem: true,
+        sigla: true,
         ativo: true
       }
     })

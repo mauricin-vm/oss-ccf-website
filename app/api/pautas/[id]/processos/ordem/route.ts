@@ -41,9 +41,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Pauta não encontrada' }, { status: 404 })
     }
 
-    if (pauta.status !== 'aberta') {
+    if (pauta.status === 'fechada') {
       return NextResponse.json(
-        { error: 'Apenas pautas abertas podem ser modificadas' },
+        { error: 'Não é possível reordenar processos de pautas com sessão finalizada' },
         { status: 400 }
       )
     }

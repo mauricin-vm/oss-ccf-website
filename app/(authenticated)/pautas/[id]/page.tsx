@@ -570,7 +570,7 @@ export default function PautaDetalhesPage({
                     Lista ordenada dos processos para julgamento
                   </CardDescription>
                 </div>
-                {canEdit && pauta.status === 'aberta' && (
+                {canEdit && pauta.status !== 'fechada' && (
                   <Button
                     onClick={openAddProcessModal}
                     className="cursor-pointer"
@@ -600,7 +600,7 @@ export default function PautaDetalhesPage({
                             key={processoPauta.id}
                             draggableId={processoPauta.id}
                             index={index}
-                            isDragDisabled={pauta.status !== 'aberta' || !canEdit || foiJulgado}
+                            isDragDisabled={pauta.status === 'fechada' || !canEdit || foiJulgado}
                           >
                             {(provided, snapshot) => (
                               <div
@@ -611,14 +611,14 @@ export default function PautaDetalhesPage({
                                 <div className="flex items-start justify-between">
                                   <div className="space-y-2 flex-1">
                                     <div className="flex items-center gap-3">
-                                      {canEdit && pauta.status === 'aberta' && !foiJulgado && (
+                                      {canEdit && pauta.status !== 'fechada' && !foiJulgado && (
                                         <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
                                           <span className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 rounded-full font-bold text-sm">
                                             {processoPauta.ordem}
                                           </span>
                                         </div>
                                       )}
-                                      {(!canEdit || pauta.status !== 'aberta' || foiJulgado) && (
+                                      {(!canEdit || pauta.status === 'fechada' || foiJulgado) && (
                                         <span className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 rounded-full font-bold text-sm">
                                           {processoPauta.ordem}
                                         </span>
@@ -663,7 +663,7 @@ export default function PautaDetalhesPage({
                                   </div>
 
                                   {/* Ações do Processo */}
-                                  {canEdit && pauta.status === 'aberta' && !foiJulgado && (
+                                  {canEdit && pauta.status !== 'fechada' && !foiJulgado && (
                                     <div className="flex gap-2 ml-4">
                                       <div className="flex flex-col gap-1">
                                         <Button
@@ -711,7 +711,7 @@ export default function PautaDetalhesPage({
                   )}
                 </Droppable>
               </DragDropContext>
-              {canEdit && pauta.status === 'aberta' && pauta.processos.length > 1 && (
+              {canEdit && pauta.status !== 'fechada' && pauta.processos.length > 1 && (
                 <p className="text-xs text-gray-500 mt-4">
                   💡 Dica: Arraste os processos ou use os botões ↑↓ para reordenar a sequência de julgamento
                 </p>

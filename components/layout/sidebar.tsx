@@ -16,8 +16,10 @@ import {
   Building2,
   Shield,
   Activity,
-  Menu
+  Menu,
+  Wrench
 } from 'lucide-react'
+import { RxText } from "react-icons/rx";
 import { signOut } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -30,12 +32,6 @@ interface SidebarProps {
 export default function Sidebar({ userRole, userName }: SidebarProps) {
   const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(false)
-
-  const TramitacoesIcon = () => (
-    <div className="h-5 w-4 flex items-center justify-center font-bold text-xs">
-      T
-    </div>
-  )
 
   const menuItems = [
     {
@@ -53,7 +49,7 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
     {
       title: 'Tramitações',
       href: '/tramitacoes',
-      icon: TramitacoesIcon,
+      icon: RxText,
       roles: ['ADMIN', 'FUNCIONARIO']
     },
     {
@@ -79,6 +75,12 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
       href: '/relatorios',
       icon: BarChart3,
       roles: ['ADMIN', 'FUNCIONARIO', 'VISUALIZADOR']
+    },
+    {
+      title: 'Ferramentas',
+      href: '/ferramentas',
+      icon: Wrench,
+      roles: ['ADMIN', 'FUNCIONARIO']
     }
   ]
 

@@ -338,6 +338,7 @@ model SessaoJulgamento {
 
   conselheiros      Conselheiro[]   @relation("SessaoConselheiro")
   decisoes          Decisao[]
+  folhaJeton        FolhaJeton?
 
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -622,13 +623,16 @@ model Conselheiro {
   email             String?
   telefone          String?
   cargo             String?
+  matricula         String?         // Matrícula do conselheiro
   origem            String?         // Ex: "Secretaria da Fazenda", "OAB", "Sindicato dos Contadores", etc.
+  sigla             String?         // Sigla da origem
   ativo             Boolean         @default(true)
-  
+
   sessoes           SessaoJulgamento[] @relation("SessaoConselheiro")
   sessoesPresididas SessaoJulgamento[] @relation("SessaoPresidente")
   votos             Voto[]
   processosPautaPresididos ProcessoPauta[] @relation("ProcessoPautaPresidenteSubstituto")
+  membrosJeton      MembroJeton[]
 
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -811,4 +815,49 @@ enum MetodoPagamento {
 enum TipoSessao {
   JULGAMENTO
   ADMINISTRATIVA
+}
+
+enum StatusFolhaJeton {
+  PENDENTE
+  ENTREGUE
+}
+
+model FolhaJeton {
+  id                String              @id @default(cuid())
+
+  sessaoId          String              @unique
+  sessao            SessaoJulgamento    @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
+
+  status            StatusFolhaJeton    @default(PENDENTE)
+  dataEntrega       DateTime?
+  observacoes       String?             @db.Text
+
+  membros           MembroJeton[]
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([sessaoId])
+  @@index([status])
+}
+
+model MembroJeton {
+  id                String              @id @default(cuid())
+
+  folhaJetonId      String
+  folhaJeton        FolhaJeton          @relation(fields: [folhaJetonId], references: [id], onDelete: Cascade)
+
+  conselheiroId     String
+  conselheiro       Conselheiro         @relation(fields: [conselheiroId], references: [id])
+
+  valorJeton        Decimal             @db.Decimal(10, 2)
+  presente          Boolean             @default(true)
+  observacoes       String?             @db.Text
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@unique([folhaJetonId, conselheiroId])
+  @@index([folhaJetonId])
+  @@index([conselheiroId])
 }

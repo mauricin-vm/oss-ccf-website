@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const status = searchParams.get('status') // 'ativa' ou 'finalizada'
+    const finalizadas = searchParams.get('finalizadas') // 'true' ou 'false'
     const ano = searchParams.get('ano')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
@@ -35,9 +36,10 @@ export async function GET(request: NextRequest) {
         { conselheiros: { some: { nome: { contains: search, mode: 'insensitive' } } } }
       ]
     }
-    if (status === 'ativa') {
+    // Suportar ambos os parâmetros: status e finalizadas
+    if (status === 'ativa' || finalizadas === 'false') {
       where.dataFim = null
-    } else if (status === 'finalizada') {
+    } else if (status === 'finalizada' || finalizadas === 'true') {
       where.dataFim = { not: null }
     }
     if (ano) {

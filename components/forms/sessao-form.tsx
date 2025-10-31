@@ -564,12 +564,9 @@ export default function SessaoForm({ onSuccess, pautaId }: SessaoFormProps) {
                     id="dataInicio"
                     type="datetime-local"
                     {...register('dataInicio', {
-                      setValueAs: (value) => value ? new Date(value) : undefined
+                      setValueAs: (value) => value ? new Date(value) : undefined,
+                      onChange: () => clearFieldError('dataInicio')
                     })}
-                    onChange={(e) => {
-                      setValue('dataInicio', new Date(e.target.value))
-                      clearFieldError('dataInicio')
-                    }}
                     onFocus={() => clearFieldError('dataInicio')}
                     className={`pl-10 w-full ${errors.dataInicio ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                     disabled={isLoading}

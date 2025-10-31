@@ -22,6 +22,8 @@ export function useReportFilters(initialData: {
   sessoesAtivas: number
   acordosVencidos: number
   valores: {
+    acordos: number
+    custasHonorarios: number
     totalAcordos: number
     recebido: number
   }
@@ -32,8 +34,9 @@ export function useReportFilters(initialData: {
     mes: number
     ano: number
     valor: number
-    acordos: { valor: number; quantidade: number }
-    parcelas: { valor: number; quantidade: number }
+    compensacao: { valor: number; quantidade: number }
+    dacao: { valor: number; quantidade: number }
+    transacao: { valor: number; quantidade: number }
     total: { valor: number; quantidade: number }
   }>
 }) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db'
+import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { SessionUser } from '@/types'
 
@@ -168,9 +169,16 @@ export async function PUT(
         { status: 404 }
       )
     }
-    // Verificar se pode editar sessão finalizada
-    if (decisaoExistente.sessao.dataFim) {
-      // Só permite se veio da página do processo E o processo está JULGADO
+    // Status que não permitem edição (processos que não passaram por julgamento ou já foram finalizados)
+    const statusNaoEditaveis = ['RECEPCIONADO', 'EM_ANALISE', 'EM_CUMPRIMENTO', 'CONCLUIDO', 'FINALIZADO']
+
+    // Lógica de acesso:
+    // 1. Se a sessão está ATIVA: pode editar qualquer decisão
+    // 2. Se a sessão está FINALIZADA: só pode editar se veio da página do processo E o processo passou por julgamento
+    const isSessionActive = !decisaoExistente.sessao.dataFim
+
+    if (!isSessionActive) {
+      // Sessão finalizada - só permite se veio do processo E processo passou por julgamento
       if (!(fromProcess && data.processoId)) {
         return NextResponse.json(
           { error: 'Não é possível atualizar decisões de sessões finalizadas' },
@@ -178,19 +186,20 @@ export async function PUT(
         )
       }
 
-      // Verificar se o processo está JULGADO antes de permitir
+      // Verificar se o processo passou por julgamento (não está nos status não editáveis)
       const processoParaVerificar = await prisma.processo.findUnique({
         where: { id: data.processoId },
         select: { status: true }
       })
 
-      if (!processoParaVerificar || processoParaVerificar.status !== 'JULGADO') {
+      if (!processoParaVerificar || statusNaoEditaveis.includes(processoParaVerificar.status as string)) {
         return NextResponse.json(
-          { error: 'Não é possível atualizar decisões de sessões finalizadas' },
+          { error: 'Apenas decisões de processos que passaram por julgamento podem ser editadas após o encerramento da sessão' },
           { status: 400 }
         )
       }
     }
+
     // Verificar se o processo existe na pauta
     const processoNaPauta = decisaoExistente.sessao.pauta?.processos.find(
       p => p.processo.id === data.processoId
@@ -198,14 +207,6 @@ export async function PUT(
     if (!processoNaPauta) {
       return NextResponse.json(
         { error: 'Processo não encontrado na pauta desta sessão' },
-        { status: 400 }
-      )
-    }
-
-    // Verificar se o processo tem status JULGADO (apenas estes podem ser editados)
-    if (processoNaPauta.processo.status !== 'JULGADO') {
-      return NextResponse.json(
-        { error: 'Apenas decisões de processos julgados podem ser editadas' },
         { status: 400 }
       )
     }
@@ -372,6 +373,10 @@ export async function PUT(
         }
       }
     })
+
+    // Revalidar a página de detalhes da sessão para mostrar a decisão atualizada
+    revalidatePath(`/sessoes/${id}`)
+
     return NextResponse.json(result)
   } catch (error) {
     console.error('Erro ao atualizar decisão:', error)
@@ -514,6 +519,10 @@ export async function DELETE(
         }
       }
     })
+
+    // Revalidar a página de detalhes da sessão para mostrar a decisão removida
+    revalidatePath(`/sessoes/${id}`)
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Erro ao excluir decisão:', error)
